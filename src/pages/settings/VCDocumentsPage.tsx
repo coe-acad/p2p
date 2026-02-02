@@ -1,18 +1,26 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, FileCheck, FileX, Upload } from "lucide-react";
+import { ChevronLeft, Upload, FileCheck, X } from "lucide-react";
+import { useState, useRef } from "react";
 
 const VCDocumentsPage = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
-  const documents = [
-    { id: "connection", label: "Connection VC", status: "verified", required: true },
-    { id: "consumer", label: "Consumer VC", status: "pending", required: false },
-    { id: "generation", label: "Generation VC", status: "pending", required: false },
-  ];
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+      <div className="w-full max-w-md flex flex-col gap-5 px-4">
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -25,52 +33,70 @@ const VCDocumentsPage = () => {
         </div>
 
         {/* Info */}
-        <p className="text-xs text-muted-foreground animate-fade-in">
-          Upload your DISCOM Verifiable Credentials to enable energy trading
+        <p className="text-sm text-muted-foreground animate-fade-in">
+          Upload your DISCOM Verifiable Credentials (Connection VC + Consumer or Generation VC)
         </p>
 
-        {/* Documents List */}
-        <div className="space-y-3">
-          {documents.map((doc, index) => (
-            <div 
-              key={doc.id}
-              className="bg-card rounded-xl p-4 shadow-card animate-slide-up"
-              style={{ animationDelay: `${0.1 * index}s` }}
-            >
-              <div className="flex items-center justify-between">
+        {/* Upload Button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={handleUpload}
+          className="hidden"
+        />
+        
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full py-8 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 flex flex-col items-center gap-3 animate-slide-up"
+        >
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Upload size={24} className="text-primary" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">Tap to upload files</p>
+            <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG • Multiple files allowed</p>
+          </div>
+        </button>
+
+        {/* Uploaded Files */}
+        {uploadedFiles.length > 0 && (
+          <div className="space-y-2 animate-slide-up">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Uploaded ({uploadedFiles.length})
+            </p>
+            {uploadedFiles.map((file, index) => (
+              <div 
+                key={index}
+                className="flex items-center justify-between bg-card rounded-xl p-3 shadow-card border border-border"
+              >
                 <div className="flex items-center gap-3">
-                  {doc.status === "verified" ? (
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <FileCheck size={16} className="text-accent" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                      <FileX size={16} className="text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                    <p className={`text-xs ${doc.status === "verified" ? "text-accent" : "text-muted-foreground"}`}>
-                      {doc.status === "verified" ? "Verified ✓" : "Not uploaded"}
-                    </p>
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <FileCheck size={16} className="text-accent" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                 </div>
-                {doc.status !== "verified" && (
-                  <button className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors">
-                    <Upload size={14} className="text-primary" />
-                  </button>
-                )}
+                <button 
+                  onClick={() => removeFile(index)}
+                  className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                >
+                  <X size={16} className="text-muted-foreground hover:text-destructive" />
+                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Requirement Note */}
-        <div className="bg-muted/50 rounded-xl p-3 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium">Required:</span> Connection VC + either Consumer or Generation VC to list energy for trading
-          </p>
-        </div>
+        {/* Submit Button */}
+        {uploadedFiles.length > 0 && (
+          <button className="btn-solar w-full animate-slide-up">
+            Submit Documents
+          </button>
+        )}
       </div>
     </div>
   );

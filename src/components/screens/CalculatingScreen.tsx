@@ -5,7 +5,7 @@ import SamaiLogo from "../SamaiLogo";
 interface CalculatingScreenProps {
   onComplete: () => void;
 }
-
+//
 const CalculatingScreen = ({ onComplete }: CalculatingScreenProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   
@@ -18,8 +18,8 @@ const CalculatingScreen = ({ onComplete }: CalculatingScreenProps) => {
   useEffect(() => {
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 900);
-    const completeTimeout = setTimeout(onComplete, 3000);
+    }, 1500);
+    const completeTimeout = setTimeout(onComplete, 5000);
     return () => {
       clearInterval(stepInterval);
       clearTimeout(completeTimeout);

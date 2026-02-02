@@ -8,7 +8,7 @@ const CalculatingPage = () => {
 
   return (
     <CalculatingScreen
-      onComplete={() => navigate("/prepared", { state: { isVCVerified } })}
+      onComplete={() => navigate("/prepared", { state: { isVCVerified, fromOnboarding: true } })}
     />
   );
 };

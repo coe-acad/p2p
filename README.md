@@ -1,4 +1,4 @@
-# Welcome to your p2p trading platform
+# Welcome to your Lovable project
 
 ## Project info
 
