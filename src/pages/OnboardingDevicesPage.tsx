@@ -1,16 +1,27 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import DeviceProfileScreen from "@/components/screens/DeviceProfileScreen";
 
+const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
+
 const OnboardingDevicesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isVCVerified = location.state?.isVCVerified ?? false;
-  const devices = location.state?.devices || [];
+  const locationData = {
+    address: location.state?.address,
+    city: location.state?.city,
+    discom: location.state?.discom
+  };
+
+  const handleContinue = () => {
+    localStorage.setItem(ONBOARDING_DEVICES_KEY, "true");
+    navigate("/onboarding/talk", { state: { isVCVerified } });
+  };
 
   return (
     <DeviceProfileScreen
-      onContinue={() => navigate("/onboarding/talk", { state: { isVCVerified } })}
-      devices={devices}
+      locationData={locationData}
+      onContinue={handleContinue}
       onBack={() => navigate("/onboarding/location")}
     />
   );

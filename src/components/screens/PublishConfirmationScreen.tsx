@@ -11,16 +11,16 @@ const PublishConfirmationScreen = ({ onGoHome }: PublishConfirmationScreenProps)
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAutoRedirect((prev) => Math.max(prev - 1, 0));
+      setAutoRedirect((prev) => {
+        if (prev <= 1) {
+          onGoHome();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(interval);
   }, [onGoHome]);
-
-  useEffect(() => {
-    if (autoRedirect === 0) {
-      onGoHome();
-    }
-  }, [autoRedirect, onGoHome]);
 
   return (
     <div className="screen-container">

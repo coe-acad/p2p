@@ -1,103 +1,118 @@
 import { useState } from "react";
-import { Zap, Battery, Gauge, User, Check, ChevronDown, ChevronUp, ChevronLeft } from "lucide-react";
+import { Zap, Battery, Gauge, User, Check, ChevronDown, ChevronUp, ChevronLeft, Sun, Sparkles, Cpu } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
+import { useUserData, extractLocality } from "@/hooks/useUserData";
 
-interface DeviceProfileScreenProps {
-  onContinue: () => void;
-  onBack: () => void;
-  devices?: Array<{
-    device?: {
-      id?: string;
-      type?: string;
-      name?: string;
-      meter_id?: string;
-      status?: string;
-    };
-    credentialSubject?: Record<string, any>;
-  }>;
+interface LocationData {
+  address?: string;
+  city?: string;
+  discom?: string;
 }
 
-const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfileScreenProps) => {
+interface DeviceProfileScreenProps {
+  locationData?: LocationData;
+  onContinue: () => void;
+  onBack: () => void;
+}
+
+const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfileScreenProps) => {
+  const { userData } = useUserData();
   const [confirmed, setConfirmed] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const mappedDevices = devices.length
-    ? devices.map((item) => {
-        const subject = item.credentialSubject || {};
-        const typeLabel = item.device?.type || subject.type || "Device";
-        const loweredType = String(typeLabel).toLowerCase();
-        const isConsumption = loweredType.includes("consumption");
-        const isGeneration = loweredType.includes("generation");
-        const icon = isGeneration ? Zap : isConsumption ? Gauge : User;
+  // Use location data from route state (step 1) or fallback to userData
+  const address = locationData?.address || userData.address;
+  const city = locationData?.city || userData.city;
+  const locality = extractLocality(address);
 
-        if (isConsumption) {
-          const solarType = subject.solarType || subject.connectionType || subject.type || "Consumption";
-          const meterNumber = subject.meterNumber || item.device?.meter_id || "";
-
-          return {
-            icon,
-            title: solarType,
-            detail: meterNumber ? `Meter ${meterNumber}` : "Meter unavailable",
-            expanded: {
-              fullName: subject.fullName,
-              connectionType: subject.connectionType,
-              meterNumber,
-              sanctionedLoad: subject.sanctionedLoadKW,
-              premisesType: subject.premisesType,
-              tariffCategoryCode: subject.tariffCategoryCode,
-            },
-          };
-        }
-
-        if (isGeneration) {
-          const generationType = subject.generationType || subject.storageType || subject.type || "Generation";
-          const meterNumber = subject.meterNumber || item.device?.meter_id || "";
-          const capacity =
-            subject.capacity || subject.powerRatingKW || subject.storageCapacityKWh || subject.generationCapacityKW;
-
-          return {
-            icon,
-            title: generationType,
-            detail: meterNumber ? `Meter ${meterNumber}` : "Meter unavailable",
-            expanded: {
-              capacity,
-              manufacturer: subject.manufacturer || subject.issuerName,
-              assetId: subject.assetId,
-              commissioningDate: subject.commissioningDate,
-            },
-          };
-        }
-
-        const fallbackDetail = [subject.meterNumber, subject.assetId].filter(Boolean).join(" • ");
-        return {
-          icon,
-          title: item.device?.name || typeLabel,
-          detail: fallbackDetail || "Credential linked",
-          expanded: {
-            type: typeLabel,
-            meterNumber: subject.meterNumber || item.device?.meter_id || "",
-            assetId: subject.assetId || "",
-            fullName: subject.fullName || "",
-          },
-        };
-      })
-    : [];
+  const devices = [
+    { 
+      icon: Zap, 
+      title: "Solar Inverter", 
+      detail: "Growatt • 5 kW",
+      expanded: {
+        brand: "Growatt",
+        model: "MIN 5000TL-X",
+        capacity: "5 kW",
+        installDate: "March 2024",
+        serialNo: "GRW2024XXXXXX"
+      }
+    },
+    { 
+      icon: Battery, 
+      title: "Battery", 
+      detail: "Luminous • 10 kWh",
+      expanded: {
+        brand: "Luminous",
+        model: "Power Stack 10K",
+        capacity: "10 kWh",
+        cycles: "6000+",
+        warranty: "10 years"
+      }
+    },
+    { 
+      icon: Gauge, 
+      title: "Smart Meter", 
+      detail: "Genus • Bi-directional",
+      expanded: {
+        brand: "Genus",
+        type: "Bi-directional",
+        meterNo: "KA-BLR-XXXXXX",
+        sanctionedLoad: "5 kW",
+        phase: "Single Phase"
+      }
+    },
+    { 
+      icon: User, 
+      title: "Profile", 
+      detail: `${userData.name}, ${locality}`,
+      expanded: {
+        name: userData.name,
+        address: address,
+        city: city,
+        consumerId: userData.consumerId,
+        tariff: "LT-2 Domestic"
+      }
+    },
+  ];
 
   const toggleExpand = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   return (
-    <div className="screen-container !py-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <div className="screen-container !py-4 relative overflow-hidden">
+      {/* Background gradient effects - Vibrant & Warm */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top warm sunlight glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gradient-to-b from-teal-300/25 via-green-200/15 to-transparent rounded-full blur-3xl" />
+        
+        {/* Animated shimmer */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full animate-[shimmer_4s_ease-in-out_infinite]" />
+        
+        {/* Colorful accent orbs */}
+        <div className="absolute top-1/3 -left-20 w-[200px] h-[200px] bg-gradient-to-br from-teal-400/15 to-green-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
+        <div className="absolute top-1/2 -right-16 w-[180px] h-[180px] bg-gradient-to-bl from-orange-400/12 to-amber-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "5s" }} />
+        
+        {/* Decorative icons */}
+        <div className="absolute top-14 right-6 text-teal-400/15">
+          <Cpu size={32} className="animate-[pulse_6s_ease-in-out_infinite]" />
+        </div>
+        
+        {/* Floating particles */}
+        <div className="absolute top-24 left-8 w-1.5 h-1.5 bg-gradient-to-br from-teal-400 to-green-500 rounded-full animate-[pulse_4s_ease-in-out_infinite] shadow-lg shadow-teal-400/30" />
+        <div className="absolute bottom-32 right-12 w-1.5 h-1.5 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full animate-[pulse_3s_ease-in-out_infinite] shadow-lg shadow-orange-400/30" style={{ animationDelay: "1s" }} />
+      </div>
+
+      <div className="w-full max-w-md flex flex-col h-full px-4 relative z-10">
         {/* Header with Back Button and Logo */}
         <div className="animate-slide-up mb-3">
           <div className="flex items-center justify-between mb-2">
             <button 
               onClick={onBack}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back
             </button>
             <SamaiLogo size="sm" showText={false} />
@@ -106,18 +121,72 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
             <div className="flex items-center justify-center gap-2 mb-1.5">
               <span className="text-2xs text-muted-foreground">Step 2 of 3</span>
               <div className="flex gap-1">
-                <div className="w-5 h-0.5 rounded-full bg-primary" />
-                <div className="w-5 h-0.5 rounded-full bg-primary" />
-                <div className="w-5 h-0.5 rounded-full bg-muted" />
+                <div className="w-5 h-1 rounded-full bg-gradient-to-r from-orange-400 to-amber-500" />
+                <div className="w-5 h-1 rounded-full bg-gradient-to-r from-teal-400 to-green-500" />
+                <div className="w-5 h-1 rounded-full bg-muted" />
               </div>
+            </div>
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-teal-400/20 to-green-500/10 mb-2">
+              <Cpu className="text-accent" size={18} />
             </div>
             <h2 className="text-lg font-semibold text-foreground tracking-tight">We found your solar setup</h2>
           </div>
         </div>
 
-        {/* Compact Device List */}
-        <div className="bg-card rounded-xl border border-border shadow-card divide-y divide-border animate-slide-up mb-3" style={{ animationDelay: "0.1s" }}>
-          {mappedDevices.map((device, index) => {
+        {/* Device Summary Card - Vibrant */}
+        <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-accent/30 mb-3" 
+          style={{ animationDelay: "0.1s", background: "linear-gradient(135deg, hsl(165 60% 42% / 0.1) 0%, hsl(155 55% 42% / 0.05) 100%)" }}>
+          
+          {/* Decorative orbs */}
+          <div className="absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br from-teal-400/25 to-green-400/15 rounded-full blur-2xl" />
+          <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-gradient-to-tr from-teal-400/20 to-emerald-400/10 rounded-full blur-xl" />
+          
+          <div className="relative">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-green-500 flex items-center justify-center shadow-lg shadow-teal-400/30">
+                <Zap className="text-white" size={16} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground">Solar System Detected</p>
+                <p className="text-2xs text-muted-foreground">{locality}</p>
+              </div>
+              <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-teal-500/15 to-green-500/10 px-2 py-1 rounded-full border border-accent/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="text-2xs font-medium text-accent">Verified</span>
+              </div>
+            </div>
+            
+            {/* Quick Stats Grid - Colorful */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50 hover:shadow-md transition-shadow">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-orange-400/20">
+                  <Zap className="text-white" size={14} />
+                </div>
+                <p className="text-sm font-bold text-foreground">5 kW</p>
+                <p className="text-2xs text-muted-foreground">Inverter</p>
+              </div>
+              <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50 hover:shadow-md transition-shadow">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-green-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-teal-400/20">
+                  <Battery className="text-white" size={14} />
+                </div>
+                <p className="text-sm font-bold text-foreground">10 kWh</p>
+                <p className="text-2xs text-muted-foreground">Battery</p>
+              </div>
+              <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50 hover:shadow-md transition-shadow">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-purple-400/20">
+                  <Gauge className="text-white" size={14} />
+                </div>
+                <p className="text-sm font-bold text-foreground">Bi-dir</p>
+                <p className="text-2xs text-muted-foreground">Meter</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Expandable Details */}
+        <div className="bg-card rounded-xl border border-border shadow-card divide-y divide-border animate-slide-up mb-3" style={{ animationDelay: "0.15s" }}>
+          {devices.map((device, index) => {
             const Icon = device.icon;
             const isExpanded = expandedIndex === index;
             
@@ -128,19 +197,11 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
                   className="w-full flex items-center justify-between p-2.5 hover:bg-secondary/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-primary/6 flex items-center justify-center">
-                      <Icon className="text-primary" size={14} />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-medium text-foreground">{device.title}</p>
-                      <p className="text-2xs text-muted-foreground">{device.detail}</p>
-                    </div>
+                    <Icon className="text-muted-foreground" size={14} />
+                    <span className="text-xs font-medium text-foreground">{device.title}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-2xs text-accent bg-accent/8 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                      <span className="w-1 h-1 rounded-full bg-accent" />
-                      Verified
-                    </span>
+                    <span className="text-2xs text-muted-foreground">{device.detail}</span>
                     {isExpanded ? (
                       <ChevronUp size={12} className="text-muted-foreground" />
                     ) : (
@@ -153,7 +214,7 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
                 {isExpanded && (
                   <div className="px-2.5 pb-2.5 pt-1 bg-secondary/30 animate-slide-up">
                     <div className="space-y-0.5 text-2xs">
-                      {Object.entries(device.expanded).filter(([, value]) => value).map(([key, value]) => (
+                      {Object.entries(device.expanded).map(([key, value]) => (
                         <div key={key} className="flex items-center gap-2">
                           <span className="text-muted-foreground capitalize min-w-[80px]">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                           <span className="text-foreground font-medium">{value}</span>
@@ -165,17 +226,14 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
               </div>
             );
           })}
-          {mappedDevices.length === 0 && (
-            <div className="p-3 text-xs text-muted-foreground text-center">No devices found yet.</div>
-          )}
         </div>
 
-        {/* Confirmation - Enhanced Checkbox Design */}
+        {/* Confirmation - Simplified */}
         <button 
           onClick={() => setConfirmed(!confirmed)}
-          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all animate-slide-up text-left w-full ${
+          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all animate-slide-up w-full ${
             confirmed 
-              ? "border-primary bg-primary/5 shadow-sm" 
+              ? "border-primary bg-primary/8" 
               : "border-border hover:border-primary/30 bg-card"
           }`}
           style={{ animationDelay: "0.2s" }}
@@ -183,16 +241,13 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
           <div 
             className={`w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0 ${
               confirmed 
-                ? "bg-primary shadow-sm" 
+                ? "bg-primary" 
                 : "border-2 border-input bg-background"
             }`}
           >
             {confirmed && <Check className="text-primary-foreground" size={14} strokeWidth={3} />}
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">Confirm details to continue</span>
-            <span className="text-2xs text-muted-foreground">I verify the above information is correct</span>
-          </div>
+          <span className="text-sm font-medium text-foreground">I confirm these details are correct</span>
         </button>
 
         {/* Fixed bottom CTA */}
@@ -203,7 +258,7 @@ const DeviceProfileScreen = ({ onContinue, onBack, devices = [] }: DeviceProfile
             className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed animate-slide-up"
             style={{ animationDelay: "0.3s" }}
           >
-            Proceed
+            Continue
           </button>
         </div>
       </div>

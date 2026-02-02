@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation } from "lucide-react";
+import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Sparkles } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
+import { useUserData } from "@/hooks/useUserData";
 
 interface LocationDiscomScreenProps {
-  onContinue: (payload: { isVCVerified: boolean; devices?: any[] }) => void;
+  onContinue: (isVerified: boolean, locationData?: { address: string; city: string; discom: string }) => void;
   onBack: () => void;
 }
 
@@ -44,33 +45,17 @@ const DISCOMS = [
 ];
 
 const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps) => {
-  const [location, setLocation] = useState("");
-  const [selectedDiscom, setSelectedDiscom] = useState<typeof DISCOMS[0] | null>(null);
+  const { userData, setUserData } = useUserData();
+  const [location, setLocation] = useState(userData.address || "");
+  const [selectedDiscom, setSelectedDiscom] = useState<typeof DISCOMS[0] | null>(
+    userData.discom ? DISCOMS.find(d => d.name === userData.discom) || null : null
+  );
+  const [city, setCity] = useState(userData.city || "");
   const [isEditing, setIsEditing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{
-    consumption: string | null;
-    utility: string | null;
-    generation: string | null;
-  }>({ consumption: null, utility: null, generation: null });
-  const [credentialIds, setCredentialIds] = useState<{
-    consumption: string | null;
-    utility: string | null;
-    generation: string | null;
-  }>({ consumption: null, utility: null, generation: null });
-  const [credentialJsons, setCredentialJsons] = useState<{
-    consumption: Record<string, any> | null;
-    utility: Record<string, any> | null;
-    generation: Record<string, any> | null;
-  }>({ consumption: null, utility: null, generation: null });
-  const [verifiedFiles, setVerifiedFiles] = useState({
-    consumption: false,
-    utility: false,
-    generation: false,
-  });
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   
   // Address autocomplete state
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
@@ -137,7 +122,11 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
               addr?.state
             ].filter(Boolean).join(", ");
             
+            const cityName = addr?.suburb || addr?.village || addr?.town || addr?.city || "";
+            const stateName = addr?.state || "";
+            
             setLocation(shortAddress || data.display_name);
+            setCity(`${cityName}${cityName && stateName ? ", " : ""}${stateName}`);
             
             // Auto-select DISCOM based on state
             if (addr?.state) {
@@ -222,138 +211,21 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
     }
   };
 
-  const resetFile = (type: "consumption" | "utility" | "generation") => {
-    setUploadedFiles((prev) => ({ ...prev, [type]: null }));
-    setCredentialIds((prev) => ({ ...prev, [type]: null }));
-    setCredentialJsons((prev) => ({ ...prev, [type]: null }));
-    setVerifiedFiles((prev) => ({ ...prev, [type]: false }));
-  };
-
-  const handleFileUpload = (
-    type: "consumption" | "utility" | "generation",
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFiles((prev) => ({ ...prev, [type]: file.name }));
-      setVerifiedFiles((prev) => ({ ...prev, [type]: false }));
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const raw = typeof reader.result === "string" ? reader.result : "";
-          const parsed = JSON.parse(raw);
-          const vcId = parsed?.id;
-          if (!vcId) {
-            throw new Error("Missing id in VC JSON");
-          }
-          setCredentialIds((prev) => ({ ...prev, [type]: vcId }));
-          setCredentialJsons((prev) => ({ ...prev, [type]: parsed }));
-        } catch (error) {
-          console.error("Invalid VC JSON", error);
-          alert("Invalid VC JSON file. Please upload a valid credential JSON.");
-          resetFile(type);
-        }
-      };
-      reader.onerror = () => {
-        alert("Could not read the file. Please try again.");
-        resetFile(type);
-      };
-      reader.readAsText(file);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
     }
   };
 
-  const isVerified = Object.values(verifiedFiles).every(Boolean);
-  const allFilesReady = Object.values(credentialIds).every(Boolean);
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
-
-  const handleVerifyContinue = async () => {
-    if (isVerified) {
-      if (isExtracting) return;
-      const userId = localStorage.getItem("samai_user_id");
-      if (!userId) {
-        alert("Missing user ID. Please sign up again.");
-        return;
-      }
-      const credentials = [credentialJsons.consumption, credentialJsons.generation].filter(Boolean) as Record<string, any>[];
-      if (credentials.length === 0) {
-        alert("Missing credentials. Please upload VC JSON files again.");
-        return;
-      }
-
-      try {
-        setIsExtracting(true);
-        const response = await fetch(`${API_BASE_URL}/api/bpp/onboarding/extract-device`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, credentials }),
-        });
-        if (!response.ok) {
-          console.error("Extract device failed", await response.text());
-          alert("Extract device failed. Please try again.");
-          return;
-        }
-        const result = await response.json();
-        const devices = Array.isArray(result.devices) ? result.devices : [];
-
-        if (devices.length === 0) {
-          alert("No devices found from the credentials. Please try again.");
-          return;
-        }
-
-        const baseUrl = API_BASE_URL;
-        const userResponse = await fetch(`${baseUrl}/api/bpp/onboarding/user/${userId}`);
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          localStorage.setItem("samai_user_cache", JSON.stringify({ timestamp: Date.now(), data: userData }));
-        }
-
-        onContinue({ isVCVerified: true, devices });
-      } catch (error) {
-        console.error("Extract device failed", error);
-        alert("Extract device failed. Please check your connection.");
-      } finally {
-        setIsExtracting(false);
-      }
-      return;
-    }
-    if (!allFilesReady) {
-      alert("Please upload all three VC JSON files before verifying.");
-      return;
-    }
-    const userId = localStorage.getItem("samai_user_id");
-    if (!userId) {
-      alert("Missing user ID. Please sign up again.");
-      return;
-    }
-
-    try {
-      setIsVerifying(true);
-      const response = await fetch(`${API_BASE_URL}/api/bpp/onboarding/verify-vc`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          utilityCustomerId: credentialIds.utility,
-          consumptionProfileId: credentialIds.consumption,
-          generationProfileId: credentialIds.generation,
-          role: localStorage.getItem("samai_user_role") || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("VC verification failed", await response.text());
-        alert("VC verification failed. Please try again.");
-        return;
-      }
-
-      setVerifiedFiles({ consumption: true, utility: true, generation: true });
-    } catch (error) {
-      console.error("VC verification failed", error);
-      alert("VC verification failed. Please check your connection.");
-    } finally {
-      setIsVerifying(false);
-    }
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Check if at least one file is uploaded for verification
+  useEffect(() => {
+    setIsVerified(uploadedFiles.length >= 1);
+  }, [uploadedFiles]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -367,16 +239,38 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
   }, []);
 
   return (
-    <div className="screen-container !py-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <div className="screen-container !py-4 relative overflow-hidden">
+      {/* Background gradient effects - Vibrant & Warm */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top warm sunlight glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gradient-to-b from-orange-300/30 via-amber-200/15 to-transparent rounded-full blur-3xl" />
+        
+        {/* Animated shimmer */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full animate-[shimmer_4s_ease-in-out_infinite]" />
+        
+        {/* Colorful accent orbs */}
+        <div className="absolute top-1/3 -left-20 w-[200px] h-[200px] bg-gradient-to-br from-orange-400/15 to-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
+        <div className="absolute top-1/2 -right-16 w-[180px] h-[180px] bg-gradient-to-bl from-teal-400/12 to-green-400/8 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "5s" }} />
+        
+        {/* Decorative icons */}
+        <div className="absolute top-14 right-6 text-orange-400/15">
+          <Sun size={32} className="animate-[pulse_6s_ease-in-out_infinite]" />
+        </div>
+        
+        {/* Floating particles */}
+        <div className="absolute top-24 left-8 w-1.5 h-1.5 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full animate-[pulse_4s_ease-in-out_infinite] shadow-lg shadow-orange-400/30" />
+        <div className="absolute bottom-32 right-12 w-1.5 h-1.5 bg-gradient-to-br from-teal-400 to-green-500 rounded-full animate-[pulse_3s_ease-in-out_infinite] shadow-lg shadow-teal-400/30" style={{ animationDelay: "1s" }} />
+      </div>
+
+      <div className="w-full max-w-md flex flex-col h-full px-4 relative z-10">
         {/* Header with Back Button and Logo */}
         <div className="animate-slide-up mb-3">
           <div className="flex items-center justify-between mb-2">
             <button 
               onClick={onBack}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back
             </button>
             <SamaiLogo size="sm" showText={false} />
@@ -385,10 +279,13 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
             <div className="flex items-center justify-center gap-2 mb-1.5">
               <span className="text-2xs text-muted-foreground">Step 1 of 3</span>
               <div className="flex gap-1">
-                <div className="w-5 h-0.5 rounded-full bg-primary" />
-                <div className="w-5 h-0.5 rounded-full bg-muted" />
-                <div className="w-5 h-0.5 rounded-full bg-muted" />
+                <div className="w-5 h-1 rounded-full bg-gradient-to-r from-orange-400 to-amber-500" />
+                <div className="w-5 h-1 rounded-full bg-muted" />
+                <div className="w-5 h-1 rounded-full bg-muted" />
               </div>
+            </div>
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-400/20 to-amber-500/10 mb-2">
+              <MapPin className="text-primary" size={18} />
             </div>
             <h2 className="text-lg font-semibold text-foreground tracking-tight">
               Confirm your electricity connection
@@ -397,12 +294,16 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
         </div>
 
         {/* Combined Location & DISCOM Card */}
-        <div className="bg-card rounded-xl border border-border p-2.5 shadow-card animate-slide-up relative z-30 mb-3" style={{ animationDelay: "0.1s" }}>
+        <div className="bg-card rounded-xl border border-primary/20 p-2.5 shadow-card animate-slide-up relative z-30 mb-3 overflow-hidden" style={{ animationDelay: "0.1s" }}>
+          {/* Subtle gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-amber-50/30 pointer-events-none" />
           {/* Location Row */}
-          <div className="pb-2.5 border-b border-border">
+          <div className="pb-2.5 border-b border-border/50 relative">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5">
-                <MapPin className="text-primary" size={14} />
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                  <MapPin className="text-white" size={12} />
+                </div>
                 <span className="text-xs font-medium text-foreground">Location</span>
                 {isDetectingLocation && (
                   <span className="text-2xs text-muted-foreground flex items-center gap-1">
@@ -413,7 +314,7 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
               <button
                 onClick={detectLocation}
                 disabled={isDetectingLocation}
-                className="text-2xs text-primary flex items-center gap-1 disabled:opacity-50"
+                className="text-2xs text-primary flex items-center gap-1 disabled:opacity-50 font-medium hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors"
               >
                 <Navigation size={10} />
                 Detect
@@ -458,16 +359,16 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
           </div>
           
           {/* DISCOM Selector */}
-          <div className="pt-2.5 relative">
+          <div className="pt-2.5 relative z-[100]">
             <div className="flex items-center justify-between mb-1">
               <label className="text-2xs text-muted-foreground">Your DISCOM</label>
               {selectedDiscom && (
-                <span className="text-2xs text-accent">Auto-detected</span>
+                <span className="text-2xs text-accent font-medium">Auto-detected</span>
               )}
             </div>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg border border-input bg-background text-left"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg border border-input bg-background text-left hover:border-primary/40 transition-colors"
             >
               <span className={`text-xs ${selectedDiscom ? "font-medium text-foreground" : "text-muted-foreground"} truncate`}>
                 {selectedDiscom?.name || "Select your DISCOM"}
@@ -476,7 +377,7 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
             </button>
             
             {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-36 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-card border border-border rounded-xl shadow-xl z-[200] max-h-48 overflow-y-auto">
                 {DISCOMS.map((discom, index) => (
                   <button
                     key={index}
@@ -484,8 +385,8 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
                       setSelectedDiscom(discom);
                       setShowDropdown(false);
                     }}
-                    className={`w-full px-2.5 py-1.5 text-left hover:bg-secondary transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                      selectedDiscom?.name === discom.name ? "bg-primary/5" : ""
+                    className={`w-full px-3 py-2 text-left hover:bg-primary/5 transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                      selectedDiscom?.name === discom.name ? "bg-primary/10 border-l-2 border-primary" : ""
                     }`}
                   >
                     <p className="text-xs font-medium text-foreground">{discom.name}</p>
@@ -497,10 +398,10 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
           </div>
         </div>
 
-        {/* VC Upload Section */}
-        <div className="space-y-1.5 animate-slide-up z-10" style={{ animationDelay: "0.2s" }}>
-          <div className="flex items-start justify-between mb-0.5">
-            <span className="text-xs font-medium text-foreground">Verifiable Credentials</span>
+        {/* VC Upload Section - Simplified */}
+        <div className="space-y-2 animate-slide-up z-10" style={{ animationDelay: "0.2s" }}>
+          <div className="flex items-start justify-between">
+            <span className="text-xs font-medium text-foreground">Upload DISCOM Documents</span>
             <button
               onClick={() => setShowHelpModal(true)}
               className="text-2xs text-primary hover:underline flex items-center gap-0.5 flex-shrink-0"
@@ -509,90 +410,90 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
               Help
             </button>
           </div>
-          <p className="text-2xs text-muted-foreground mb-1.5">
-            Upload your DISCOM-issued Verifiable Credentials (JSON). Samai uses these to configure your trading
-            settings.
-          </p>
 
-          <div className="space-y-2">
-            {[
-              { key: "consumption", label: "Consumption VC" },
-              { key: "utility", label: "Utility VC" },
-              { key: "generation", label: "Generation VC" },
-            ].map(({ key, label }) => {
-              const fileName = uploadedFiles[key as keyof typeof uploadedFiles];
-              const isFileVerified = verifiedFiles[key as keyof typeof verifiedFiles];
+          {/* Single Upload Button */}
+          <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all bg-card">
+            <Upload className="text-primary mb-1.5" size={20} />
+            <span className="text-xs font-medium text-foreground">Tap to upload files</span>
+            <span className="text-2xs text-muted-foreground mt-0.5">Connection, Consumer, or Generation VCs</span>
+            <input 
+              type="file" 
+              accept=".pdf,.jpg,.jpeg,.png" 
+              multiple 
+              onChange={handleFileUpload} 
+              className="hidden" 
+            />
+          </label>
 
-              if (!fileName) {
-                return (
-                  <label
-                    key={key}
-                    className="flex items-center justify-between gap-2 px-2.5 py-2 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Upload className="text-muted-foreground" size={12} />
-                      <span className="text-2xs text-muted-foreground">Upload {label} (JSON)</span>
-                    </div>
-                    <input
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={(e) => handleFileUpload(key as "consumption" | "utility" | "generation", e)}
-                      className="hidden"
-                    />
-                  </label>
-                );
-              }
-
-              return (
-                <div
-                  key={key}
-                  className={`flex items-center justify-between px-2.5 py-2 rounded-lg border border-border ${
-                    isFileVerified ? "bg-accent/8" : "bg-secondary/60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {isFileVerified ? (
-                      <Check className="text-accent" size={12} />
-                    ) : (
-                      <div className="w-3.5 h-3.5 rounded-full bg-muted-foreground/30 animate-pulse" />
-                    )}
-                    <div>
-                      <p className="text-2xs font-medium text-foreground truncate max-w-[160px]">{fileName}</p>
-                      <span className="text-[10px] text-muted-foreground">{label}</span>
-                      {isFileVerified ? (
-                        <span className="text-[10px] text-accent ml-2">Verified ✓</span>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground ml-2">Ready to verify</span>
-                      )}
-                    </div>
+          {/* Uploaded Files List */}
+          {uploadedFiles.length > 0 && (
+            <div className="space-y-1.5">
+              {uploadedFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between px-2.5 py-2 bg-accent/8 rounded-lg border border-accent/20">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Check className="text-accent flex-shrink-0" size={12} />
+                    <span className="text-2xs text-foreground truncate">{file.name}</span>
                   </div>
-                  <button onClick={() => resetFile(key as "consumption" | "utility" | "generation")}>
-                    <X size={12} className="text-muted-foreground" />
+                  <button onClick={() => removeFile(index)} className="p-1 hover:bg-destructive/10 rounded transition-colors">
+                    <X size={12} className="text-muted-foreground hover:text-destructive" />
                   </button>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Fixed bottom CTAs */}
         <div className="mt-auto pt-4 pb-6 space-y-1.5 animate-slide-up" style={{ animationDelay: "0.3s" }}>
           <button
-            onClick={handleVerifyContinue}
-            disabled={!isFormValid || (!isVerified && !allFilesReady) || isVerifying || isExtracting}
+            onClick={() => {
+              // Save location data
+              setUserData({ 
+                address: location, 
+                city: city,
+                discom: selectedDiscom?.name || "" 
+              });
+              onContinue(isVerified, { address: location, city, discom: selectedDiscom?.name || "" });
+            }}
+            disabled={!isFormValid || !isVerified}
             className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isVerified ? (isExtracting ? "Loading devices..." : "Continue") : isVerifying ? "Verifying..." : "Verify credentials"}
+            Continue
           </button>
           
           {!isVerified && isFormValid && (
-            <button
-              onClick={() => onContinue({ isVCVerified: false })}
-              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1 py-2"
-            >
-              <AlertTriangle size={12} />
-              Skip for now
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  setUserData({ 
+                    address: location, 
+                    city: city,
+                    discom: selectedDiscom?.name || "" 
+                  });
+                  onContinue(false, { address: location, city, discom: selectedDiscom?.name || "" });
+                }}
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 py-1.5"
+              >
+                <AlertTriangle size={10} />
+                Skip for now
+              </button>
+              
+              {/* TODO: Remove this dummy button before production */}
+              <span className="text-muted-foreground/30">|</span>
+              <button
+                onClick={() => {
+                  setIsVerified(true);
+                  setUserData({ 
+                    address: location, 
+                    city: city,
+                    discom: selectedDiscom?.name || "" 
+                  });
+                  onContinue(true, { address: location, city, discom: selectedDiscom?.name || "" });
+                }}
+                className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-1.5"
+              >
+                [Dev] Mark as Verified
+              </button>
+            </div>
           )}
         </div>
       </div>

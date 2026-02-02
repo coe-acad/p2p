@@ -1,56 +1,11 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Zap, Battery, Gauge, Home } from "lucide-react";
-import { useUser } from "@/hooks/use-user";
+import { useState } from "react";
 
 const DevicesSettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const deviceType = searchParams.get("type") || "inverter";
-  const { devices } = useUser();
-
-  const consumptionDevice = devices.find((device) =>
-    String(device?.information?.credentialSubject?.type || device?.type || "")
-      .toLowerCase()
-      .includes("consumption"),
-  );
-  const generationDevice = devices.find((device) =>
-    String(device?.information?.credentialSubject?.type || device?.type || "")
-      .toLowerCase()
-      .includes("generation"),
-  );
-
-  const consumptionSubject = consumptionDevice?.information?.credentialSubject || {};
-  const generationSubject = generationDevice?.information?.credentialSubject || {};
-  const consumptionMeter = consumptionSubject.meterNumber || consumptionDevice?.meter_id || consumptionDevice?.meterId || "";
-  const generationMeter = generationSubject.meterNumber || generationDevice?.meter_id || generationDevice?.meterId || "";
-
-  const formatValue = (value: unknown, suffix?: string) => {
-    if (value === undefined || value === null || value === "") return "—";
-    const text = String(value);
-    if (suffix && !text.toLowerCase().includes(suffix.toLowerCase())) {
-      return `${text} ${suffix}`;
-    }
-    return text;
-  };
-
-  const consumptionDetails = [
-    { label: "Meter Number", value: formatValue(consumptionMeter) },
-    { label: "Type", value: formatValue(consumptionSubject.premisesType) },
-    { label: "Size", value: formatValue(consumptionSubject.connectionType) },
-    { label: "Sanctioned Load", value: formatValue(consumptionSubject.sanctionedLoadKW, "kW") },
-    { label: "Tariff Category", value: formatValue(consumptionSubject.tariffCategoryCode) },
-  ];
-
-  const generationDetails = [
-    { label: "Meter Number", value: formatValue(generationMeter) },
-    { label: "Generation Type", value: formatValue(generationSubject.generationType) },
-    { label: "Capacity", value: formatValue(generationSubject.capacityKW, "kW") },
-    { label: "Commissioning Date", value: formatValue(generationSubject.commissioningDate) },
-  ];
-
-  const profileSublabel =
-    [consumptionSubject.connectionType, consumptionSubject.premisesType].filter(Boolean).join(" • ") ||
-    "Home profile";
 
   const devicesMap: Record<string, {
     icon: typeof Zap;
@@ -94,8 +49,13 @@ const DevicesSettingsPage = () => {
     profile: {
       icon: Home,
       label: "Home Profile",
-      sublabel: profileSublabel,
-      details: [...consumptionDetails, ...generationDetails],
+      sublabel: "3 BHK • Residential",
+      details: [
+        { label: "Type", value: "Residential" },
+        { label: "Size", value: "3 BHK" },
+        { label: "Avg. Consumption", value: "450 kWh/month" },
+        { label: "Peak Hours", value: "6 PM - 10 PM" },
+      ]
     },
   };
 
@@ -133,41 +93,17 @@ const DevicesSettingsPage = () => {
           </div>
           
           <div className="p-4">
-            {deviceType === "profile" ? (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Consumption VC</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {consumptionDetails.map((detail, dIndex) => (
-                      <div key={`consumption-${dIndex}`}>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{detail.label}</p>
-                        <p className="text-sm font-medium text-foreground mt-0.5">{detail.value}</p>
-                      </div>
-                    ))}
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              {device.details.map((detail, dIndex) => (
+                <div key={dIndex}>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{detail.label}</p>
+                  <p className="text-sm font-medium text-foreground mt-0.5">{detail.value}</p>
                 </div>
-                <div className="border-t border-border pt-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Generation VC</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {generationDetails.map((detail, dIndex) => (
-                      <div key={`generation-${dIndex}`}>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{detail.label}</p>
-                        <p className="text-sm font-medium text-foreground mt-0.5">{detail.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {device.details.map((detail, dIndex) => (
-                  <div key={dIndex}>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{detail.label}</p>
-                    <p className="text-sm font-medium text-foreground mt-0.5">{detail.value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
+            <button className="mt-4 w-full py-2.5 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+              Edit Details
+            </button>
           </div>
         </div>
       </div>

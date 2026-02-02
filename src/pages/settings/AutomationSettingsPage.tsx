@@ -1,14 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, Sparkles, Check } from "lucide-react";
 import { useState } from "react";
+import { useUserData } from "@/hooks/useUserData";
 
 const AutomationSettingsPage = () => {
   const navigate = useNavigate();
-  const [selectedMode, setSelectedMode] = useState<"manual" | "auto">("auto");
+  const { userData, setUserData } = useUserData();
+  const [selectedMode, setSelectedMode] = useState<"recommend" | "auto">(
+    userData.automationLevel === "auto" ? "auto" : "recommend"
+  );
 
   const modes = [
     {
-      id: "manual" as const,
+      id: "recommend" as const,
       icon: Eye,
       title: "Show me the best times & prices",
       description: "Samai will recommend optimal times but ask for your confirmation before placing orders",
@@ -82,6 +86,10 @@ const AutomationSettingsPage = () => {
 
         {/* Save Button */}
         <button
+          onClick={() => {
+            setUserData({ automationLevel: selectedMode });
+            navigate("/profile");
+          }}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity animate-slide-up"
           style={{ animationDelay: "0.4s" }}
         >

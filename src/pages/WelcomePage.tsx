@@ -7,7 +7,7 @@ const WelcomePage = () => {
   return (
     <WelcomeScreen
       onNewUser={() => navigate("/intent")}
-      onReturningUser={() => navigate("/returning")}
+      onReturningUser={() => navigate("/verify")}
     />
   );
 };

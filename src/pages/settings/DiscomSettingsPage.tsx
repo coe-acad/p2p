@@ -1,13 +1,26 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, MapPin, Building2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, MapPin, Building2, Home } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useUserData } from "@/hooks/useUserData";
 
 const DiscomSettingsPage = () => {
   const navigate = useNavigate();
-  const [location, setLocation] = useState("Bengaluru, Karnataka");
-  const [discom, setDiscom] = useState("BESCOM");
+  const { userData, setUserData } = useUserData();
+  
+  const [address, setAddress] = useState(userData.address || "");
+  const [location, setLocation] = useState(userData.city || "Bengaluru, Karnataka");
+  const [discom, setDiscom] = useState(userData.discom || "BESCOM");
 
   const discoms = ["BESCOM", "MESCOM", "HESCOM", "GESCOM", "CESC"];
+
+  const handleSave = () => {
+    setUserData({
+      address,
+      city: location,
+      discom
+    });
+    navigate("/profile");
+  };
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
@@ -20,14 +33,32 @@ const DiscomSettingsPage = () => {
           >
             <ChevronLeft size={20} className="text-foreground" />
           </button>
-          <h1 className="text-lg font-bold text-foreground">DISCOM Settings</h1>
+          <h1 className="text-lg font-bold text-foreground">Location & DISCOM</h1>
+        </div>
+
+        {/* Address - from VC Documents */}
+        <div className="bg-card rounded-xl p-4 shadow-card animate-slide-up">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Home size={14} className="text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Address</p>
+            </div>
+            <span className="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">From VC</span>
+          </div>
+          <textarea
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Address from your VC documents"
+            rows={2}
+            className="w-full text-sm font-medium text-foreground bg-muted/30 border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none transition-colors resize-none"
+          />
         </div>
 
         {/* Location */}
-        <div className="bg-card rounded-xl p-4 shadow-card animate-slide-up">
+        <div className="bg-card rounded-xl p-4 shadow-card animate-slide-up" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center gap-2 mb-2">
             <MapPin size={14} className="text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">Your Location</p>
+            <p className="text-xs text-muted-foreground">City / Region</p>
           </div>
           <input
             type="text"
@@ -62,6 +93,7 @@ const DiscomSettingsPage = () => {
 
         {/* Save Button */}
         <button
+          onClick={handleSave}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity animate-slide-up"
           style={{ animationDelay: "0.2s" }}
         >
