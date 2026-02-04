@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Sparkles } from "lucide-react";
+import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Sparkles, ExternalLink } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 
@@ -30,18 +30,18 @@ interface ReverseGeocodeResult {
 }
 
 const DISCOMS = [
-  { state: "Maharashtra", name: "MSEDCL", fullName: "Maharashtra State Electricity Distribution Co. Ltd" },
-  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited" },
-  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited" },
-  { state: "Karnataka", name: "BESCOM", fullName: "Bangalore Electricity Supply Company" },
-  { state: "Tamil Nadu", name: "TANGEDCO", fullName: "Tamil Nadu Generation and Distribution Corporation" },
-  { state: "Gujarat", name: "UGVCL", fullName: "Uttar Gujarat Vij Company Limited" },
-  { state: "Rajasthan", name: "JVVNL", fullName: "Jaipur Vidyut Vitran Nigam Limited" },
-  { state: "Andhra Pradesh", name: "APSPDCL", fullName: "AP Southern Power Distribution Company" },
-  { state: "Telangana", name: "TSSPDCL", fullName: "Telangana Southern Power Distribution" },
-  { state: "Kerala", name: "KSEB", fullName: "Kerala State Electricity Board" },
-  { state: "West Bengal", name: "WBSEDCL", fullName: "West Bengal State Electricity Distribution" },
-  { state: "Uttar Pradesh", name: "UPPCL", fullName: "Uttar Pradesh Power Corporation" },
+  { state: "Maharashtra", name: "MSEDCL", fullName: "Maharashtra State Electricity Distribution Co. Ltd", portalUrl: "https://www.mahadiscom.in/" },
+  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited", portalUrl: "https://www.tatapower-ddl.com/" },
+  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited", portalUrl: "https://www.bsesdelhi.com/" },
+  { state: "Karnataka", name: "BESCOM", fullName: "Bangalore Electricity Supply Company", portalUrl: "https://bescom.karnataka.gov.in/" },
+  { state: "Tamil Nadu", name: "TANGEDCO", fullName: "Tamil Nadu Generation and Distribution Corporation", portalUrl: "https://www.tangedco.gov.in/" },
+  { state: "Gujarat", name: "UGVCL", fullName: "Uttar Gujarat Vij Company Limited", portalUrl: "https://www.ugvcl.com/" },
+  { state: "Rajasthan", name: "JVVNL", fullName: "Jaipur Vidyut Vitran Nigam Limited", portalUrl: "https://energy.rajasthan.gov.in/jvvnl" },
+  { state: "Andhra Pradesh", name: "APSPDCL", fullName: "AP Southern Power Distribution Company", portalUrl: "https://www.apspdcl.in/" },
+  { state: "Telangana", name: "TSSPDCL", fullName: "Telangana Southern Power Distribution", portalUrl: "https://tsspdcl.cgg.gov.in/" },
+  { state: "Kerala", name: "KSEB", fullName: "Kerala State Electricity Board", portalUrl: "https://www.kseb.in/" },
+  { state: "West Bengal", name: "WBSEDCL", fullName: "West Bengal State Electricity Distribution", portalUrl: "https://www.wbsedcl.in/" },
+  { state: "Uttar Pradesh", name: "UPPCL", fullName: "Uttar Pradesh Power Corporation", portalUrl: "https://www.uppcl.org/" },
 ];
 
 const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps) => {
@@ -407,7 +407,7 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
               className="text-2xs text-primary hover:underline flex items-center gap-0.5 flex-shrink-0"
             >
               <HelpCircle size={9} />
-              Help
+              How to get VC?
             </button>
           </div>
 
@@ -503,28 +503,50 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
         <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
           <div className="bg-card w-full max-w-sm rounded-xl p-4 animate-slide-up shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-foreground">How to get this document</h3>
+              <h3 className="text-base font-bold text-foreground">How to get your VC in 3 simple steps</h3>
               <button onClick={() => setShowHelpModal(false)}>
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>
             
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               {[
-                { step: 1, text: `Open ${selectedDiscom?.name || "your DISCOM"} app or website` },
-                { step: 2, text: "Download your Verifiable Credentials (VC)" },
+                { 
+                  step: 1, 
+                  text: `Open ${selectedDiscom?.name || "your DISCOM"} portal`,
+                  hasLink: true
+                },
+                { step: 2, text: "Login and download your Verifiable Credentials (VC)" },
                 { step: 3, text: "Upload it here to start trading!" },
               ].map((item) => (
-                <div key={item.step} className="flex gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold flex-shrink-0">
+                <div key={item.step} className="flex gap-2.5 items-start">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold flex-shrink-0">
                     {item.step}
                   </div>
-                  <p className="text-xs text-muted-foreground">{item.text}</p>
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">{item.text}</p>
+                    {item.hasLink && selectedDiscom?.portalUrl && (
+                      <a 
+                        href={selectedDiscom.portalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-1 text-xs text-primary font-medium hover:underline"
+                      >
+                        <ExternalLink size={11} />
+                        Visit {selectedDiscom.name} Portal
+                      </a>
+                    )}
+                    {item.hasLink && !selectedDiscom && (
+                      <p className="text-2xs text-amber-600 mt-1 italic">
+                        Select your DISCOM above to get the direct link
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
             
-            <button onClick={() => setShowHelpModal(false)} className="btn-outline-calm w-full mt-3 !py-2 text-sm">
+            <button onClick={() => setShowHelpModal(false)} className="btn-outline-calm w-full mt-4 !py-2 text-sm">
               Got it
             </button>
           </div>

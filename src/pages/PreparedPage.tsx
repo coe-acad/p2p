@@ -1,12 +1,17 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import PreparedTomorrowScreen from "@/components/screens/PreparedTomorrowScreen";
+import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 
 const PreparedPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { tradesData } = usePublishedTrades();
   const isVCVerified = location.state?.isVCVerified ?? false;
-  // Show confirmed trades section if user has confirmed trades
-  const hasConfirmedTrades = location.state?.hasConfirmedTrades ?? false;
+  
+  // Only show confirmed trades if explicitly flagged via showConfirmed state OR tradesData flag
+  const showConfirmedFromState = location.state?.showConfirmed ?? false;
+  const hasConfirmedTrades = showConfirmedFromState && tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
+  
   // Force walkthrough during onboarding flow (coming from /calculating)
   const fromOnboarding = location.state?.fromOnboarding ?? false;
 

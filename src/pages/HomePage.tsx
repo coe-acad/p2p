@@ -7,22 +7,15 @@ import MarioCoin from "@/components/MarioCoin";
 import chatbotIcon from "@/assets/chatbot-icon.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 
 // Session storage keys
 const NOTIFICATION_SHOWN_KEY = "samai_confirmed_notification_shown";
-const UPI_POPUP_SHOWN_KEY = "samai_upi_popup_shown";
-const UPI_SKIPPED_KEY = "samai_upi_skipped";
 const ONBOARDING_LOCATION_KEY = "samai_onboarding_location_done";
 const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
 const HIDE_SETUP_BANNER_KEY = "samai_hide_setup_banner";
+const HAS_COMPLETED_FIRST_TRADE_KEY = "samai_has_completed_first_trade";
 
 type TabType = "chat" | "home" | "statements";
 type TomorrowStatus = "not_published" | "published_confirmed" | "published_pending";
@@ -34,8 +27,9 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-// Earnings data with animation states
-const initialTodayData = { actual: 56, expected: 85, actualKwh: 9, expectedKwh: 14 };
+// Earnings data with animation states - for returning users only
+// Today's predicted: ₹186 @ avg ₹6.15/unit = ~30.24 kWh (rounded to 30)
+const initialTodayData = { actual: 56, expected: 186, actualKwh: 9, expectedKwh: 30 };
 const monthData = { actual: 114, expected: 450, actualKwh: 18, expectedKwh: 72 };
 
 const HomePage = () => {
@@ -43,9 +37,14 @@ const HomePage = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { userData, setUserData } = useUserData();
+  const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
   
   // Get verification status from router state or userData (persisted)
   const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
+  const justPublished = location.state?.justPublished ?? false;
+  
+  // Determine if user is new (based on userData flag)
+  const isNewUser = !userData.isReturningUser;
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -57,31 +56,30 @@ const HomePage = () => {
   const [showMegaCelebration, setShowMegaCelebration] = useState(false);
   const [earningsView, setEarningsView] = useState<"today" | "month">("today");
   
-  // Animated earnings values
-  const [displayedEarnings, setDisplayedEarnings] = useState(initialTodayData.actual);
-  const [displayedKwh, setDisplayedKwh] = useState(initialTodayData.actualKwh);
+  // Animated earnings values - only for returning users
+  const [displayedEarnings, setDisplayedEarnings] = useState(isNewUser ? 0 : initialTodayData.actual);
+  const [displayedKwh, setDisplayedKwh] = useState(isNewUser ? 0 : initialTodayData.actualKwh);
   const [celebrationCount, setCelebrationCount] = useState(0);
   const [lastEarningsIncrease, setLastEarningsIncrease] = useState(5);
   
-  // Demo state - in real app would come from backend
-  const [tomorrowStatus] = useState<TomorrowStatus>("published_confirmed");
-  const tomorrowData = { units: 25, earnings: 155, avgRate: 6.2 };
-  const hasConfirmedTrades = tomorrowStatus === "published_confirmed";
+  // Tomorrow status based on published trades OR justPublished flag from navigation
+  const isPublished = tradesData.isPublished || justPublished;
+  const tomorrowStatus: TomorrowStatus = isPublished 
+    ? (tradesData.showConfirmedTrades ? "published_confirmed" : "published_pending")
+    : "not_published";
+  const tomorrowData = { 
+    units: totalUnits, 
+    earnings: totalEarnings, 
+    avgRate: avgRate 
+  };
+  // Only show confirmed trades if explicitly flagged
+  const hasConfirmedTrades = tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
 
   // Session-based notification state
   const [notificationShown, setNotificationShown] = useState(() => {
     return sessionStorage.getItem(NOTIFICATION_SHOWN_KEY) === "true";
   });
 
-  // UPI popup state
-  const [showUpiPopup, setShowUpiPopup] = useState(false);
-  const [upiId, setUpiId] = useState(userData.upiId || "");
-  const [upiPopupShown, setUpiPopupShown] = useState(() => {
-    return sessionStorage.getItem(UPI_POPUP_SHOWN_KEY) === "true";
-  });
-  const [upiSkipped, setUpiSkipped] = useState(() => {
-    return localStorage.getItem(UPI_SKIPPED_KEY) === "true" && !userData.upiId;
-  });
 
   const showConfirmedNotification = () => {
     toast({
@@ -105,53 +103,22 @@ const HomePage = () => {
     setNotificationShown(false);
   };
 
-  const handleSaveUpi = () => {
-    if (upiId.trim() && upiId.includes("@")) {
-      setUserData({ upiId });
-      sessionStorage.setItem(UPI_POPUP_SHOWN_KEY, "true");
-      localStorage.removeItem(UPI_SKIPPED_KEY);
-      setUpiPopupShown(true);
-      setUpiSkipped(false);
-      setShowUpiPopup(false);
-      toast({
-        title: "Payment method saved! 💰",
-        description: "Your UPI ID has been saved for settlements",
-      });
-    }
-  };
-
-  const skipUpiSetup = () => {
-    sessionStorage.setItem(UPI_POPUP_SHOWN_KEY, "true");
-    localStorage.setItem(UPI_SKIPPED_KEY, "true");
-    setUpiPopupShown(true);
-    setUpiSkipped(true);
-    setShowUpiPopup(false);
-  };
-
-  // Show UPI popup after 3 seconds (first popup)
+  // Show confirmed trades notification after 15s
   useEffect(() => {
-    if (isVCVerified && !upiPopupShown && !userData.upiId) {
-      const timer = setTimeout(() => {
-        setShowUpiPopup(true);
-      }, 3000); // 3 second delay
-      return () => clearTimeout(timer);
-    }
-  }, [isVCVerified, upiPopupShown, userData.upiId]);
-
-  // Show confirmed trades notification after 15s (second notification, after UPI)
-  useEffect(() => {
-    if (hasConfirmedTrades && isVCVerified && !notificationShown && (upiPopupShown || userData.upiId)) {
+    if (hasConfirmedTrades && isVCVerified && !notificationShown) {
       const timer = setTimeout(() => {
         showConfirmedNotification();
       }, 15000); // 15 second delay
       return () => clearTimeout(timer);
     }
-  }, [hasConfirmedTrades, isVCVerified, notificationShown, upiPopupShown, userData.upiId]);
+  }, [hasConfirmedTrades, isVCVerified, notificationShown]);
 
   // Celebration animation effect - trigger every 10 seconds with value increase
+  // Only for returning users (not new users who have no earnings yet)
   // Stops at 100% progress with MEGA celebration, then resets and restarts for prototype demo
   useEffect(() => {
-    if (isVCVerified) {
+    // Skip celebration logic for new users
+    if (isVCVerified && !isNewUser) {
       const interval = setInterval(() => {
         setDisplayedEarnings(prev => {
           const expected = earningsView === "today" ? initialTodayData.expected : monthData.expected;
@@ -186,7 +153,7 @@ const HomePage = () => {
       }, 10000); // Every 10 seconds
       return () => clearInterval(interval);
     }
-  }, [isVCVerified, earningsView]);
+  }, [isVCVerified, earningsView, isNewUser]);
 
   const toggleHideSetupBanner = () => {
     const newValue = !hideSetupBanner;
@@ -359,22 +326,6 @@ const HomePage = () => {
           </button>
         )}
 
-        {/* Pending Payment Setup Card */}
-        {upiSkipped && !userData.upiId && (
-          <button
-            onClick={() => setShowUpiPopup(true)}
-            className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-100 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 border border-amber-300/40 dark:border-amber-700/30 rounded-xl animate-slide-up backdrop-blur-sm w-full text-left hover:shadow-md transition-all"
-          >
-            <div className="w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-800/40 flex items-center justify-center flex-shrink-0">
-              <Wallet size={12} className="text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">Add payment method</p>
-              <p className="text-[10px] text-muted-foreground">Set up UPI to receive settlements</p>
-            </div>
-            <ArrowRight size={14} className="text-amber-500" />
-          </button>
-        )}
 
         {/* Section 1: Earnings Snapshot - Colorful & Exciting */}
         <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-primary/20" 
@@ -440,19 +391,23 @@ const HomePage = () => {
                     {earningsView === "today" ? "Today's Earnings" : "This Month"}
                   </p>
                   <div className={`relative inline-flex items-baseline mt-0.5 ${showCelebration ? "scale-110" : ""} transition-transform duration-300`}>
-                    <RollingNumber 
-                      value={isVCVerified ? (earningsView === "today" ? displayedEarnings : monthData.actual) : 0}
-                      prefix="₹"
-                      className="text-3xl font-black text-white drop-shadow-lg"
-                    />
+                    {isNewUser ? (
+                      <span className="text-3xl font-black text-white drop-shadow-lg">--</span>
+                    ) : (
+                      <RollingNumber 
+                        value={isVCVerified ? (earningsView === "today" ? displayedEarnings : monthData.actual) : 0}
+                        prefix="₹"
+                        className="text-3xl font-black text-white drop-shadow-lg"
+                      />
+                    )}
                   </div>
                   <p className="text-[10px] text-white/70 font-medium">
-                    {isVCVerified ? (earningsView === "today" ? displayedKwh : monthData.actualKwh) : "0"} kWh sold
+                    {isNewUser ? "-- kWh sold" : (isVCVerified ? `${earningsView === "today" ? displayedKwh : monthData.actualKwh} kWh sold` : "0 kWh sold")}
                   </p>
                 </div>
                 
-                {/* Live indicator - more vibrant */}
-                {isVCVerified && earningsView === "today" && (
+                {/* Live indicator - only for returning users */}
+                {isVCVerified && !isNewUser && earningsView === "today" && (
                   <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full border border-white/30">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-lg shadow-green-400/50" />
                     <span className="text-[9px] font-bold text-white">LIVE</span>
@@ -460,13 +415,13 @@ const HomePage = () => {
                 )}
               </div>
               
-              {/* Progress bar - Prominent with goal */}
-              {isVCVerified && (
+              {/* Progress bar - Hidden for new users */}
+              {isVCVerified && !isNewUser && (
                 <div className="mt-3 pt-2 border-t border-white/20">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-medium text-white/80">
-                        {earningsView === "today" ? "Daily" : "Monthly"} Goal
+                        {earningsView === "today" ? "Predicted" : "Monthly Target"}
                       </span>
                       <span className="text-sm font-black text-white">
                         ₹{earningsView === "today" ? initialTodayData.expected : monthData.expected}
@@ -509,7 +464,7 @@ const HomePage = () => {
           <div className="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-sky-400/15 to-blue-500/10 rounded-full blur-xl" />
           <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-gradient-to-tl from-cyan-400/10 to-sky-500/5 rounded-full blur-lg" />
           
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2" onClick={() => navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: false } })}>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-500" />
               <p className="text-[10px] font-bold text-foreground uppercase tracking-wider">Tomorrow</p>
@@ -536,17 +491,23 @@ const HomePage = () => {
                 </span>
               </button>
             </div>
-          ) : tomorrowStatus === "published_confirmed" ? (
+          ) : (
+            // Both published_confirmed and published_pending show "Published" status
             <button 
-              onClick={() => navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: true, showConfirmed: false } })}
+              onClick={() => navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: tomorrowStatus === "published_confirmed", showConfirmed: false } })}
               className="relative w-full p-3 rounded-xl overflow-hidden group hover:shadow-lg hover:scale-[1.01] transition-all" 
-              style={{ background: "linear-gradient(135deg, hsl(200 75% 50%) 0%, hsl(210 80% 45%) 100%)" }}
+              style={{ background: "linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(152 65% 40%) 100%)" }}
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-white/25 to-transparent rounded-bl-full" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-white/15 to-transparent rounded-tr-full" />
-              {/* Cloud decoration */}
-              <div className="absolute top-2 right-12 w-8 h-3 bg-white/20 rounded-full blur-sm" />
-              <div className="flex items-center justify-between relative">
+              {/* Check decoration */}
+              <div className="absolute top-2 right-3 flex items-center gap-1">
+                <div className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center">
+                  <Check size={10} className="text-white" />
+                </div>
+                <span className="text-[9px] text-white/90 font-semibold uppercase tracking-wide">Published</span>
+              </div>
+              <div className="flex items-center justify-between relative mt-2">
                 <div>
                   <p className="text-[10px] text-white/80 font-medium">Selling tomorrow</p>
                   <p className="text-2xl font-black text-white drop-shadow-md">₹{tomorrowData.earnings}</p>
@@ -555,23 +516,13 @@ const HomePage = () => {
                 <div className="text-right">
                   <p className="text-[9px] text-white/60 uppercase tracking-wide font-semibold">Avg rate</p>
                   <p className="text-sm font-bold text-white">₹{tomorrowData.avgRate}/kWh</p>
-                  <div className="flex items-center justify-end gap-1 mt-1">
-                    <span className="text-[8px] text-white/60">View</span>
-                    <ArrowRight size={12} className="text-white/80 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center justify-end gap-1 mt-1.5">
+                    <span className="text-[9px] text-white/80 font-medium">View trades</span>
+                    <ArrowRight size={12} className="text-white group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               </div>
             </button>
-          ) : (
-            <div className="space-y-2">
-              <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-lg shadow-primary/30" />
-                  <p className="text-xs font-semibold text-foreground">Searching for buyers</p>
-                </div>
-                <p className="text-[10px] text-muted-foreground">Samai is finding the best prices</p>
-              </div>
-            </div>
           )}
         </div>
 
@@ -809,7 +760,7 @@ const HomePage = () => {
           <div>
             <p className="text-xs text-muted-foreground">{getGreeting()},</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <h1 className="text-lg font-bold text-foreground">Archana M</h1>
+              <h1 className="text-lg font-bold text-foreground">{userData.name}</h1>
               <span className="text-[10px] bg-gradient-to-r from-primary/15 to-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold border border-primary/20">Seller</span>
             </div>
           </div>
@@ -869,81 +820,68 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* UPI Setup Sheet */}
-      <Sheet open={showUpiPopup} onOpenChange={setShowUpiPopup}>
-        <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8">
-          <SheetHeader className="text-left pb-2">
-            <SheetTitle className="flex items-center gap-2 text-base">
-              <Wallet className="text-primary" size={18} />
-              Set Up Payment Method
-            </SheetTitle>
-            <SheetDescription className="text-xs">
-              Enter your UPI ID to receive trade settlements
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="space-y-4 pt-2">
-            <input
-              type="text"
-              value={upiId}
-              onChange={(e) => setUpiId(e.target.value)}
-              placeholder="yourname@upi"
-              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-
-            {/* Settlement Info */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-              <p className="text-xs font-medium text-foreground">How settlements work</p>
-              <ul className="space-y-1 text-2xs text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>All trades settled at end of month</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>View Payments page for transaction history</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>Updates daily at 10 PM</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex gap-2">
-              <button 
-                onClick={skipUpiSetup}
-                className="flex-1 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-lg border border-border"
-              >
-                Skip for now
-              </button>
-              <button 
-                onClick={handleSaveUpi}
-                disabled={!upiId.trim() || !upiId.includes("@")}
-                className="flex-1 btn-solar !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save UPI ID
-              </button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
 
 // Chat Screen Component
 const ChatScreen = () => {
+  const { userData } = useUserData();
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([
-    { role: "assistant", text: "Hi Archana! I'm Samai. How can I help you today?" }
+    { role: "assistant", text: `Hi ${userData.name?.split(' ')[0] || 'there'}! I'm Samai. How can I help you today?` }
   ]);
   const [input, setInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
 
   const suggestions = [
     "Pause selling tomorrow",
     "Don't sell between 9 AM to 3 PM",
     "Only sell if price is above ₹6",
   ];
+
+  // Speech recognition setup
+  const startListening = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        text: "Sorry, voice input isn't supported in your browser. Please try Chrome or Edge." 
+      }]);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN'; // Default to Hindi
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join('');
+      
+      if (event.results[0].isFinal) {
+        handleSend(transcript);
+      } else {
+        setInput(transcript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
 
   // Listen for prefill events from nudges
   useEffect(() => {
@@ -1016,14 +954,24 @@ const ChatScreen = () => {
         </div>
       )}
 
-      {/* Input */}
+      {/* Input with Voice */}
       <div className="flex gap-2 pt-2 border-t border-border">
+        <button 
+          onClick={startListening}
+          className={`p-2 rounded-lg transition-all ${
+            isListening 
+              ? "bg-primary text-primary-foreground animate-pulse" 
+              : "bg-muted hover:bg-muted/80 text-foreground"
+          }`}
+        >
+          <Mic size={18} />
+        </button>
         <input 
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend(input)}
-          placeholder="Ask Samai anything..."
+          placeholder={isListening ? "Listening..." : "Ask Samai anything..."}
           className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button 
@@ -1031,7 +979,7 @@ const ChatScreen = () => {
           disabled={!input.trim()}
           className="px-3 py-2 bg-primary text-primary-foreground rounded-lg disabled:opacity-50"
         >
-          <Sparkles size={18} />
+          <Send size={18} />
         </button>
       </div>
     </div>

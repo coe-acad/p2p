@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Mic, MicOff, MessageSquare, ChevronLeft, Bell, Zap, MessageCircle } from "lucide-react";
+import { Mic, MicOff, MessageSquare, ChevronLeft, Bell, Zap, MessageCircle, AlertCircle } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 interface TalkToSamaiScreenProps {
   onContinue: () => void;
@@ -17,12 +18,38 @@ const GHOST_TEXTS = [
 const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
   const { userData, setUserData } = useUserData();
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
-  const [userInput, setUserInput] = useState("");
-  const [isListening, setIsListening] = useState(false);
+  const [userInput, setUserInput] = useState(userData.userContext || "");
   const [ghostTextIndex, setGhostTextIndex] = useState(0);
   const [automationLevel, setAutomationLevel] = useState<"recommend" | "auto">(userData.automationLevel || "auto");
 
+  // Speech recognition hook
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    isSupported,
+    error: speechError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition({
+    language: "hi-IN", // Default to Hindi
+    continuous: true,
+    interimResults: true,
+  });
+
   const isFormValid = automationLevel !== null;
+
+  // Update userInput when transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setUserInput(prev => {
+        const newText = prev ? `${prev} ${transcript}`.trim() : transcript.trim();
+        return newText;
+      });
+      resetTranscript();
+    }
+  }, [transcript, resetTranscript]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,12 +59,10 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
   }, []);
 
   const handleMicToggle = () => {
-    setIsListening(!isListening);
-    if (!isListening) {
-      setTimeout(() => {
-        setUserInput("मेरा घर दिन में ज्यादा बिजली इस्तेमाल करता है");
-        setIsListening(false);
-      }, 2000);
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -65,11 +90,10 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <span className="text-2xs text-muted-foreground">Step 3 of 3</span>
-              <div className="flex gap-0.5">
-                <div className="w-4 h-0.5 rounded-full bg-gradient-to-r from-orange-400 to-amber-500" />
-                <div className="w-4 h-0.5 rounded-full bg-gradient-to-r from-teal-400 to-green-500" />
-                <div className="w-4 h-0.5 rounded-full bg-gradient-to-r from-purple-400 to-indigo-500" />
+              <span className="text-2xs text-muted-foreground">Step 2 of 2</span>
+              <div className="flex gap-1">
+                <div className="w-6 h-1 rounded-full bg-gradient-to-r from-orange-400 to-amber-500" />
+                <div className="w-6 h-1 rounded-full bg-gradient-to-r from-purple-400 to-indigo-500" />
               </div>
             </div>
             <div className="flex items-center justify-center gap-2">
@@ -119,19 +143,45 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
               />
             ) : (
               <div className="flex flex-col items-center py-2">
+                {/* Speech not supported warning */}
+                {!isSupported && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertCircle size={14} className="text-amber-600" />
+                    <span className="text-2xs text-amber-700">Speech recognition not supported. Please use text input.</span>
+                  </div>
+                )}
+
+                {/* Speech error display */}
+                {speechError && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle size={14} className="text-red-600" />
+                    <span className="text-2xs text-red-700">{speechError}</span>
+                  </div>
+                )}
+
                 <button
                   onClick={handleMicToggle}
+                  disabled={!isSupported}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-md ${
                     isListening 
                       ? "bg-gradient-to-br from-red-500 to-red-600 animate-pulse" 
-                      : "bg-gradient-to-br from-purple-500 to-indigo-600 hover:scale-105"
+                      : isSupported
+                        ? "bg-gradient-to-br from-purple-500 to-indigo-600 hover:scale-105"
+                        : "bg-gray-300 cursor-not-allowed"
                   }`}
                 >
                   {isListening ? <MicOff className="text-white" size={20} /> : <Mic className="text-white" size={20} />}
                 </button>
                 <p className="text-2xs text-purple-700 mt-1.5 font-medium">
-                  {isListening ? "Listening..." : "Tap to speak"}
+                  {isListening ? "Listening... (tap to stop)" : "Tap to speak"}
                 </p>
+
+                {/* Show interim transcript while listening */}
+                {isListening && interimTranscript && (
+                  <div className="mt-2 p-2 bg-purple-50/50 rounded-lg border border-purple-200/30 w-full">
+                    <p className="text-2xs text-purple-600 italic">{interimTranscript}</p>
+                  </div>
+                )}
                 
                 {/* Guiding prompts - Single row compact */}
                 <div className="flex flex-wrap justify-center gap-1.5 mt-2">
@@ -205,9 +255,14 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
         <div className="mt-auto pt-3 pb-4">
           <button 
             onClick={() => {
+              // Save both automation level and user context
               const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-              localStorage.setItem("samai_user_data", JSON.stringify({ ...currentData, automationLevel }));
-              setUserData({ automationLevel });
+              localStorage.setItem("samai_user_data", JSON.stringify({ 
+                ...currentData, 
+                automationLevel,
+                userContext: userInput.trim() 
+              }));
+              setUserData({ automationLevel, userContext: userInput.trim() });
               onContinue();
             }} 
             disabled={!isFormValid}

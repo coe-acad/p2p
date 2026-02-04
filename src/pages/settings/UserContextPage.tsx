@@ -1,12 +1,29 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, MessageSquare, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useUserData } from "@/hooks/useUserData";
+import { useToast } from "@/hooks/use-toast";
 
 const UserContextPage = () => {
   const navigate = useNavigate();
-  const [context, setContext] = useState(
-    "I work from home most days and prefer to use my solar power during peak hours. I'd like to sell excess energy in the morning when rates are better."
-  );
+  const { userData, setUserData } = useUserData();
+  const { toast } = useToast();
+  const [context, setContext] = useState(userData.userContext || "");
+  const [isSaved, setIsSaved] = useState(true);
+
+  // Track unsaved changes
+  useEffect(() => {
+    setIsSaved(context === (userData.userContext || ""));
+  }, [context, userData.userContext]);
+
+  const handleSave = () => {
+    setUserData({ userContext: context.trim() });
+    setIsSaved(true);
+    toast({
+      title: "Context saved",
+      description: "Your preferences have been updated.",
+    });
+  };
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
@@ -39,9 +56,13 @@ const UserContextPage = () => {
             onChange={(e) => setContext(e.target.value)}
             placeholder="Tell Samai about your energy usage patterns, work schedule, preferences..."
             className="w-full h-32 text-sm text-foreground bg-transparent resize-none focus:outline-none placeholder:text-muted-foreground/50"
+            maxLength={500}
           />
-          <div className="flex justify-end mt-2">
-            <span className="text-[10px] text-muted-foreground">{context.length}/500</span>
+          <div className="flex justify-between items-center mt-2">
+            {!isSaved && (
+              <span className="text-2xs text-amber-600 font-medium">Unsaved changes</span>
+            )}
+            <span className="text-[10px] text-muted-foreground ml-auto">{context.length}/500</span>
           </div>
         </div>
 
@@ -57,10 +78,13 @@ const UserContextPage = () => {
 
         {/* Save Button */}
         <button
-          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity animate-slide-up"
+          onClick={handleSave}
+          disabled={isSaved}
+          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity animate-slide-up disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{ animationDelay: "0.3s" }}
         >
-          Save Context
+          <Save size={16} />
+          {isSaved ? "Saved" : "Save Context"}
         </button>
       </div>
     </div>

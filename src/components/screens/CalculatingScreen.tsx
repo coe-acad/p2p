@@ -5,7 +5,7 @@ import SamaiLogo from "../SamaiLogo";
 interface CalculatingScreenProps {
   onComplete: () => void;
 }
-//
+
 const CalculatingScreen = ({ onComplete }: CalculatingScreenProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   

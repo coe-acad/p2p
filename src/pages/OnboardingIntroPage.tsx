@@ -6,9 +6,8 @@ const OnboardingIntroPage = () => {
   const navigate = useNavigate();
 
   const steps = [
-    { step: 1, title: "Verify electricity connection", icon: MapPin, color: "from-orange-400 to-amber-500" },
-    { step: 2, title: "Confirm your solar setup", icon: Cpu, color: "from-teal-400 to-green-500" },
-    { step: 3, title: "Help Samai understand you", icon: MessageCircle, color: "from-purple-400 to-indigo-500" },
+    { step: 1, title: "Verify your electricity connection", icon: MapPin, color: "from-orange-400 to-amber-500" },
+    { step: 2, title: "Help Samai understand you", icon: MessageCircle, color: "from-purple-400 to-indigo-500" },
   ];
 
   return (
@@ -58,7 +57,7 @@ const OnboardingIntroPage = () => {
             Your Samai account is ready!
           </h2>
           <p className="text-sm text-muted-foreground">
-            Complete 3 quick steps before you start earning.
+            Complete 2 quick steps before you start earning.
           </p>
         </div>
 
@@ -85,7 +84,15 @@ const OnboardingIntroPage = () => {
 
         {/* CTA */}
         <button
-          onClick={() => navigate("/onboarding/location")}
+          onClick={() => {
+            // Clear userContext for new users starting fresh onboarding
+            const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
+            localStorage.setItem("samai_user_data", JSON.stringify({ 
+              ...currentData, 
+              userContext: "" 
+            }));
+            navigate("/onboarding/location");
+          }}
           className="btn-solar w-full flex items-center justify-center gap-2 animate-slide-up !py-3.5"
           style={{ animationDelay: "0.3s" }}
         >
