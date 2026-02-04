@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Wallet, Info, FileText, ChevronDown } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Wallet, Info, FileText, ChevronDown, Check, ArrowRight } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
+import { useToast } from "@/hooks/use-toast";
 
 type PaymentStatus = "received" | "confirmed" | "pending";
 
@@ -19,7 +20,15 @@ interface PaymentTransaction {
 
 const PaymentsPage = () => {
   const navigate = useNavigate();
-  const { userData } = useUserData();
+  const { userData, setUserData } = useUserData();
+  const { toast } = useToast();
+  
+  // For returning users, show their saved UPI ID; for new users, show empty
+  const isReturningUser = userData.isReturningUser ?? false;
+  const defaultUpiId = isReturningUser ? (userData.upiId || "jyotirmayee@upi") : (userData.upiId || "");
+  
+  const [upiId, setUpiId] = useState(defaultUpiId);
+  const [isEditingUpi, setIsEditingUpi] = useState(!defaultUpiId);
 
   // Demo data - completed transactions with payment status (matches home page "This Month" = ₹114)
   const transactions: PaymentTransaction[] = [
@@ -125,6 +134,17 @@ const PaymentsPage = () => {
     },
   ];
 
+  const handleSaveUpi = () => {
+    if (upiId.trim() && upiId.includes("@")) {
+      setUserData({ upiId });
+      setIsEditingUpi(false);
+      toast({
+        title: "Payment method saved! 💰",
+        description: "Your UPI ID has been saved for receiving settlements",
+      });
+    }
+  };
+
   return (
     <div className="screen-container !justify-start !pt-4">
       <div className="w-full max-w-md flex flex-col h-full px-4">
@@ -139,147 +159,226 @@ const PaymentsPage = () => {
             </button>
             <div>
               <h1 className="text-base font-bold text-foreground">Payments</h1>
-              <p className="text-2xs text-muted-foreground">Settlement account</p>
+              <p className="text-2xs text-muted-foreground">Receive your energy earnings</p>
             </div>
           </div>
           <SamaiLogo size="sm" showText={false} />
         </div>
 
-        {/* UPI Info Card */}
-        <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Wallet size={16} className="text-primary" />
-              <p className="text-xs font-medium text-foreground">Settlement Account</p>
-            </div>
-            <button 
-              onClick={() => navigate("/settings/payment")}
-              className="text-2xs text-primary hover:underline"
-            >
-              Edit
-            </button>
-          </div>
-          <p className="text-sm font-bold text-foreground">{userData.upiId || "Not set"}</p>
-        </div>
-
-        {/* Info Banner */}
-        <div className="bg-muted/50 rounded-xl p-3 mb-3 flex items-start gap-2 animate-slide-up" style={{ animationDelay: "0.05s" }}>
-          <Info size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
-          <p className="text-2xs text-muted-foreground">
-            All trades are settled at end of month. This page updates daily at 10 PM with transactions from the previous 24 hours.
-          </p>
-        </div>
-
-        {/* Summary Card */}
-        <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-2xs text-muted-foreground">This Month</p>
-              <p className="text-lg font-bold text-foreground">₹{Math.round(totalAmount)}</p>
-            </div>
-            <div>
-              <p className="text-2xs text-muted-foreground">Received</p>
-              <p className="text-lg font-bold text-accent">₹{Math.round(receivedAmount)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Transactions List */}
-        <div className="flex-1 overflow-y-auto space-y-3 pb-4">
-          {Object.entries(groupedByDate).map(([date, txns]) => (
-            <div key={date} className="space-y-1.5 animate-slide-up">
-              <h3 className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">{date}</h3>
-              <div className="space-y-1">
-                {txns.map((txn) => {
-                  const config = getStatusConfig(txn.paymentStatus);
-                  const Icon = config.icon;
-                  const amount = txn.units * txn.pricePerUnit;
-
-                  return (
-                    <div key={txn.id} className={`px-3 py-2 rounded-lg ${config.bg}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Icon size={12} className={config.color} />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-medium text-foreground truncate">{txn.timeSlot}</span>
-                              <span className="text-2xs text-muted-foreground">{txn.buyer}</span>
-                            </div>
-                            <span className={`text-2xs ${config.color}`}>{config.label}</span>
-                          </div>
-                        </div>
-                        <div className="text-right ml-2">
-                          <p className="text-xs font-bold text-foreground">
-                            +₹{Math.round(amount)}
-                          </p>
-                          <p className="text-2xs text-muted-foreground">
-                            {Math.round(txn.units)} kWh
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* UPI Setup Card - Show prominently if not set (new users) */}
+        {(!isReturningUser && !userData.upiId) || isEditingUpi ? (
+          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-accent/5 rounded-xl p-4 shadow-card mb-3 animate-slide-up border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center">
+                <Wallet size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Set Up Payment Account</p>
+                <p className="text-2xs text-muted-foreground">Where should we send your earnings?</p>
               </div>
             </div>
-          ))}
+            
+            <input
+              type="text"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="yourname@upi"
+              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+            />
 
-          {transactions.length === 0 && (
-            <div className="text-center py-6">
-              <p className="text-xs text-muted-foreground">No transactions yet</p>
+            {/* Settlement Info */}
+            <div className="bg-background/60 rounded-lg p-3 space-y-1.5 mb-3">
+              <p className="text-xs font-medium text-foreground">How you'll receive payments</p>
+              <ul className="space-y-1 text-2xs text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
+                  <span>Earnings from sold energy are settled monthly</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
+                  <span>Direct deposit to your UPI account</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
+                  <span>Track all transactions on this page</span>
+                </li>
+              </ul>
+            </div>
+
+            <button 
+              onClick={handleSaveUpi}
+              disabled={!upiId.trim() || !upiId.includes("@")}
+              className="w-full btn-solar !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Payment Method
+            </button>
+            
+            {(userData.upiId || isReturningUser) && isEditingUpi && (
+              <button 
+                onClick={() => {
+                  setUpiId(userData.upiId || defaultUpiId);
+                  setIsEditingUpi(false);
+                }}
+                className="w-full mt-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Existing UPI Info Card - for returning users or when UPI is set */
+          <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Wallet size={16} className="text-primary" />
+                <p className="text-xs font-medium text-foreground">Settlement Account</p>
+              </div>
+              <button 
+                onClick={() => setIsEditingUpi(true)}
+                className="text-2xs text-primary hover:underline"
+              >
+                Edit
+              </button>
+            </div>
+            <p className="text-sm font-bold text-foreground">{userData.upiId || defaultUpiId}</p>
+          </div>
+        )}
+
+        {/* Info Banner - only show for new users without transactions */}
+        {!isReturningUser && (
+          <div className="bg-muted/50 rounded-xl p-3 mb-3 flex items-start gap-2 animate-slide-up" style={{ animationDelay: "0.05s" }}>
+            <Info size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+            <p className="text-2xs text-muted-foreground">
+              All trades are settled at end of month. This page updates daily at 10 PM with transactions from the previous 24 hours.
+            </p>
+          </div>
+        )}
+
+        {/* Summary Card - Only show for returning users with transactions */}
+        {isReturningUser && (
+          <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-2xs text-muted-foreground">This Month</p>
+                <p className="text-lg font-bold text-foreground">₹{Math.round(totalAmount)}</p>
+              </div>
+              <div>
+                <p className="text-2xs text-muted-foreground">Received</p>
+                <p className="text-lg font-bold text-accent">₹{Math.round(receivedAmount)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Transactions List - Only for returning users */}
+        <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+          {isReturningUser ? (
+            <>
+              {Object.entries(groupedByDate).map(([date, txns]) => (
+                <div key={date} className="space-y-1.5 animate-slide-up">
+                  <h3 className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">{date}</h3>
+                  <div className="space-y-1">
+                    {txns.map((txn) => {
+                      const config = getStatusConfig(txn.paymentStatus);
+                      const Icon = config.icon;
+                      const amount = txn.units * txn.pricePerUnit;
+
+                      return (
+                        <div key={txn.id} className={`px-3 py-2 rounded-lg ${config.bg}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Icon size={12} className={config.color} />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-foreground truncate">{txn.timeSlot}</span>
+                                  <span className="text-2xs text-muted-foreground">{txn.buyer}</span>
+                                </div>
+                                <span className={`text-2xs ${config.color}`}>{config.label}</span>
+                              </div>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="text-xs font-bold text-foreground">
+                                +₹{Math.round(amount)}
+                              </p>
+                              <p className="text-2xs text-muted-foreground">
+                                {Math.round(txn.units)} kWh
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            /* New user - empty state */
+            <div className="text-center py-8">
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                <Wallet size={20} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">No payments yet</p>
+              <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">
+                Once you start selling energy, your earnings will appear here
+              </p>
             </div>
           )}
 
-          {/* View Statements Button */}
-          <button
-            onClick={() => setShowStatements(!showStatements)}
-            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border-t border-border mt-2"
-          >
-            <FileText size={16} />
-            <span>View statements for previous months</span>
-            <ChevronDown size={16} className={`transition-transform ${showStatements ? 'rotate-180' : ''}`} />
-          </button>
+          {/* View Statements Button - Only for returning users */}
+          {isReturningUser && (
+            <>
+              <button
+                onClick={() => setShowStatements(!showStatements)}
+                className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border-t border-border mt-2"
+              >
+                <FileText size={16} />
+                <span>View statements for previous months</span>
+                <ChevronDown size={16} className={`transition-transform ${showStatements ? 'rotate-180' : ''}`} />
+              </button>
 
-          {/* Statements Section */}
-          {showStatements && (
-            <div className="space-y-2 animate-slide-up">
-              {monthlyData.map((month) => (
-                <div key={month.month} className="bg-card rounded-xl shadow-card overflow-hidden">
-                  {/* Month Header - Clickable */}
-                  <button
-                    onClick={() => setExpandedMonth(expandedMonth === month.month ? null : month.month)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{month.month}</p>
-                      <p className="text-xs text-muted-foreground">{month.totalUnits} kWh sold</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-base font-bold text-primary">₹{month.totalAmount.toLocaleString()}</p>
-                      <ChevronDown 
-                        size={16}
-                        className={`text-muted-foreground transition-transform ${expandedMonth === month.month ? 'rotate-180' : ''}`}
-                      />
-                    </div>
-                  </button>
-
-                  {/* Transactions - Expandable */}
-                  {expandedMonth === month.month && (
-                    <div className="border-t border-border divide-y divide-border/50 max-h-60 overflow-y-auto">
-                      {month.transactions.map((tx, i) => (
-                        <div key={i} className="flex items-center justify-between px-3 py-2 bg-muted/20">
-                          <div>
-                            <p className="text-xs font-medium text-foreground">{tx.date}</p>
-                            <p className="text-[10px] text-muted-foreground">{tx.time} • {tx.units} kWh</p>
-                          </div>
-                          <p className="text-xs font-semibold text-accent">+₹{tx.amount}</p>
+              {/* Statements Section */}
+              {showStatements && (
+                <div className="space-y-2 animate-slide-up">
+                  {monthlyData.map((month) => (
+                    <div key={month.month} className="bg-card rounded-xl shadow-card overflow-hidden">
+                      {/* Month Header - Clickable */}
+                      <button
+                        onClick={() => setExpandedMonth(expandedMonth === month.month ? null : month.month)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{month.month}</p>
+                          <p className="text-xs text-muted-foreground">{month.totalUnits} kWh sold</p>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <p className="text-base font-bold text-primary">₹{month.totalAmount.toLocaleString()}</p>
+                          <ChevronDown 
+                            size={16}
+                            className={`text-muted-foreground transition-transform ${expandedMonth === month.month ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+                      </button>
+
+                      {/* Transactions - Expandable */}
+                      {expandedMonth === month.month && (
+                        <div className="border-t border-border divide-y divide-border/50 max-h-60 overflow-y-auto">
+                          {month.transactions.map((tx, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-2 bg-muted/20">
+                              <div>
+                                <p className="text-xs font-medium text-foreground">{tx.date}</p>
+                                <p className="text-[10px] text-muted-foreground">{tx.time} • {tx.units} kWh</p>
+                              </div>
+                              <p className="text-xs font-semibold text-accent">+₹{tx.amount}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

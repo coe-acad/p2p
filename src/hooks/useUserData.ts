@@ -17,22 +17,28 @@ export interface UserData {
   upiId?: string; // e.g., "archana@upi"
   // Verification status
   isVCVerified?: boolean; // DISCOM VC verification status
+  // User context from "Talk to Samai"
+  userContext?: string; // Transcribed/typed context about usage patterns
+  // Demo mode: returning user with 30 days of trading history
+  isReturningUser?: boolean; // If true, shows full transaction history and earnings
 }
 
 const DEFAULT_USER_DATA: UserData = {
-  name: "Archana M",
-  phone: "+91 98765 43210",
-  address: "42, 5th Cross, Hebbal",
-  city: "Hebbal, Bangalore, Karnataka",
-  discom: "BESCOM",
-  consumerId: "BESCOM-XXXXXX",
+  name: "TPDL-Prosumer-7", // Default name for new users (from VC document)
+  phone: "",
+  address: "",
+  city: "",
+  discom: "",
+  consumerId: "",
   automationLevel: "recommend",
   schoolHolidays: "",
   summerVacationStart: "",
   summerVacationEnd: "",
   upcomingEvents: "",
   upiId: "",
-  isVCVerified: true, // Default to true for demo
+  isVCVerified: false, // New users need to verify
+  userContext: "",
+  isReturningUser: false, // Default to new user
 };
 
 const STORAGE_KEY = "samai_user_data";

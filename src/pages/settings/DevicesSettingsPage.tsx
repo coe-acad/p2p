@@ -38,23 +38,23 @@ const DevicesSettingsPage = () => {
     meter: {
       icon: Gauge,
       label: "Smart Meter",
-      sublabel: "Genus • Bi-directional",
+      sublabel: "TPDDL • 62358107",
       details: [
-        { label: "Brand", value: "Genus" },
-        { label: "Model", value: "GENUS-SM-01" },
-        { label: "Type", value: "Bi-directional" },
-        { label: "Connection", value: "RS485" },
+        { label: "DISCOM ID", value: "TPDDL-P" },
+        { label: "Consumer ID", value: "80000190017" },
+        { label: "Meter ID", value: "62358107" },
+        { label: "Customer Type", value: "Prosumer" },
       ]
     },
     profile: {
       icon: Home,
       label: "Home Profile",
-      sublabel: "3 BHK • Residential",
+      sublabel: "Prosumer • TPDDL",
       details: [
-        { label: "Type", value: "Residential" },
-        { label: "Size", value: "3 BHK" },
-        { label: "Avg. Consumption", value: "450 kWh/month" },
-        { label: "Peak Hours", value: "6 PM - 10 PM" },
+        { label: "Type", value: "Prosumer" },
+        { label: "DISCOM", value: "Tata Power Delhi Distribution" },
+        { label: "Address", value: "abc street, Delhi, India" },
+        { label: "Connection Date", value: "20-03-2024" },
       ]
     },
   };

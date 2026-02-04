@@ -1,14 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import LocationDiscomScreen from "@/components/screens/LocationDiscomScreen";
+import LocationDeviceScreen from "@/components/screens/LocationDeviceScreen";
 
 const ONBOARDING_LOCATION_KEY = "samai_onboarding_location_done";
+const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
 
 const OnboardingLocationPage = () => {
   const navigate = useNavigate();
 
   const handleContinue = (isVerified: boolean, locationData?: { address?: string; city?: string; discom?: string }) => {
+    // Mark both location and devices as done (combined step)
     localStorage.setItem(ONBOARDING_LOCATION_KEY, "true");
-    navigate("/onboarding/devices", { 
+    localStorage.setItem(ONBOARDING_DEVICES_KEY, "true");
+    navigate("/onboarding/talk", { 
       state: { 
         isVCVerified: isVerified,
         address: locationData?.address,
@@ -19,7 +22,7 @@ const OnboardingLocationPage = () => {
   };
 
   return (
-    <LocationDiscomScreen
+    <LocationDeviceScreen
       onContinue={handleContinue}
       onBack={() => navigate("/onboarding")}
     />

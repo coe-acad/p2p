@@ -12,6 +12,7 @@ interface VoiceNarrationProps {
   className?: string;
   autoPlay?: boolean;
   storageKey?: string;
+  onSpeechComplete?: () => void;
 }
 
 const LANGUAGES = [
@@ -29,7 +30,8 @@ const VoiceNarration = ({
   content, 
   className = "", 
   autoPlay = false,
-  storageKey = "samai_narration_played"
+  storageKey = "samai_narration_played",
+  onSpeechComplete
 }: VoiceNarrationProps) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]); // Hindi default
@@ -72,7 +74,8 @@ const VoiceNarration = ({
       if (!hasAutoPlayed.current) {
         hasAutoPlayed.current = true;
         startSpeaking();
-        localStorage.setItem(storageKey, 'true');
+        // Note: localStorage is set in onSpeechComplete callback, not here
+        // This ensures we track when narration actually completes
       }
     }, 1500);
 
@@ -105,8 +108,18 @@ const VoiceNarration = ({
       setIsSpeaking(true);
       setShowAttention(false);
     };
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Mark narration as played only after it completes
+      localStorage.setItem(storageKey, 'true');
+      onSpeechComplete?.();
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      // Also mark as played on error to prevent infinite retry
+      localStorage.setItem(storageKey, 'true');
+      onSpeechComplete?.();
+    };
 
     window.speechSynthesis.speak(utterance);
   }, [content, selectedLang]);

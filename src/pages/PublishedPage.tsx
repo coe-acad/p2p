@@ -8,7 +8,7 @@ const PublishedPage = () => {
 
   return (
     <PublishConfirmationScreen
-      onGoHome={() => navigate("/home", { state: { isVCVerified } })}
+      onGoHome={() => navigate("/home", { state: { isVCVerified, justPublished: true } })}
     />
   );
 };
