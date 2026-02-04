@@ -5,6 +5,7 @@ import SamaiLogo from "../SamaiLogo";
 interface VerificationScreenProps {
   onVerified: () => void;
   onBack: () => void;
+  isReturningUser?: boolean;
 }
 
 const isValidIndianMobile = (phone: string): boolean => {
@@ -23,7 +24,7 @@ const isValidGSTIN = (gstin: string): boolean => {
   return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin.toUpperCase());
 };
 
-const VerificationScreen = ({ onVerified, onBack }: VerificationScreenProps) => {
+const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
   const [step, setStep] = useState<"phone" | "otp" | "aadhaar" | "aadhaar-otp">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -59,11 +60,6 @@ const VerificationScreen = ({ onVerified, onBack }: VerificationScreenProps) => 
     setStep("otp");
   };
 
-  // Check if user has completed Aadhaar verification before (returning user)
-  const isReturningUser = (): boolean => {
-    return localStorage.getItem("samai_aadhaar_verified") === "true";
-  };
-
   const handleOtpChange = (index: number, value: string) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
       const newOtp = [...otp];
@@ -71,11 +67,15 @@ const VerificationScreen = ({ onVerified, onBack }: VerificationScreenProps) => 
       setOtp(newOtp);
       if (value && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
       if (newOtp.every(d => d) && newOtp.join("").length === 6) {
-        // Returning users skip Aadhaar, new users go to Aadhaar step
-        if (isReturningUser()) {
-          setTimeout(() => onVerified(), 500);
-        } else {
-          setTimeout(() => setStep("aadhaar"), 500);
+        const enteredOtp = newOtp.join("");
+        // Accept fixed OTP 212900 for demo, or proceed regardless for prototype
+        if (enteredOtp === "212900" || true) {
+          // Returning users skip Aadhaar, new users go to Aadhaar step
+          if (isReturningUser) {
+            setTimeout(() => onVerified(), 500);
+          } else {
+            setTimeout(() => setStep("aadhaar"), 500);
+          }
         }
       }
     }
@@ -181,13 +181,17 @@ const VerificationScreen = ({ onVerified, onBack }: VerificationScreenProps) => 
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Verify your identity</h2>
         </div>
 
-        {/* Steps */}
+        {/* Steps - Only 2 steps for returning users, 3 for new users */}
         <div className="flex items-center justify-center gap-1.5 animate-fade-in mb-3">
           <div className={`w-2 h-2 rounded-full ${step !== "phone" || step === "phone" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-5 h-0.5 ${step === "otp" || step === "aadhaar" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-2 h-2 rounded-full ${step === "otp" || step === "aadhaar" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-5 h-0.5 ${step === "aadhaar" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-2 h-2 rounded-full ${step === "aadhaar" ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-5 h-0.5 ${step === "otp" || step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${step === "otp" || step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+          {!isReturningUser && (
+            <>
+              <div className={`w-5 h-0.5 ${step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+              <div className={`w-2 h-2 rounded-full ${step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+            </>
+          )}
         </div>
 
         {/* Content area */}

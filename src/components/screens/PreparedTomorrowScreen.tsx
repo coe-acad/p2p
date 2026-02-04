@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ConfirmedTradesCard from "./ConfirmedTradesCard";
 import { useUserData } from "@/hooks/useUserData";
+import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import VoiceNarration from "../VoiceNarration";
+import { publishTradesApi } from "@/api/publishTrades";
 
 const WALKTHROUGH_STORAGE_KEY = "samai_prepared_walkthrough_seen";
 
@@ -211,13 +213,14 @@ interface PreparedTomorrowScreenProps {
 
 // Base time slots - will be filtered based on user choices
 // isBatteryPowered indicates if battery discharge is providing the energy (for evening/night)
+// Base time slots configured for ₹145 total: 4+5+4+4+3+3 = 23 kWh @ ~₹6.30 avg
 const BASE_TIME_SLOTS = [
-  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 5, rate: 6.10, isBatteryPowered: false },
-  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 5, rate: 6.20, isBatteryPowered: false },
-  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 4, rate: 6.00, isBatteryPowered: false },
-  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 4, rate: 6.25, isBatteryPowered: false },
-  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 3, rate: 6.80, isBatteryPowered: true },
-  { id: "6PM", time: "6:00 PM – 7:00 PM", kWh: 2, rate: 7.10, isBatteryPowered: true },
+  { id: "10AM", time: "10:00 AM – 11:00 AM", kWh: 4, rate: 6.25, isBatteryPowered: false },
+  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 5, rate: 6.20, isBatteryPowered: false },
+  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 4, rate: 6.30, isBatteryPowered: false },
+  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 4, rate: 6.35, isBatteryPowered: false },
+  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 3, rate: 6.40, isBatteryPowered: false },
+  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 3, rate: 6.50, isBatteryPowered: true },
 ];
 
 // Helper to calculate earnings from kWh and rate
@@ -255,6 +258,7 @@ const PreparedTomorrowScreen = ({
 }: PreparedTomorrowScreenProps) => {
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
+  const { publishTrades, tradesData } = usePublishedTrades();
   const isAutoMode = userData.automationLevel === "auto";
   
   // State for excluded hours - persisted during session
@@ -266,6 +270,27 @@ const PreparedTomorrowScreen = ({
     setUserData({ 
       automationLevel: isAutoMode ? "recommend" : "auto" 
     });
+  };
+  
+  // Handler for publishing trades (persists to localStorage)
+  const handlePublish = async () => {
+ try {
+    await publishTradesApi(activeTimeSlots);
+    console.log("Trades sent to backend successfully");
+  } catch (error) {
+    console.error("Failed to publish trades", error);
+  }
+
+    // Persist the active trades
+    publishTrades(activeTimeSlots.map(slot => ({
+      id: slot.id,
+      time: slot.time,
+      kWh: slot.kWh,
+      rate: slot.rate,
+      isBatteryPowered: slot.isBatteryPowered,
+    })));
+    // Call the original callback
+    onLooksGood();
   };
   
   // Calculate active time slots (not excluded and not paused)
@@ -290,6 +315,8 @@ const PreparedTomorrowScreen = ({
   // Walkthrough state
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [walkthroughStep, setWalkthroughStep] = useState(0);
+  const [narrationComplete, setNarrationComplete] = useState(false);
+  const shouldWaitForNarration = useRef(false);
 
   // Refs for walkthrough targets
   const earningsRef = useRef<HTMLDivElement>(null);
@@ -384,14 +411,27 @@ const PreparedTomorrowScreen = ({
     if (walkthroughInitialized.current || showWalkthrough) return;
     
     const hasSeenWalkthrough = localStorage.getItem(WALKTHROUGH_STORAGE_KEY);
+    
     // Show walkthrough if coming from onboarding (forceWalkthrough) or if never seen
     if (forceWalkthrough || !hasSeenWalkthrough) {
       walkthroughInitialized.current = true;
-      // Small delay to let elements render
-      const timer = setTimeout(() => setShowWalkthrough(true), 500);
-      return () => clearTimeout(timer);
+      
+      // Always wait for narration to complete before showing walkthrough for new users
+      // The walkthrough will be triggered by handleNarrationComplete callback
+      shouldWaitForNarration.current = true;
+      return;
     }
   }, []);
+
+  // Handler for when narration completes
+  const handleNarrationComplete = () => {
+    setNarrationComplete(true);
+    // If we were waiting for narration before showing walkthrough, start it now
+    if (shouldWaitForNarration.current && !showWalkthrough) {
+      const timer = setTimeout(() => setShowWalkthrough(true), 300);
+      return () => clearTimeout(timer);
+    }
+  };
 
   const handleWalkthroughComplete = () => {
     localStorage.setItem(WALKTHROUGH_STORAGE_KEY, 'true');
@@ -415,11 +455,12 @@ const PreparedTomorrowScreen = ({
   };
 
   const handleLooksGood = () => {
-    if (!isVCVerified) {
-      setShowVerificationError(true);
-    } else {
-      onLooksGood();
-    }
+    // if (!isVCVerified) {
+    //   setShowVerificationError(true);
+    // } else {
+    //   handlePublish();
+    // }
+    handlePublish();
   };
   const tomorrowFormatted = format(tomorrow, "EEEE, MMMM d");
   const todayFormatted = format(new Date(), "EEEE, MMMM d");
@@ -652,6 +693,7 @@ const PreparedTomorrowScreen = ({
           }
           autoPlay={true}
           storageKey="samai_prepared_narration_played"
+          onSpeechComplete={handleNarrationComplete}
           className="animate-fade-in"
         />
 

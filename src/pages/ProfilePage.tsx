@@ -38,7 +38,7 @@ const ProfilePage = () => {
       items: [
         { icon: Sparkles, label: "How Samai Helps", sublabel: userData.automationLevel === "auto" ? "Auto-place orders" : "Show recommendations", route: "/settings/automation" },
         { icon: Wallet, label: "Payment Method", sublabel: userData.upiId || "Not set", route: "/settings/payment" },
-        { icon: MessageSquare, label: "Your Context", sublabel: "Work from home, peak hours...", route: "/settings/context" },
+        { icon: MessageSquare, label: "Your Context", sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : "Not set", route: "/settings/context" },
         { icon: CalendarClock, label: "Vacations & Holidays", sublabel: userData.schoolHolidays || userData.summerVacationStart ? "Dates saved" : "Not set", route: "/settings/vacations" },
         { icon: Bell, label: "Notifications", sublabel: "Enabled", route: null },
       ]

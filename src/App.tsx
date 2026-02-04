@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -10,7 +11,6 @@ import SuccessPage from "./pages/SuccessPage";
 
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
 import OnboardingLocationPage from "./pages/OnboardingLocationPage";
-import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import CalculatingPage from "./pages/CalculatingPage";
 import PreparedPage from "./pages/PreparedPage";
@@ -41,16 +41,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Initial Flow */}
+          {/* Initial Flow - Welcome is the common landing for all users */}
           <Route path="/" element={<WelcomePage />} />
           <Route path="/intent" element={<IntentPage />} />
           <Route path="/verify" element={<VerifyPage />} />
           <Route path="/success" element={<SuccessPage />} />
           
-          {/* Onboarding Steps */}
+          {/* Onboarding Steps (2 steps: Location+Devices combined, then Talk) */}
           <Route path="/onboarding" element={<OnboardingIntroPage />} />
           <Route path="/onboarding/location" element={<OnboardingLocationPage />} />
-          <Route path="/onboarding/devices" element={<OnboardingDevicesPage />} />
           <Route path="/onboarding/talk" element={<OnboardingTalkPage />} />
           
           {/* Post-Onboarding */}
