@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FileText, User, AlertTriangle, ShieldCheck, X, Sparkles, Plane, CalendarClock, Bell, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, Star } from "lucide-react";
+import { FileText, User, AlertTriangle, ShieldCheck, X, Sparkles, Plane, CalendarClock, Bell, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, Star, LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
@@ -16,6 +22,7 @@ const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
 const HIDE_SETUP_BANNER_KEY = "samai_hide_setup_banner";
 const HAS_COMPLETED_FIRST_TRADE_KEY = "samai_has_completed_first_trade";
+const SESSION_APPROVED_KEY = "samai_session_approved";
 
 type TabType = "chat" | "home" | "statements";
 type TomorrowStatus = "not_published" | "published_confirmed" | "published_pending";
@@ -777,12 +784,36 @@ const HomePage = () => {
               </button>
             )}
             <SamaiLogo size="sm" showText={false} />
-            <button 
-              onClick={() => navigate("/profile")}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center border border-border/50 hover:shadow-md transition-all duration-200"
-            >
-              <User size={16} className="text-muted-foreground" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="w-9 h-9 rounded-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center border border-border/50 hover:shadow-md transition-all duration-200"
+                >
+                  <User size={16} className="text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="text-sm">
+                  <User size={14} className="mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    // Clear session approval state
+                    sessionStorage.removeItem(SESSION_APPROVED_KEY);
+                    // Clear all session and local storage for sign out
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to welcome page
+                    navigate("/");
+                  }} 
+                  className="text-sm text-destructive focus:text-destructive"
+                >
+                  <LogOut size={14} className="mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

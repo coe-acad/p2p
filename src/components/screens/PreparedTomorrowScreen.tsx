@@ -22,6 +22,7 @@ import VoiceNarration from "../VoiceNarration";
 import { publishTradesApi } from "@/api/publishTrades";
 
 const WALKTHROUGH_STORAGE_KEY = "samai_prepared_walkthrough_seen";
+const SESSION_APPROVED_KEY = "samai_session_approved";
 
 // Already confirmed/matched trades that won't be refreshed
 const CONFIRMED_TRADES = [
@@ -213,14 +214,14 @@ interface PreparedTomorrowScreenProps {
 
 // Base time slots - will be filtered based on user choices
 // isBatteryPowered indicates if battery discharge is providing the energy (for evening/night)
-// Base time slots configured for ₹145 total: 4+5+4+4+3+3 = 23 kWh @ ~₹6.30 avg
+// Base time slots configured for ₹185 total: 5+6+5+5+4+4 = 29 kWh @ ~₹6.38 avg
 const BASE_TIME_SLOTS = [
-  { id: "10AM", time: "10:00 AM – 11:00 AM", kWh: 4, rate: 6.25, isBatteryPowered: false },
-  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 5, rate: 6.20, isBatteryPowered: false },
-  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 4, rate: 6.30, isBatteryPowered: false },
-  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 4, rate: 6.35, isBatteryPowered: false },
-  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 3, rate: 6.40, isBatteryPowered: false },
-  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 3, rate: 6.50, isBatteryPowered: true },
+  { id: "10AM", time: "10:00 AM – 11:00 AM", kWh: 5, rate: 6.30, isBatteryPowered: false },
+  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 6, rate: 6.35, isBatteryPowered: false },
+  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 5, rate: 6.40, isBatteryPowered: false },
+  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 5, rate: 6.45, isBatteryPowered: false },
+  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 4, rate: 6.50, isBatteryPowered: false },
+  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 4, rate: 6.55, isBatteryPowered: true },
 ];
 
 // Helper to calculate earnings from kWh and rate
@@ -258,7 +259,15 @@ const PreparedTomorrowScreen = ({
 }: PreparedTomorrowScreenProps) => {
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
-  const { publishTrades, tradesData } = usePublishedTrades();
+  const { publishTrades, updatePlannedTrades, tradesData, setTradesData } = usePublishedTrades();
+  
+  // Reset approval state when user makes changes
+  const resetApprovalState = () => {
+    if (tradesData.isPublished) {
+      setTradesData({ isPublished: false });
+      sessionStorage.removeItem(SESSION_APPROVED_KEY);
+    }
+  };
   const isAutoMode = userData.automationLevel === "auto";
   
   // State for excluded hours - persisted during session
@@ -272,14 +281,40 @@ const PreparedTomorrowScreen = ({
     });
   };
   
+  // Calculate active time slots (not excluded and not paused)
+  const activeTimeSlots = isPaused ? [] : BASE_TIME_SLOTS.filter(
+    slot => !excludedSlotIds.includes(slot.id)
+  ).map(slot => ({
+    ...slot,
+    earnings: calculateEarnings(slot.kWh, slot.rate)
+  }));
+  
+  // Sync active trades to the hook whenever they change (for cross-page consistency)
+  useEffect(() => {
+    // Compute slots inside effect to avoid dependency on activeTimeSlots (which changes every render)
+    const slotsToSync = isPaused ? [] : BASE_TIME_SLOTS.filter(
+      slot => !excludedSlotIds.includes(slot.id)
+    ).map(slot => ({
+      id: slot.id,
+      time: slot.time,
+      kWh: slot.kWh,
+      rate: slot.rate,
+      isBatteryPowered: slot.isBatteryPowered,
+    }));
+    updatePlannedTrades(slotsToSync);
+  }, [excludedSlotIds, isPaused, updatePlannedTrades]);
+  
   // Handler for publishing trades (persists to localStorage)
   const handlePublish = async () => {
- try {
-    await publishTradesApi(activeTimeSlots);
-    console.log("Trades sent to backend successfully");
-  } catch (error) {
-    console.error("Failed to publish trades", error);
-  }
+    try {
+      await publishTradesApi(activeTimeSlots);
+      console.log("Trades sent to backend successfully");
+    } catch (error) {
+      console.error("Failed to publish trades", error);
+    }
+
+    // Mark as approved for this session
+    sessionStorage.setItem(SESSION_APPROVED_KEY, "true");
 
     // Persist the active trades
     publishTrades(activeTimeSlots.map(slot => ({
@@ -292,14 +327,6 @@ const PreparedTomorrowScreen = ({
     // Call the original callback
     onLooksGood();
   };
-  
-  // Calculate active time slots (not excluded and not paused)
-  const activeTimeSlots = isPaused ? [] : BASE_TIME_SLOTS.filter(
-    slot => !excludedSlotIds.includes(slot.id)
-  ).map(slot => ({
-    ...slot,
-    earnings: calculateEarnings(slot.kWh, slot.rate)
-  }));
   
   // Calculate totals dynamically from active slots
   const plannedUnits = activeTimeSlots.reduce((sum, slot) => sum + slot.kWh, 0);
@@ -382,10 +409,8 @@ const PreparedTomorrowScreen = ({
     },
     {
       id: 'looksGood',
-      title: isAutoMode ? 'Approve Now' : 'Confirm Your Plan',
-      description: isAutoMode 
-        ? 'Don\'t want to wait? Tap here to approve and post these trades to the market immediately.'
-        : 'Happy with the plan? Tap here to confirm and let Samai handle the trading for you tomorrow.',
+      title: 'Approve Now',
+      description: 'Tap here to approve and post these trades to the market immediately.',
       targetRef: looksGoodRef,
     },
     {
@@ -687,10 +712,7 @@ const PreparedTomorrowScreen = ({
 
         {/* Voice Narration Control - Auto-plays on first visit */}
         <VoiceNarration 
-          content={isAutoMode 
-            ? `कल के लिए आपका सोलर ट्रेडिंग प्लान तैयार है। कुल अनुमानित कमाई ${totalEarnings} रुपये है, ${Math.round(totalUnits)} किलोवाट घंटे बिजली बेचकर। ${activeTimeSlots.length} ट्रेड प्लान किए गए हैं। चूंकि आपने ऑटो-सेल चुना है, ये ट्रेड 2 घंटे में अपने आप मार्केट में पोस्ट हो जाएंगे। आप चाहें तो अभी अप्रूव कर सकते हैं या उससे पहले बदलाव कर सकते हैं।`
-            : `कल के लिए आपका सोलर ट्रेडिंग प्लान तैयार है। कुल अनुमानित कमाई ${totalEarnings} रुपये है, ${Math.round(totalUnits)} किलोवाट घंटे बिजली बेचकर। ${activeTimeSlots.length} ट्रेड प्लान किए गए हैं। अगर आप सहमत हैं तो लुक्स गुड बटन दबाएं और समाई कल आपके लिए ट्रेडिंग संभाल लेगा। बदलाव करने के लिए चेंज बटन दबाएं।`
-          }
+          content={`कल के लिए आपका सोलर ट्रेडिंग प्लान तैयार है। कुल अनुमानित कमाई ${totalEarnings} रुपये है, ${Math.round(totalUnits)} किलोवाट घंटे बिजली बेचकर। ${activeTimeSlots.length} ट्रेड प्लान किए गए हैं। अगर आप सहमत हैं तो अप्रूव नाउ बटन दबाएं और समाई कल आपके लिए ट्रेडिंग संभाल लेगा। बदलाव करने के लिए चेंज बटन दबाएं।`}
           autoPlay={true}
           storageKey="samai_prepared_narration_played"
           onSpeechComplete={handleNarrationComplete}
@@ -802,6 +824,7 @@ const PreparedTomorrowScreen = ({
                       <DropdownMenuContent align="end" className="w-36">
                         <DropdownMenuItem 
                           onClick={() => {
+                            resetApprovalState();
                             setChatInput(`Edit trade at ${slot.time}`);
                             handleOpenControl();
                           }}
@@ -812,6 +835,7 @@ const PreparedTomorrowScreen = ({
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => {
+                            resetApprovalState();
                             setExcludedSlotIds(prev => [...prev, slot.id]);
                           }}
                           className="text-xs text-destructive focus:text-destructive"
@@ -855,12 +879,26 @@ const PreparedTomorrowScreen = ({
 
           {/* Actions inside the card */}
           <div className="flex gap-2 p-3 pt-0">
-            <button ref={looksGoodRef} onClick={handleLooksGood} className="btn-solar flex-1 !py-2.5 text-sm">
-              {isAutoMode ? "Approve Now" : "Looks good"}
-            </button>
-            <button ref={changeRef} onClick={handleOpenControl} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
-              <span>Change</span>
-            </button>
+            {tradesData.isPublished ? (
+              <>
+                <div className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-accent/15 border border-accent/30">
+                  <Check size={16} className="text-accent" />
+                  <span className="text-sm font-medium text-accent">Approved</span>
+                </div>
+                <button ref={changeRef} onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
+                  <span>Change</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button ref={looksGoodRef} onClick={handleLooksGood} className="btn-solar flex-1 !py-2.5 text-sm">
+                  Approve Now
+                </button>
+                <button ref={changeRef} onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
+                  <span>Change</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
