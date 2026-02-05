@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ArrowLeft, Shield, Check, X, CreditCard, Building2, Receipt } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Shield, Check, X, CreditCard, Building2, Receipt, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 
 interface VerificationScreenProps {
@@ -25,7 +26,7 @@ const isValidGSTIN = (gstin: string): boolean => {
 };
 
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
-  const [step, setStep] = useState<"phone" | "otp" | "aadhaar" | "aadhaar-otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "aadhaar" | "aadhaar-otp" | "fetching">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -43,6 +44,45 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   const [panError, setPanError] = useState("");
   const [gstinNumber, setGstinNumber] = useState("");
   const [gstinError, setGstinError] = useState("");
+  
+  // Fetching loading state
+  const [fetchingProgress, setFetchingProgress] = useState(0);
+  const [fetchingStep, setFetchingStep] = useState(0);
+  
+  const fetchingMessages = [
+    { icon: Loader2, text: "Connecting to DigiLocker...", spin: true },
+    { icon: Lock, text: "Encrypting your data...", spin: false },
+    { icon: ShieldCheck, text: "Verification complete!", spin: false },
+  ];
+
+  // Handle fetching animation
+  useEffect(() => {
+    if (step === "fetching") {
+      setFetchingProgress(0);
+      setFetchingStep(0);
+      
+      const progressInterval = setInterval(() => {
+        setFetchingProgress(prev => {
+          if (prev >= 100) return 100;
+          return prev + 3.33; // Complete in ~3 seconds
+        });
+      }, 100);
+      
+      const stepTimers = [
+        setTimeout(() => setFetchingStep(1), 1000),
+        setTimeout(() => setFetchingStep(2), 2000),
+        setTimeout(() => {
+          localStorage.setItem("samai_aadhaar_verified", "true");
+          onVerified();
+        }, 3000),
+      ];
+      
+      return () => {
+        clearInterval(progressInterval);
+        stepTimers.forEach(timer => clearTimeout(timer));
+      };
+    }
+  }, [step, onVerified]);
   const handlePhoneChange = (value: string) => {
     const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
     setPhoneNumber(digitsOnly);
@@ -106,8 +146,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       setPanError("Please enter a valid PAN (e.g., ABCDE1234F)");
       return;
     }
-    localStorage.setItem("samai_aadhaar_verified", "true");
-    onVerified();
+    setStep("fetching");
   };
 
   const handleGstinChange = (value: string) => {
@@ -121,8 +160,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       setGstinError("Please enter a valid 15-character GSTIN");
       return;
     }
-    localStorage.setItem("samai_aadhaar_verified", "true");
-    onVerified();
+    setStep("fetching");
   };
 
   const handleAadhaarOtpChange = (index: number, value: string) => {
@@ -132,18 +170,14 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       setAadhaarOtp(newOtp);
       if (value && index < 5) document.getElementById(`aadhaar-otp-${index + 1}`)?.focus();
       if (newOtp.every(d => d) && newOtp.join("").length === 6) {
-        // Mark as verified user for future logins
-        localStorage.setItem("samai_aadhaar_verified", "true");
-        setTimeout(() => onVerified(), 500);
+        setTimeout(() => setStep("fetching"), 500);
       }
     }
   };
 
   const handleDigiLockerVerify = () => {
     if (consentChecked) {
-      // Mark as verified user for future logins
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      onVerified();
+      setStep("fetching");
     }
   };
 
@@ -446,6 +480,61 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
               <button className="text-2xs text-muted-foreground hover:text-primary text-center">
                 Resend OTP
               </button>
+            </div>
+          )}
+
+          {/* Fetching/Loading Step */}
+          {step === "fetching" && (
+            <div className="flex flex-col items-center justify-center gap-6 animate-fade-in py-8">
+              {/* Logo with pulse */}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+                    <Shield className="text-primary" size={28} />
+                  </div>
+                </div>
+                <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full max-w-xs">
+                <Progress value={fetchingProgress} className="h-1.5" />
+              </div>
+
+              {/* Status messages */}
+              <div className="w-full space-y-2">
+                {fetchingMessages.map((msg, index) => {
+                  const Icon = msg.icon;
+                  const isActive = index <= fetchingStep;
+                  const isComplete = index < fetchingStep;
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-500 ${
+                        isActive ? "opacity-100 bg-primary/5" : "opacity-30"
+                      }`}
+                    >
+                      {isComplete ? (
+                        <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                          <Check className="text-accent-foreground" size={12} />
+                        </div>
+                      ) : (
+                        <Icon 
+                          className={`text-primary ${msg.spin && isActive && !isComplete ? "animate-spin" : ""}`} 
+                          size={20} 
+                        />
+                      )}
+                      <span className="text-sm text-foreground">{msg.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Security note */}
+              <div className="text-center space-y-1 pt-2">
+                <p className="text-2xs text-muted-foreground">🔒 Your data is encrypted end-to-end</p>
+                <p className="text-2xs text-muted-foreground">We never store your Aadhaar number</p>
+              </div>
             </div>
           )}
         </div>
