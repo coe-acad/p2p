@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Wallet, Info, FileText, ChevronDown, Check, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Wallet, Info, FileText, ChevronDown, Check } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { useToast } from "@/hooks/use-toast";
+import PaymentDetailSheet from "@/components/payments/PaymentDetailSheet";
 
 type PaymentStatus = "received" | "confirmed" | "pending";
 
@@ -20,15 +22,19 @@ interface PaymentTransaction {
 
 const PaymentsPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { userData, setUserData } = useUserData();
   const { toast } = useToast();
   
   // For returning users, show their saved UPI ID; for new users, show empty
   const isReturningUser = userData.isReturningUser ?? false;
   const defaultUpiId = isReturningUser ? (userData.upiId || "jyotirmayee@upi") : (userData.upiId || "");
+  const defaultEmail = isReturningUser ? (userData.email || "jyotirmayee@gmail.com") : (userData.email || "");
   
   const [upiId, setUpiId] = useState(defaultUpiId);
+  const [email, setEmail] = useState(defaultEmail);
   const [isEditingUpi, setIsEditingUpi] = useState(!defaultUpiId);
+  const [selectedTransaction, setSelectedTransaction] = useState<PaymentTransaction | null>(null);
 
   // Demo data - completed transactions with payment status (matches home page "This Month" = ₹114)
   const transactions: PaymentTransaction[] = [
@@ -46,21 +52,21 @@ const PaymentsPage = () => {
       case "received":
         return {
           icon: CheckCircle2,
-          label: "Received",
+          label: t("payments.received"),
           color: "text-accent",
           bg: "bg-accent/10",
         };
       case "confirmed":
         return {
           icon: Clock,
-          label: "Confirmed",
+          label: t("trades.confirmed"),
           color: "text-primary",
           bg: "bg-primary/10",
         };
       case "pending":
         return {
           icon: AlertCircle,
-          label: "Pending",
+          label: t("common.pending"),
           color: "text-amber-600",
           bg: "bg-amber-500/10",
         };
@@ -134,13 +140,17 @@ const PaymentsPage = () => {
     },
   ];
 
-  const handleSaveUpi = () => {
-    if (upiId.trim() && upiId.includes("@")) {
-      setUserData({ upiId });
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const handleSavePayment = () => {
+    if (upiId.trim() && upiId.includes("@") && email.trim() && isValidEmail(email)) {
+      setUserData({ upiId, email });
       setIsEditingUpi(false);
       toast({
-        title: "Payment method saved! 💰",
-        description: "Your UPI ID has been saved for receiving settlements",
+        title: t("payments.paymentMethodSaved"),
+        description: t("payments.upiSavedDesc"),
       });
     }
   };
@@ -158,8 +168,8 @@ const PaymentsPage = () => {
               <ArrowLeft size={18} className="text-foreground" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-foreground">Payments</h1>
-              <p className="text-2xs text-muted-foreground">Receive your energy earnings</p>
+              <h1 className="text-base font-bold text-foreground">{t("payments.title")}</h1>
+              <p className="text-2xs text-muted-foreground">{t("payments.subtitle")}</p>
             </div>
           </div>
           <SamaiLogo size="sm" showText={false} />
@@ -173,8 +183,8 @@ const PaymentsPage = () => {
                 <Wallet size={16} className="text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Set Up Payment Account</p>
-                <p className="text-2xs text-muted-foreground">Where should we send your earnings?</p>
+                <p className="text-sm font-semibold text-foreground">{t("payments.setupAccount")}</p>
+                <p className="text-2xs text-muted-foreground">{t("payments.whereToSend")}</p>
               </div>
             </div>
             
@@ -183,34 +193,47 @@ const PaymentsPage = () => {
               value={upiId}
               onChange={(e) => setUpiId(e.target.value)}
               placeholder="yourname@upi"
-              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-2"
             />
+
+            {/* Email field - required for billing */}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t("payments.emailPlaceholder") || "your.email@example.com"}
+              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-2"
+            />
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-1">
+              <Info size={10} />
+              {t("payments.emailRequired") || "Email is mandatory for billing and transaction receipts"}
+            </p>
 
             {/* Settlement Info */}
             <div className="bg-background/60 rounded-lg p-3 space-y-1.5 mb-3">
-              <p className="text-xs font-medium text-foreground">How you'll receive payments</p>
+              <p className="text-xs font-medium text-foreground">{t("payments.howYouReceive")}</p>
               <ul className="space-y-1 text-2xs text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>Earnings from sold energy are settled monthly</span>
+                  <span>{t("payments.settledMonthly")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>Direct deposit to your UPI account</span>
+                  <span>{t("payments.directDeposit")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check size={10} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span>Track all transactions on this page</span>
+                  <span>{t("payments.trackTransactions")}</span>
                 </li>
               </ul>
             </div>
 
             <button 
-              onClick={handleSaveUpi}
-              disabled={!upiId.trim() || !upiId.includes("@")}
+              onClick={handleSavePayment}
+              disabled={!upiId.trim() || !upiId.includes("@") || !email.trim() || !isValidEmail(email)}
               className="w-full btn-solar !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Payment Method
+              {t("payments.savePaymentMethod")}
             </button>
             
             {(userData.upiId || isReturningUser) && isEditingUpi && (
@@ -221,7 +244,7 @@ const PaymentsPage = () => {
                 }}
                 className="w-full mt-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             )}
           </div>
@@ -231,16 +254,17 @@ const PaymentsPage = () => {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Wallet size={16} className="text-primary" />
-                <p className="text-xs font-medium text-foreground">Settlement Account</p>
+                <p className="text-xs font-medium text-foreground">{t("payments.settlementAccount")}</p>
               </div>
               <button 
                 onClick={() => setIsEditingUpi(true)}
                 className="text-2xs text-primary hover:underline"
               >
-                Edit
+                {t("common.edit")}
               </button>
             </div>
             <p className="text-sm font-bold text-foreground">{userData.upiId || defaultUpiId}</p>
+            <p className="text-xs text-muted-foreground mt-1">{userData.email || defaultEmail}</p>
           </div>
         )}
 
@@ -249,7 +273,7 @@ const PaymentsPage = () => {
           <div className="bg-muted/50 rounded-xl p-3 mb-3 flex items-start gap-2 animate-slide-up" style={{ animationDelay: "0.05s" }}>
             <Info size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
             <p className="text-2xs text-muted-foreground">
-              All trades are settled at end of month. This page updates daily at 10 PM with transactions from the previous 24 hours.
+              {t("payments.settlementInfo")}
             </p>
           </div>
         )}
@@ -259,11 +283,11 @@ const PaymentsPage = () => {
           <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-2xs text-muted-foreground">This Month</p>
+                <p className="text-2xs text-muted-foreground">{t("payments.thisMonth")}</p>
                 <p className="text-lg font-bold text-foreground">₹{Math.round(totalAmount)}</p>
               </div>
               <div>
-                <p className="text-2xs text-muted-foreground">Received</p>
+                <p className="text-2xs text-muted-foreground">{t("payments.received")}</p>
                 <p className="text-lg font-bold text-accent">₹{Math.round(receivedAmount)}</p>
               </div>
             </div>
@@ -284,7 +308,11 @@ const PaymentsPage = () => {
                       const amount = txn.units * txn.pricePerUnit;
 
                       return (
-                        <div key={txn.id} className={`px-3 py-2 rounded-lg ${config.bg}`}>
+                        <button
+                          key={txn.id}
+                          onClick={() => setSelectedTransaction(txn)}
+                          className={`w-full px-3 py-2 rounded-lg ${config.bg} hover:opacity-80 transition-opacity text-left`}
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <Icon size={12} className={config.color} />
@@ -305,7 +333,7 @@ const PaymentsPage = () => {
                               </p>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -318,9 +346,9 @@ const PaymentsPage = () => {
               <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Wallet size={20} className="text-muted-foreground" />
               </div>
-              <p className="text-sm font-medium text-foreground mb-1">No payments yet</p>
+              <p className="text-sm font-medium text-foreground mb-1">{t("payments.noPaymentsYet")}</p>
               <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">
-                Once you start selling energy, your earnings will appear here
+                {t("payments.startSellingMessage")}
               </p>
             </div>
           )}
@@ -333,7 +361,7 @@ const PaymentsPage = () => {
                 className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors border-t border-border mt-2"
               >
                 <FileText size={16} />
-                <span>View statements for previous months</span>
+                <span>{t("payments.viewStatements")}</span>
                 <ChevronDown size={16} className={`transition-transform ${showStatements ? 'rotate-180' : ''}`} />
               </button>
 
@@ -349,7 +377,7 @@ const PaymentsPage = () => {
                       >
                         <div>
                           <p className="text-sm font-semibold text-foreground">{month.month}</p>
-                          <p className="text-xs text-muted-foreground">{month.totalUnits} kWh sold</p>
+                          <p className="text-xs text-muted-foreground">{month.totalUnits} kWh {t("orders.totalSold").toLowerCase()}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="text-base font-bold text-primary">₹{month.totalAmount.toLocaleString()}</p>
@@ -382,6 +410,13 @@ const PaymentsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Payment Detail Sheet */}
+      <PaymentDetailSheet 
+        transaction={selectedTransaction}
+        open={!!selectedTransaction}
+        onOpenChange={(open) => !open && setSelectedTransaction(null)}
+      />
     </div>
   );
 };

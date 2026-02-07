@@ -74,39 +74,39 @@ export const usePublishedTrades = () => {
   }, []);
 
   const publishTrades = async (trades: PlannedTrade[]) => {
-    // Only submit to backend if there are trades to submit
+    // Persist immediately (prevents race conditions when navigating)
+    const publishedAt = new Date().toISOString();
+    setTradesDataState(prev => {
+      const newData: PublishedTradesData = {
+        ...prev,
+        plannedTrades: trades,
+        isPublished: true,
+        publishedAt,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      return newData;
+    });
+
+    // Submit to backend (non-blocking for UI)
     if (trades && trades.length > 0) {
-      // Convert trades to backend schema
       const tradeSubmissions = convertTradesToSchema(trades);
-      
-      // Submit to backend
+
       try {
-        const { data, error } = await supabase.functions.invoke('submit-trades', {
-          body: { trades: tradeSubmissions }
+        const { data, error } = await supabase.functions.invoke("submit-trades", {
+          body: { trades: tradeSubmissions },
         });
-        
+
         if (error) {
-          console.error('Failed to submit trades to backend:', error);
+          console.error("Failed to submit trades to backend:", error);
         } else {
-          console.log('Trades submitted successfully:', data);
+          console.log("Trades submitted successfully:", data);
         }
       } catch (err) {
-        console.error('Error calling submit-trades:', err);
+        console.error("Error calling submit-trades:", err);
       }
     } else {
-      console.log('No trades to submit, skipping backend call');
+      console.log("No trades to submit, skipping backend call");
     }
-    
-    // Update local state regardless of backend response
-    const newData = {
-      ...tradesData,
-      plannedTrades: trades,
-      isPublished: true,
-      publishedAt: new Date().toISOString(),
-    };
-    // Synchronously write to localStorage before state update to prevent race condition
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-    setTradesDataState(newData);
   };
 
   const confirmTrades = (trades: ConfirmedTrade[]) => {

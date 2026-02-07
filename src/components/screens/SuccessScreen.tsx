@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 
@@ -8,6 +9,7 @@ interface SuccessScreenProps {
 
 const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
   const [showConfetti, setShowConfetti] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setTimeout(() => setShowConfetti(true), 300);
@@ -34,8 +36,8 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
 
         {/* Message */}
         <div className="text-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-xl font-semibold text-foreground tracking-tight">You're in!</h2>
-          <p className="text-sm text-muted-foreground mt-1">Welcome to the Samai community</p>
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">{t("success.youreIn")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("success.welcomeToCommunity")}</p>
         </div>
 
         {/* Logo */}
@@ -49,7 +51,7 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
           className="btn-solar w-full text-sm !py-2.5 animate-slide-up"
           style={{ animationDelay: "0.4s" }}
         >
-          Get started
+          {t("onboarding.getStarted")}
         </button>
       </div>
     </div>

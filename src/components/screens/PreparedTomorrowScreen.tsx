@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Leaf, Clock, TrendingUp, Zap, AlertTriangle, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ShieldX, ChevronRight, HelpCircle, ArrowLeft, Timer, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { format, addDays, parse } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +19,12 @@ import ConfirmedTradesCard from "./ConfirmedTradesCard";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import VoiceNarration from "../VoiceNarration";
-import { publishTradesApi } from "@/api/publishTrades";
+
 
 const WALKTHROUGH_STORAGE_KEY = "samai_prepared_walkthrough_seen";
 const SESSION_APPROVED_KEY = "samai_session_approved";
+const PREPARED_EXCLUSIONS_KEY = "samai_prepared_excluded_slot_ids";
+const PREPARED_PAUSED_KEY = "samai_prepared_trades_paused";
 
 // Already confirmed/matched trades that won't be refreshed
 const CONFIRMED_TRADES = [
@@ -36,6 +38,19 @@ interface WalkthroughStep {
   description: string;
   targetRef: React.RefObject<HTMLElement>;
 }
+
+ const toISOTimeRange = (timeRange: string, targetDate: Date) => {
+  // Example input: "10:00 AM – 11:00 AM"
+  const [start, end] = timeRange.split("–").map(t => t.trim());
+
+  const startDate = parse(start, "h:mm a", targetDate);
+  const endDate = parse(end, "h:mm a", targetDate);
+
+  return {
+    startTime: startDate.toISOString(),
+    endTime: endDate.toISOString(),
+  };
+};
 
 const WalkthroughOverlay = ({ 
   steps, 
@@ -270,10 +285,45 @@ const PreparedTomorrowScreen = ({
   };
   const isAutoMode = userData.automationLevel === "auto";
   
-  // State for excluded hours - persisted during session
-  const [excludedSlotIds, setExcludedSlotIds] = useState<string[]>([]);
-  const [isPaused, setIsPaused] = useState(false);
-  
+  // State for excluded hours + pause state (persisted until sign out)
+  const [excludedSlotIds, setExcludedSlotIds] = useState<string[]>(() => {
+    // Prefer explicitly persisted exclusions
+    const stored = localStorage.getItem(PREPARED_EXCLUSIONS_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.every(v => typeof v === "string")) {
+          return parsed;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Back-compat: if we already have a persisted plan, infer exclusions from it
+    if (tradesData.plannedTrades.length > 0) {
+      const plannedIds = new Set(tradesData.plannedTrades.map(t => t.id));
+      return BASE_TIME_SLOTS.filter(slot => !plannedIds.has(slot.id)).map(slot => slot.id);
+    }
+
+    return [];
+  });
+
+  const [isPaused, setIsPaused] = useState(() => {
+    const stored = localStorage.getItem(PREPARED_PAUSED_KEY);
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(PREPARED_EXCLUSIONS_KEY, JSON.stringify(excludedSlotIds));
+  }, [excludedSlotIds]);
+
+  useEffect(() => {
+    localStorage.setItem(PREPARED_PAUSED_KEY, String(isPaused));
+  }, [isPaused]);
+
   // Dev toggle for testing auto mode
   const toggleAutoMode = () => {
     setUserData({ 
@@ -303,30 +353,85 @@ const PreparedTomorrowScreen = ({
     }));
     updatePlannedTrades(slotsToSync);
   }, [excludedSlotIds, isPaused, updatePlannedTrades]);
+
+  const postTradesToBackend = async (slots: typeof activeTimeSlots) => {
+  const tomorrow = addDays(new Date(), 1);
+
+  const trades = slots.map(slot => {
+    const { startTime, endTime } = toISOTimeRange(slot.time, tomorrow);
+
+    return {
+      startTime,
+      endTime,
+      price: slot.rate,
+      kWh: slot.kWh,
+    };
+  });
+
+  const payload = {
+    trades,
+    date: format(tomorrow, "yyyy-MM-dd"),
+    source: "prepared_tomorrow_screen",
+  };
+
+  try {
+    const API_URL = "https://atria-bbp.atriauniversity.ai/api/create";
+
+    const res = await fetch(API_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(payload),
+});
+
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Trade post failed:", err);
+    throw err;
+  }
+};
+
   
   // Handler for publishing trades (persists to localStorage)
   const handlePublish = async () => {
-    try {
-      await publishTradesApi(activeTimeSlots);
-      console.log("Trades sent to backend successfully");
-    } catch (error) {
-      console.error("Failed to publish trades", error);
-    }
+  if (activeTimeSlots.length === 0) {
+    console.log("No active trades to approve — skipping publish");
+    return;
+  }
 
-    // Mark as approved for this session
+  try {
+    // 1. Send to backend
+    await postTradesToBackend(activeTimeSlots);
+
+    // 2. Existing session logic
     sessionStorage.setItem(SESSION_APPROVED_KEY, "true");
 
-    // Persist the active trades
-    publishTrades(activeTimeSlots.map(slot => ({
-      id: slot.id,
-      time: slot.time,
-      kWh: slot.kWh,
-      rate: slot.rate,
-      isBatteryPowered: slot.isBatteryPowered,
-    })));
-    // Call the original callback
+    // 3. Keep your current local persistence
+    void publishTrades(
+      activeTimeSlots.map(slot => ({
+        id: slot.id,
+        time: slot.time,
+        kWh: slot.kWh,
+        rate: slot.rate,
+        isBatteryPowered: slot.isBatteryPowered,
+      }))
+    );
+
+    // 4. Continue existing flow
     onLooksGood();
-  };
+
+  } catch (err) {
+    // Optional: show UI error toast here
+    alert("Failed to publish trades. Please try again.");
+  }
+};
+
   
   // Calculate totals dynamically from active slots
   const plannedUnits = activeTimeSlots.reduce((sum, slot) => sum + slot.kWh, 0);
@@ -891,7 +996,12 @@ const PreparedTomorrowScreen = ({
               </>
             ) : (
               <>
-                <button ref={looksGoodRef} onClick={handleLooksGood} className="btn-solar flex-1 !py-2.5 text-sm">
+                <button
+                  ref={looksGoodRef}
+                  onClick={handleLooksGood}
+                  disabled={activeTimeSlots.length === 0}
+                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
                   Approve Now
                 </button>
                 <button ref={changeRef} onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">

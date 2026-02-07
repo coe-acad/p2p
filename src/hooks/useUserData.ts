@@ -14,6 +14,7 @@ export interface UserData {
   summerVacationEnd?: string; // e.g., "2026-06-15"
   upcomingEvents?: string; // Free-form text for other events
   // Payment settings
+  email?: string; // Required for billing
   upiId?: string; // e.g., "archana@upi"
   // Verification status
   isVCVerified?: boolean; // DISCOM VC verification status
@@ -35,6 +36,7 @@ const DEFAULT_USER_DATA: UserData = {
   summerVacationStart: "",
   summerVacationEnd: "",
   upcomingEvents: "",
+  email: "",
   upiId: "",
   isVCVerified: false, // New users need to verify
   userContext: "",
