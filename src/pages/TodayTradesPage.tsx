@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, CheckCircle2, AlertCircle, Timer, Zap, Search } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 
@@ -32,6 +33,7 @@ const priceCatalog: Record<string, number> = {
 
 const TodayTradesPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Demo data with 1-hour windows - amounts calculated from units * price
   // Total completed: 2.0 + 2.0 + 2.0 + 2.5 = 8.5 kWh, earning ~₹55
@@ -52,7 +54,7 @@ const TodayTradesPage = () => {
       case "searching":
         return {
           icon: Search,
-          label: "Searching",
+          label: t("trades.searching"),
           color: "text-muted-foreground",
           bg: "bg-muted/50",
           badgeColor: "bg-muted text-muted-foreground",
@@ -60,7 +62,7 @@ const TodayTradesPage = () => {
       case "confirmed":
         return {
           icon: Timer,
-          label: "Confirmed",
+          label: t("trades.confirmed"),
           color: "text-primary",
           bg: "bg-primary/10",
           badgeColor: "bg-primary/20 text-primary",
@@ -68,7 +70,7 @@ const TodayTradesPage = () => {
       case "completed":
         return {
           icon: CheckCircle2,
-          label: isPartial ? `Partial (${trade.matchedUnits}/${trade.units} kWh)` : "Completed",
+          label: isPartial ? `${t("trades.partial")} (${trade.matchedUnits}/${trade.units} kWh)` : t("trades.completed"),
           color: "text-accent",
           bg: "bg-accent/10",
           badgeColor: isPartial ? "bg-amber-500/20 text-amber-600" : "bg-accent/20 text-accent",
@@ -76,7 +78,7 @@ const TodayTradesPage = () => {
       case "expired":
         return {
           icon: AlertCircle,
-          label: "Expired",
+          label: t("trades.expired"),
           color: "text-destructive",
           bg: "bg-destructive/10",
           badgeColor: "bg-destructive/20 text-destructive",
@@ -124,7 +126,7 @@ const TodayTradesPage = () => {
               </div>
               {isPartial && (
                 <span className="text-2xs bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full">
-                  Partial ({trade.matchedUnits}/{trade.units} kWh)
+                  {t("trades.partial")} ({trade.matchedUnits}/{trade.units} kWh)
                 </span>
               )}
             </div>
@@ -168,7 +170,7 @@ const TodayTradesPage = () => {
               <ArrowLeft size={18} className="text-foreground" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-foreground">Today's Trades</h1>
+              <h1 className="text-base font-bold text-foreground">{t("trades.today")}</h1>
               <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
             </div>
           </div>
@@ -179,9 +181,9 @@ const TodayTradesPage = () => {
         <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xs text-muted-foreground">Earned so far</p>
+              <p className="text-2xs text-muted-foreground">{t("trades.earnedSoFar")}</p>
               <p className="text-xl font-bold text-primary">₹{Math.round(totalEarnings)}</p>
-              <p className="text-2xs text-muted-foreground">{Math.round(totalUnits)} kWh sold</p>
+              <p className="text-2xs text-muted-foreground">{Math.round(totalUnits)} {t("trades.kwhSold")}</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Zap size={20} className="text-primary" />
@@ -191,14 +193,14 @@ const TodayTradesPage = () => {
 
         {/* Trade Sections */}
         <div className="flex-1 overflow-y-auto space-y-3 pb-4">
-          {renderSection("Completed", groupedTrades.completed)}
-          {renderSection("Confirmed", groupedTrades.confirmed)}
-          {renderSection("Planned Trades", groupedTrades.searching)}
-          {renderSection("Expired", groupedTrades.expired)}
+          {renderSection(t("trades.completed"), groupedTrades.completed)}
+          {renderSection(t("trades.confirmed"), groupedTrades.confirmed)}
+          {renderSection(t("trades.plannedTrades"), groupedTrades.searching)}
+          {renderSection(t("trades.expired"), groupedTrades.expired)}
 
           {trades.length === 0 && (
             <div className="text-center py-6">
-              <p className="text-xs text-muted-foreground">No trades scheduled for today</p>
+              <p className="text-xs text-muted-foreground">{t("trades.noTradesScheduled")}</p>
             </div>
           )}
         </div>

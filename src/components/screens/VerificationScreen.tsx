@@ -51,7 +51,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   
   const fetchingMessages = [
     { icon: Loader2, text: "Connecting to DigiLocker...", spin: true },
-    { icon: Lock, text: "Encrypting your data...", spin: false },
+    { icon: Lock, text: "Fetching securely...", spin: false },
     { icon: ShieldCheck, text: "Verification complete!", spin: false },
   ];
 
