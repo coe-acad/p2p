@@ -42,7 +42,7 @@ const DISCOMS = [
   { state: "Telangana", name: "TSSPDCL", fullName: "Telangana Southern Power Distribution", portalUrl: "https://tsspdcl.cgg.gov.in/" },
   { state: "Kerala", name: "KSEB", fullName: "Kerala State Electricity Board", portalUrl: "https://www.kseb.in/" },
   { state: "West Bengal", name: "WBSEDCL", fullName: "West Bengal State Electricity Distribution", portalUrl: "https://www.wbsedcl.in/" },
-  { state: "Uttar Pradesh", name: "UPPCL", fullName: "Uttar Pradesh Power Corporation", portalUrl: "https://www.uppcl.org/" },
+  { state: "Uttar Pradesh", name: "PVVNL", fullName: "Pashchimanchal Vidyut Vitran Nigam Limited", portalUrl: "https://pvvnl.org/P2P-Energy-Trading" },
 ];
 
 const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps) => {

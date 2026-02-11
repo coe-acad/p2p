@@ -31,8 +31,8 @@ interface ReverseGeocodeResult {
 
 const DISCOMS = [
   { state: "Maharashtra", name: "MSEDCL", fullName: "Maharashtra State Electricity Distribution Co. Ltd", portalUrl: "https://www.mahadiscom.in/" },
-  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited", portalUrl: "https://www.tatapower-ddl.com/" },
-  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited", portalUrl: "https://www.bsesdelhi.com/" },
+  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited", portalUrl: "https://www.tatapower-ddl.com/solar-rooftop/p-to-p-trading" },
+  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited", portalUrl: "https://www.bsesdelhi.com/web/brpl/p-to-p-trading" },
   { state: "Karnataka", name: "BESCOM", fullName: "Bangalore Electricity Supply Company", portalUrl: "https://bescom.karnataka.gov.in/" },
   { state: "Tamil Nadu", name: "TANGEDCO", fullName: "Tamil Nadu Generation and Distribution Corporation", portalUrl: "https://www.tangedco.gov.in/" },
   { state: "Gujarat", name: "UGVCL", fullName: "Uttar Gujarat Vij Company Limited", portalUrl: "https://www.ugvcl.com/" },
@@ -41,7 +41,7 @@ const DISCOMS = [
   { state: "Telangana", name: "TSSPDCL", fullName: "Telangana Southern Power Distribution", portalUrl: "https://tsspdcl.cgg.gov.in/" },
   { state: "Kerala", name: "KSEB", fullName: "Kerala State Electricity Board", portalUrl: "https://www.kseb.in/" },
   { state: "West Bengal", name: "WBSEDCL", fullName: "West Bengal State Electricity Distribution", portalUrl: "https://www.wbsedcl.in/" },
-  { state: "Uttar Pradesh", name: "UPPCL", fullName: "Uttar Pradesh Power Corporation", portalUrl: "https://www.uppcl.org/" },
+  { state: "Uttar Pradesh", name: "PVVNL", fullName: "Pashchimanchal Vidyut Vitran Nigam Limited", portalUrl: "https://pvvnl.org/P2P-Energy-Trading" },
 ];
 
 const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps) => {
