@@ -415,10 +415,10 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
           <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all bg-card">
             <Upload className="text-primary mb-1.5" size={20} />
             <span className="text-xs font-medium text-foreground">Tap to upload files</span>
-            <span className="text-2xs text-muted-foreground mt-0.5">Connection, Consumer, or Generation VCs</span>
+            <span className="text-2xs text-muted-foreground mt-0.5">Connection, Consumer, or Generation VCs (JSON/PDF)</span>
             <input 
               type="file" 
-              accept=".pdf,.jpg,.jpeg,.png" 
+              accept=".json,.pdf,application/json,application/pdf" 
               multiple 
               onChange={handleFileUpload} 
               className="hidden" 

@@ -1,21 +1,69 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Upload, FileCheck, X } from "lucide-react";
 import { useState, useRef } from "react";
+import { uploadVcDocuments } from "@/api/vcUpload";
 
 const VCDocumentsPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       setUploadedFiles(prev => [...prev, ...newFiles]);
+      setSubmitError(null);
+      setSubmitSuccess(false);
     }
   };
 
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setSubmitSuccess(false);
+    setSubmitError(null);
+  };
+
+  const getOrCreateUserId = () => {
+    const key = "samai_user_id";
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      return existing;
+    }
+    const generated = crypto.randomUUID();
+    localStorage.setItem(key, generated);
+    return generated;
+  };
+
+  const handleSubmit = async () => {
+    if (uploadedFiles.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+    try {
+      await uploadVcDocuments(uploadedFiles, getOrCreateUserId());
+      setSubmitSuccess(true);
+    } catch (error) {
+      console.error("VC upload failed:", error);
+      const details = (error as any)?.details;
+      if (typeof details === "string") {
+        setSubmitError(details);
+      } else if (details?.missing_types) {
+        const missing = details.missing_types.join(", ");
+        const duplicates = details.duplicate_types?.length
+          ? ` Duplicate types: ${details.duplicate_types.join(", ")}.`
+          : "";
+        setSubmitError(`Missing required VC(s): ${missing}.${duplicates}`);
+      } else if (details?.message) {
+        setSubmitError(details.message);
+      } else {
+        setSubmitError("Upload failed. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -42,7 +90,7 @@ const VCDocumentsPage = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept=".json,.pdf,application/json,application/pdf"
           onChange={handleUpload}
           className="hidden"
         />
@@ -56,7 +104,7 @@ const VCDocumentsPage = () => {
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">Tap to upload files</p>
-            <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG • Multiple files allowed</p>
+            <p className="text-xs text-muted-foreground mt-1">JSON or PDF • Multiple files allowed</p>
           </div>
         </button>
 
@@ -93,9 +141,17 @@ const VCDocumentsPage = () => {
 
         {/* Submit Button */}
         {uploadedFiles.length > 0 && (
-          <button className="btn-solar w-full animate-slide-up">
-            Submit Documents
-          </button>
+          <div className="space-y-2 animate-slide-up">
+            <button className="btn-solar w-full" onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Uploading..." : "Submit Documents"}
+            </button>
+            {submitError && (
+              <p className="text-xs text-destructive">{submitError}</p>
+            )}
+            {submitSuccess && (
+              <p className="text-xs text-accent">Documents uploaded successfully.</p>
+            )}
+          </div>
         )}
       </div>
     </div>

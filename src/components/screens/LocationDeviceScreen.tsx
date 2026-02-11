@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, ExternalLink, Zap, Battery, Gauge, User, ChevronUp, Cpu, FileCheck, Sparkles } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
- import { parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
+import { uploadVcDocuments } from "@/api/vcUpload";
+import { formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
 
 interface LocationDeviceScreenProps {
   onContinue: (isVerified: boolean, locationData?: { address: string; city: string; discom: string }) => void;
@@ -294,109 +295,78 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
     }
   };
 
-  const fetchUtilityCredential = async () => {
-    const url =
-      "https://35.244.45.209.sslip.io/credential/credentials/did:rcw:c5f53fcb-bfaa-4d09-9602-5a30a1c0cc8a";
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Credential API failed: ${response.status}`);
+  const getOrCreateUserId = () => {
+    const key = "samai_user_id";
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      return existing;
     }
-
-    const data = await response.json();
-
-    // Basic validation like your Postman test
-    if (
-      !data.type ||
-      !String(data.type).includes("UtilityCustomerCredential")
-    ) {
-      throw new Error("Invalid credential type");
-    }
-
-    return data;
+    const generated = crypto.randomUUID();
+    localStorage.setItem(key, generated);
+    return generated;
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
 
-   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-     if (e.target.files) {
-       const newFiles = Array.from(e.target.files);
-       setUploadedFiles(prev => [...prev, ...newFiles]);
-       setParseError(null);
-       
-       // Parse PDF files to extract VC data
-       if (newFiles.length > 0) {
-         setPreparingVC(true);
-         setIsVerifying(true);
-         
-         try {
-            const [credentialData] = await Promise.all([
-              fetchUtilityCredential(),
+    const newFiles = Array.from(e.target.files);
+    const nextFiles = [...uploadedFiles, ...newFiles];
+    setUploadedFiles(nextFiles);
+    setParseError(null);
 
-              // keep UI visible at least 2.5 sec
-              new Promise((res) => setTimeout(res, 2500)),
-            ]);
+    if (nextFiles.length === 0) return;
 
-            console.log("Credential from API:", credentialData);
+    setPreparingVC(true);
+    setIsVerifying(true);
 
-           setPreparingVC(false);
-           setIsVerifying(true);
-           // Find PDF files and parse them
-           const pdfFiles = newFiles.filter(
-             (f) => f.type === "application/pdf" || f.name.endsWith(".pdf"),
-           );
+    try {
+      const response = await uploadVcDocuments(nextFiles, getOrCreateUserId());
+      const mergedData = response.merged || {};
 
-           if (pdfFiles.length > 0) {
-             // Parse the first PDF (or merge data from multiple)
-             const parsedData = await parseVCPdf(pdfFiles[0]);
-             setVcData(parsedData);
+      setVcData(mergedData);
 
-             // Update user data with extracted info
-             if (parsedData.fullName) {
-               setUserData({ name: parsedData.fullName });
-             }
-             if (parsedData.address && !location) {
-               setLocation(parsedData.address);
-             }
-             if (parsedData.consumerNumber) {
-               setUserData({ consumerId: parsedData.consumerNumber });
-             }
+      if (mergedData.fullName) {
+        setUserData({ name: mergedData.fullName });
+      }
+      if (mergedData.address && !location) {
+        setLocation(mergedData.address);
+      }
+      if (mergedData.consumerNumber) {
+        setUserData({ consumerId: mergedData.consumerNumber });
+      }
 
-             // Store VC data in localStorage for earnings calculation
-             localStorage.setItem("samai_vc_data", JSON.stringify(parsedData));
+      localStorage.setItem("samai_vc_data", JSON.stringify(mergedData));
 
-             console.log("VC data extracted:", parsedData);
-           }
-
-           setIsVerifying(false);
-           setIsVerified(true);
-           setUserData({ isVCVerified: true });
-         } catch (error) {
-           console.error('Error parsing VC:', error);
-           setParseError('Could not parse document. Please try again.');
-           setIsVerifying(false);
-           // Still mark as verified for non-PDF files
-           if (!newFiles.some(f => f.type === 'application/pdf')) {
-             setIsVerified(true);
-             setUserData({ isVCVerified: true });
-           }
-         }
-       }
-     }
-   };
+      setIsVerified(true);
+      setUserData({ isVCVerified: true });
+    } catch (error: any) {
+      console.error("Error uploading VC:", error);
+      const details = error?.details;
+      if (typeof details === "string") {
+        setParseError(details);
+      } else if (details?.missing_types) {
+        const missing = details.missing_types.join(", ");
+        const duplicates = details.duplicate_types?.length
+          ? ` Duplicate types: ${details.duplicate_types.join(", ")}.`
+          : "";
+        setParseError(`Missing required VC(s): ${missing}.${duplicates}`);
+      } else if (details?.message) {
+        setParseError(details.message);
+      } else {
+        setParseError("Could not verify documents. Please try again.");
+      }
+      setIsVerified(false);
+    } finally {
+      setPreparingVC(false);
+      setIsVerifying(false);
+    }
+  };
 
   const removeFile = (index: number) => {
     const newFiles = uploadedFiles.filter((_, i) => i !== index);
     setUploadedFiles(newFiles);
-    if (newFiles.length === 0) {
-      setIsVerified(false);
-      setVcData(null);
-    }
+    setIsVerified(false);
+    setVcData(null);
   };
 
   useEffect(() => {
@@ -544,8 +514,8 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
             <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all bg-card">
               <Upload className="text-primary mb-1" size={16} />
               <span className="text-2xs font-medium text-foreground">Tap to upload files</span>
-              <span className="text-2xs text-muted-foreground">Connection, Consumer, or Generation VCs</span>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onChange={handleFileUpload} className="hidden" />
+              <span className="text-2xs text-muted-foreground">Connection, Consumer, or Generation VCs (JSON/PDF)</span>
+              <input type="file" accept=".json,.pdf,application/json,application/pdf" multiple onChange={handleFileUpload} className="hidden" />
             </label>
 
             {uploadedFiles.length > 0 && (
@@ -568,10 +538,10 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
             <div className="flex flex-col items-center justify-center gap-2 py-3 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
               <Loader2 size={16} className="animate-spin text-primary" />
               <span className="text-2xs font-medium text-primary">
-                Getting credentials...
+                Uploading documents...
               </span>
               <span className="text-[10px] text-muted-foreground">
-                Connecting to DISCOM registry
+                Extracting details from your files
               </span>
             </div>
           )}
