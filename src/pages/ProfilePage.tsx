@@ -1,38 +1,124 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { VCExtractedData } from "@/utils/vcPdfParser";
+import { getUserProfile, UserProfileResponse } from "@/api/users";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { userData } = useUserData();
+  const { userData, setUserData } = useUserData();
+  const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
+  const hasFetchedRef = useRef(false);
   
-  const locality = extractLocality(userData.address);
+  const loginRaw = localStorage.getItem("samai_login_user");
+  let loginIsVerified = false;
+  if (loginRaw) {
+    try {
+      loginIsVerified = Boolean(JSON.parse(loginRaw)?.is_vc_verified);
+    } catch {
+      loginIsVerified = false;
+    }
+  }
+
+  useEffect(() => {
+    const mobileNumber = localStorage.getItem("samai_mobile_number") || userData.phone;
+    const shouldFetch = loginIsVerified || Boolean(userData.isVCVerified);
+    const cachedVc = localStorage.getItem("samai_vc_data");
+    if (!mobileNumber || !shouldFetch || cachedVc || hasFetchedRef.current) {
+      return;
+    }
+
+    let isActive = true;
+    hasFetchedRef.current = true;
+    (async () => {
+      try {
+        const profile = await getUserProfile(mobileNumber);
+        if (!isActive) return;
+        setProfileData(profile);
+        if (profile.merged) {
+          localStorage.setItem("samai_vc_data", JSON.stringify(profile.merged));
+        }
+
+        setUserData({
+          name: profile.merged?.fullName || profile.user?.name || "",
+          phone: profile.user?.mobile_number || mobileNumber,
+          address: profile.merged?.address || "",
+          discom: profile.merged?.issuerName || "",
+          consumerId: profile.merged?.consumerNumber || "",
+          isVCVerified: profile.is_vc_verified,
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [loginIsVerified, setUserData, userData.isVCVerified, userData.phone]);
+
+  const cachedVcRaw = localStorage.getItem("samai_vc_data");
+  let cachedVcData: VCExtractedData | null = null;
+  if (cachedVcRaw) {
+    try {
+      cachedVcData = JSON.parse(cachedVcRaw);
+    } catch {
+      cachedVcData = null;
+    }
+  }
+
+  const isVerified = Boolean(profileData?.is_vc_verified ?? loginIsVerified ?? userData.isVCVerified);
+  const vcData = (profileData?.merged || cachedVcData || {}) as VCExtractedData;
+  const profileUser = profileData?.user;
+
+  const address = vcData.address || userData.address;
+  const locality = extractLocality(address);
+  const roleLabel = profileUser?.role || localStorage.getItem("samai_user_role") || "";
+  const safeLocality = isVerified ? locality : "";
+  const discomValue = vcData.issuerName || userData.discom;
+  const discomLabel = isVerified
+    ? [discomValue, safeLocality].filter(Boolean).join(" • ")
+    : "";
+  const displayName = isVerified ? (vcData.fullName || profileUser?.name || userData.name) : "";
+  const inverterDetail = isVerified && vcData.generationCapacity
+    ? `Solar • ${vcData.generationCapacity} kW`
+    : "";
+  const batteryDetail = isVerified && vcData.batteryCapacity
+    ? `Storage • ${vcData.batteryCapacity}`
+    : "";
+  const meterDetail = isVerified
+    ? [vcData.issuerName, vcData.meterNumber].filter(Boolean).join(" • ")
+    : "";
+  const profileDetail = isVerified
+    ? [displayName, safeLocality].filter(Boolean).join(", ")
+    : "";
 
   const sections = [
     {
       title: t("profile.account"),
       items: [
-        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name, route: "/settings/mobile" },
-        { icon: ShoppingCart, label: t("profile.yourRole"), sublabel: t("profile.seller"), route: "/settings/role" },
-        { icon: Settings, label: t("profile.homeProfile"), sublabel: "3 BHK • Residential", route: "/settings/devices?type=profile" },
-        { icon: Building2, label: t("profile.location"), sublabel: locality, route: "/settings/discom" },
+        { icon: User, label: t("profile.personalDetails"), sublabel: displayName, route: "/settings/mobile" },
+        { icon: ShoppingCart, label: t("profile.yourRole"), sublabel: roleLabel, route: "/settings/role" },
+        { icon: Settings, label: t("profile.homeProfile"), sublabel: profileDetail, route: "/settings/devices?type=profile" },
+        { icon: Building2, label: t("profile.location"), sublabel: safeLocality, route: "/settings/discom" },
       ]
     },
     {
       title: t("profile.devices"),
       items: [
-        { icon: Zap, label: t("profile.solarInverter"), sublabel: "Growatt • 5 kW", route: "/settings/devices?type=inverter" },
-        { icon: Battery, label: t("profile.battery"), sublabel: "Luminous • 10 kWh", route: "/settings/devices?type=battery" },
-        { icon: Gauge, label: t("profile.smartMeter"), sublabel: "Genus • Bi-directional", route: "/settings/devices?type=meter" },
+        { icon: Zap, label: t("profile.solarInverter"), sublabel: inverterDetail, route: "/settings/devices?type=inverter" },
+        { icon: Battery, label: t("profile.battery"), sublabel: batteryDetail, route: "/settings/devices?type=battery" },
+        { icon: Gauge, label: t("profile.smartMeter"), sublabel: meterDetail, route: "/settings/devices?type=meter" },
       ]
     },
     {
       title: t("profile.locationDiscom"),
       items: [
-        { icon: Globe, label: t("profile.discomSettings"), sublabel: `${userData.discom || "BESCOM"} • ${locality}`, route: "/settings/discom" },
-        { icon: FileText, label: t("profile.vcDocuments"), sublabel: t("profile.connectionVerified"), route: "/settings/vc-documents" },
+        { icon: Globe, label: t("profile.discomSettings"), sublabel: discomLabel, route: "/settings/discom" },
+        { icon: FileText, label: t("profile.vcDocuments"), sublabel: isVerified ? t("profile.connectionVerified") : "", route: "/settings/vc-documents" },
       ]
     },
     {
@@ -73,8 +159,8 @@ const ProfilePage = () => {
             <User size={24} className="text-primary" />
           </div>
           <div>
-            <p className="text-base font-bold text-foreground">{userData.name}</p>
-            <p className="text-xs text-muted-foreground">{userData.phone}</p>
+            <p className="text-base font-bold text-foreground">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{profileUser?.mobile_number || userData.phone}</p>
           </div>
         </div>
 

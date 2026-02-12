@@ -82,8 +82,8 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
   const isFormValid = location.trim() !== "" && selectedDiscom !== null && deviceConfirmed;
   const locality = extractLocality(location);
 
-   // Device data - dynamic based on VC or fallback to defaults
-   const formattedDevices = vcData ? formatDevicesFromVC(vcData, locality) : null;
+   // Device data - only show VC details when verified
+   const formattedDevices = vcData && userData.isVCVerified ? formatDevicesFromVC(vcData, locality) : null;
    
    const devices = formattedDevices ? [
      { 
@@ -114,55 +114,55 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
      { 
        icon: Zap, 
        title: "Solar Inverter", 
-       detail: "Solar • 5 kW",
+       detail: "—",
        expanded: {
-         type: "Solar",
-         capacity: "5 kW",
-         commissioningDate: "N/A",
-         manufacturer: "N/A",
-         model: "N/A"
+         type: "—",
+         capacity: "—",
+         commissioningDate: "—",
+         manufacturer: "—",
+         model: "—"
        }
      },
      { 
        icon: Battery, 
        title: "Battery", 
-       detail: "Storage • 10 kWh",
+       detail: "—",
        expanded: {
-         capacity: "10 kWh",
-         type: "Lithium-ion",
-         estimatedCycles: "6000+"
+         capacity: "—",
+         type: "—",
+         estimatedCycles: "—"
        }
      },
      { 
        icon: Gauge, 
        title: "Smart Meter", 
-       detail: "DISCOM • Bi-directional",
+       detail: "—",
        expanded: {
-         meterNumber: "N/A",
-         sanctionedLoad: "N/A",
-         connectionType: "N/A",
-         premisesType: "N/A"
+         meterNumber: "—",
+         sanctionedLoad: "—",
+         connectionType: "—",
+         premisesType: "—"
        }
      },
      { 
        icon: User, 
        title: "Profile", 
-       detail: `${userData.name}, ${locality || "Location"}`,
+       detail: "—",
        expanded: {
-         name: userData.name,
-         consumerNumber: userData.consumerId || "N/A",
-         address: location,
-         tariffCategory: "N/A",
-         serviceDate: "N/A"
+        name: userData.isVCVerified ? (userData.name || "—") : "—",
+        consumerNumber: userData.consumerId || "—",
+        address: location || "—",
+        tariffCategory: "—",
+        serviceDate: "—"
        }
      },
    ];
  
    // Summary stats for card display
    const summaryStats = formattedDevices?.summary || {
-     inverterKw: "5",
-     batteryKwh: "10",
-     meterType: "Bi-dir"
+     inverterKw: "",
+     batteryKwh: "",
+     meterType: ""
    };
 
   // Auto-select DISCOM based on state
@@ -295,16 +295,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
     }
   };
 
-  const getOrCreateUserId = () => {
-    const key = "samai_user_id";
-    const existing = localStorage.getItem(key);
-    if (existing) {
-      return existing;
-    }
-    const generated = crypto.randomUUID();
-    localStorage.setItem(key, generated);
-    return generated;
-  };
+  const getMobileNumber = () => localStorage.getItem("samai_mobile_number") || "";
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -320,7 +311,15 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
     setIsVerifying(true);
 
     try {
-      const response = await uploadVcDocuments(nextFiles, getOrCreateUserId());
+      const mobileNumber = getMobileNumber();
+      if (!mobileNumber) {
+        setParseError("Mobile number not found. Please verify your phone first.");
+        setIsVerified(false);
+        setPreparingVC(false);
+        setIsVerifying(false);
+        return;
+      }
+      const response = await uploadVcDocuments(nextFiles, mobileNumber);
       const mergedData = response.merged || {};
 
       setVcData(mergedData);
@@ -612,21 +611,27 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-0.5">
                       <Zap className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">{summaryStats.inverterKw} kW</p>
+                    <p className="text-xs font-bold text-foreground">
+                      {summaryStats.inverterKw ? `${summaryStats.inverterKw} kW` : "—"}
+                    </p>
                     <p className="text-2xs text-muted-foreground">Inverter</p>
                   </div>
                   <div className="bg-card/80 backdrop-blur-sm rounded-md p-1.5 text-center border border-border/50">
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-teal-400 to-green-500 flex items-center justify-center mx-auto mb-0.5">
                       <Battery className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">{summaryStats.batteryKwh} kWh</p>
+                    <p className="text-xs font-bold text-foreground">
+                      {summaryStats.batteryKwh ? `${summaryStats.batteryKwh} kWh` : "—"}
+                    </p>
                     <p className="text-2xs text-muted-foreground">Battery</p>
                   </div>
                   <div className="bg-card/80 backdrop-blur-sm rounded-md p-1.5 text-center border border-border/50">
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center mx-auto mb-0.5">
                       <Gauge className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">{summaryStats.meterType}</p>
+                    <p className="text-xs font-bold text-foreground">
+                      {summaryStats.meterType || "—"}
+                    </p>
                     <p className="text-2xs text-muted-foreground">Meter</p>
                   </div>
                 </div>

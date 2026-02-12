@@ -28,22 +28,22 @@ export interface VCExtractedData {
  
  // Helper to format device display data from extracted VC
  export function formatDevicesFromVC(vcData: VCExtractedData, locality: string) {
-   const inverterCapacity = vcData.inverterCapacity || vcData.generationCapacity 
-     ? `${vcData.generationCapacity || '5'} kW` 
-     : '5 kW';
+   const inverterCapacity = vcData.generationCapacity
+     ? `${vcData.generationCapacity} kW`
+     : '—';
    
-   const batteryCapacity = vcData.batteryCapacity || '10 kWh';
+   const batteryCapacity = vcData.batteryCapacity || '—';
    
    return {
      inverter: {
        capacity: inverterCapacity,
        detail: `Solar • ${inverterCapacity}`,
        expanded: {
-         type: vcData.generationType || 'Solar',
+         type: vcData.generationType || '—',
          capacity: inverterCapacity,
-         commissioningDate: vcData.commissioningDate || 'N/A',
-         manufacturer: vcData.manufacturer || 'N/A',
-         model: vcData.modelNumber || 'N/A',
+         commissioningDate: vcData.commissioningDate || '—',
+         manufacturer: vcData.manufacturer || '—',
+         model: vcData.modelNumber || '—',
        }
      },
      battery: {
@@ -51,35 +51,35 @@ export interface VCExtractedData {
        detail: `Storage • ${batteryCapacity}`,
        expanded: {
          capacity: batteryCapacity,
-         type: 'Lithium-ion',
-         estimatedCycles: '6000+',
+         type: '—',
+         estimatedCycles: '—',
        }
      },
      meter: {
-       type: vcData.meterType || 'Bi-directional',
-       detail: `${vcData.issuerName?.split(' ')[0] || 'DISCOM'} • ${vcData.meterType || 'Bi-directional'}`,
+       type: vcData.meterType || '—',
+       detail: `${vcData.issuerName?.split(' ')[0] || '—'} • ${vcData.meterType || '—'}`,
        expanded: {
-         meterNumber: vcData.meterNumber || 'N/A',
-         sanctionedLoad: vcData.sanctionedLoad ? `${vcData.sanctionedLoad} kW` : 'N/A',
-         connectionType: vcData.connectionType || 'N/A',
-         premisesType: vcData.premisesType || 'N/A',
+         meterNumber: vcData.meterNumber || '—',
+         sanctionedLoad: vcData.sanctionedLoad ? `${vcData.sanctionedLoad} kW` : '—',
+         connectionType: vcData.connectionType || '—',
+         premisesType: vcData.premisesType || '—',
        }
      },
      profile: {
-       detail: `${vcData.fullName || 'User'}, ${locality || 'Location'}`,
+       detail: `${vcData.fullName || '—'}, ${locality || '—'}`,
        expanded: {
-         name: vcData.fullName || 'N/A',
-         consumerNumber: vcData.consumerNumber || 'N/A',
-         address: vcData.address || 'N/A',
-         tariffCategory: vcData.tariffCategory || 'N/A',
-         serviceDate: vcData.serviceConnectionDate || 'N/A',
+         name: vcData.fullName || '—',
+         consumerNumber: vcData.consumerNumber || '—',
+         address: vcData.address || '—',
+         tariffCategory: vcData.tariffCategory || '—',
+         serviceDate: vcData.serviceConnectionDate || '—',
        }
      },
      // Summary stats for the card
      summary: {
-       inverterKw: vcData.generationCapacity || vcData.sanctionedLoad || '5',
-       batteryKwh: vcData.batteryCapacity?.replace(' kWh', '') || '10',
-       meterType: vcData.meterType === 'Bi-directional' ? 'Bi-dir' : 'Std',
+       inverterKw: vcData.generationCapacity || vcData.sanctionedLoad || '—',
+       batteryKwh: vcData.batteryCapacity?.replace(' kWh', '') || '—',
+       meterType: vcData.meterType === 'Bi-directional' ? 'Bi-dir' : (vcData.meterType || '—'),
      }
    };
  }

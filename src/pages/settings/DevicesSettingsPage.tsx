@@ -1,11 +1,33 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Zap, Battery, Gauge, Home } from "lucide-react";
-import { useState } from "react";
+import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { VCExtractedData } from "@/utils/vcPdfParser";
 
 const DevicesSettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const deviceType = searchParams.get("type") || "inverter";
+  const { userData } = useUserData();
+
+  const isVerified = Boolean(userData.isVCVerified);
+  const vcRaw = isVerified ? localStorage.getItem("samai_vc_data") : null;
+  let vcData: VCExtractedData | null = null;
+  if (vcRaw) {
+    try {
+      vcData = JSON.parse(vcRaw);
+    } catch {
+      vcData = null;
+    }
+  }
+
+  const withUnit = (value: string | undefined, unit: string) => {
+    if (!value) return "—";
+    return /[a-zA-Z]/.test(value) ? value : `${value} ${unit}`;
+  };
+
+  const locality = extractLocality(vcData?.address || userData.address);
+  const nameValue = vcData?.fullName || userData.name || "—";
+  const discomValue = vcData?.issuerName || userData.discom || "—";
 
   const devicesMap: Record<string, {
     icon: typeof Zap;
@@ -16,45 +38,45 @@ const DevicesSettingsPage = () => {
     inverter: {
       icon: Zap,
       label: "Solar Inverter",
-      sublabel: "Growatt • 5 kW",
+      sublabel: isVerified ? (vcData?.generationCapacity ? `Solar • ${withUnit(vcData.generationCapacity, "kW")}` : "—") : "—",
       details: [
-        { label: "Brand", value: "Growatt" },
-        { label: "Model", value: "MIN 5000TL-X" },
-        { label: "Capacity", value: "5 kW" },
-        { label: "Type", value: "String Inverter" },
+        { label: "Brand", value: vcData?.manufacturer || "—" },
+        { label: "Model", value: vcData?.modelNumber || "—" },
+        { label: "Capacity", value: withUnit(vcData?.generationCapacity, "kW") },
+        { label: "Type", value: vcData?.generationType || "—" },
       ]
     },
     battery: {
       icon: Battery,
       label: "Battery",
-      sublabel: "Luminous • 10 kWh",
+      sublabel: isVerified ? (vcData?.batteryCapacity ? `Storage • ${vcData.batteryCapacity}` : "—") : "—",
       details: [
-        { label: "Brand", value: "Luminous" },
-        { label: "Model", value: "LPTT12150H" },
-        { label: "Capacity", value: "10 kWh" },
-        { label: "Type", value: "Lithium-Ion" },
+        { label: "Brand", value: "—" },
+        { label: "Model", value: "—" },
+        { label: "Capacity", value: vcData?.batteryCapacity || "—" },
+        { label: "Type", value: "—" },
       ]
     },
     meter: {
       icon: Gauge,
       label: "Smart Meter",
-      sublabel: "TPDDL • 62358107",
+      sublabel: isVerified ? ([vcData?.issuerName, vcData?.meterNumber].filter(Boolean).join(" • ") || "—") : "—",
       details: [
-        { label: "DISCOM ID", value: "TPDDL-P" },
-        { label: "Consumer ID", value: "80000190017" },
-        { label: "Meter ID", value: "62358107" },
-        { label: "Customer Type", value: "Prosumer" },
+        { label: "DISCOM", value: discomValue },
+        { label: "Consumer ID", value: vcData?.consumerNumber || "—" },
+        { label: "Meter ID", value: vcData?.meterNumber || "—" },
+        { label: "Customer Type", value: vcData?.premisesType || "—" },
       ]
     },
     profile: {
       icon: Home,
       label: "Home Profile",
-      sublabel: "Prosumer • TPDDL",
+      sublabel: isVerified ? ([nameValue, locality].filter(Boolean).join(", ") || "—") : "—",
       details: [
-        { label: "Type", value: "Prosumer" },
-        { label: "DISCOM", value: "Tata Power Delhi Distribution" },
-        { label: "Address", value: "abc street, Delhi, India" },
-        { label: "Connection Date", value: "20-03-2024" },
+        { label: "Name", value: nameValue },
+        { label: "DISCOM", value: discomValue },
+        { label: "Address", value: vcData?.address || userData.address || "—" },
+        { label: "Connection Date", value: vcData?.serviceConnectionDate || "—" },
       ]
     },
   };

@@ -20,7 +20,7 @@ const WelcomePage = () => {
   return (
     <WelcomeScreen
       onNewUser={handleNewUser}
-      onReturningUser={() => navigate("/verify", { state: { isReturningUser: true } })}
+      onReturningUser={() => navigate("/intent", { state: { isReturningUser: true } })}
     />
   );
 };

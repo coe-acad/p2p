@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Shield, Check, X, CreditCard, Building2, Receipt, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
+import { loginUser, registerUser } from "@/api/users";
+import { Link } from "react-router-dom";
 
 interface VerificationScreenProps {
   onVerified: () => void;
@@ -30,6 +32,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [showSignupLink, setShowSignupLink] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   
@@ -92,12 +96,40 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     }
   };
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (!isValidIndianMobile(phoneNumber)) {
       setPhoneError("Must start with 6, 7, 8, or 9");
       return;
     }
-    setStep("otp");
+    try {
+      setIsRegistering(true);
+      setShowSignupLink(false);
+      if (isReturningUser) {
+        const loginResponse = await loginUser(phoneNumber);
+        localStorage.setItem("samai_mobile_number", phoneNumber);
+        localStorage.setItem("samai_user_role", loginResponse.role || "PROSUMER");
+        localStorage.setItem("samai_login_user", JSON.stringify(loginResponse));
+        if (!loginResponse.is_vc_verified) {
+          localStorage.removeItem("samai_vc_data");
+        }
+      } else {
+        const role = (localStorage.getItem("samai_user_role") || "PROSUMER") as "PROSUMER" | "CONSUMER";
+        await registerUser({ mobile_number: phoneNumber, role });
+        localStorage.setItem("samai_mobile_number", phoneNumber);
+      }
+      setStep("otp");
+    } catch (error) {
+      console.error("User registration failed:", error);
+      const message = (error as Error).message || "Could not register. Please try again.";
+      if (message.toLowerCase().includes("user not found")) {
+        setPhoneError("No account found for this mobile number.");
+        setShowSignupLink(true);
+      } else {
+        setPhoneError(message);
+      }
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -248,7 +280,16 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
                     }`}
                   />
                 </div>
-                {phoneError && <p className="text-2xs text-destructive mt-1">{phoneError}</p>}
+                {phoneError && (
+                  <div className="mt-1 space-y-1">
+                    <p className="text-2xs text-destructive">{phoneError}</p>
+                    {showSignupLink && (
+                      <Link to="/intent" className="text-2xs text-primary underline">
+                        Start new user onboarding
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -544,10 +585,10 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           {step === "phone" && (
             <button
               onClick={handlePhoneSubmit}
-              disabled={phoneNumber.length !== 10 || !!phoneError}
+              disabled={phoneNumber.length !== 10 || !!phoneError || isRegistering}
               className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send OTP
+              {isRegistering ? "Registering..." : "Send OTP"}
             </button>
           )}
           {step === "aadhaar" && aadhaarMethod === "digilocker" && (

@@ -25,7 +25,7 @@ export interface UserData {
 }
 
 const DEFAULT_USER_DATA: UserData = {
-  name: "TPDL-Prosumer-7", // Default name for new users (from VC document)
+  name: "",
   phone: "",
   address: "",
   city: "",
@@ -44,26 +44,53 @@ const DEFAULT_USER_DATA: UserData = {
 };
 
 const STORAGE_KEY = "samai_user_data";
+const MOBILE_STORAGE_KEY = "samai_mobile_number";
+
+const sanitizeForUnverified = (data: UserData): UserData => ({
+  ...DEFAULT_USER_DATA,
+  phone: data.phone,
+  isVCVerified: false,
+  isReturningUser: data.isReturningUser,
+});
+
+const getInitialUserData = (): UserData => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  let merged = DEFAULT_USER_DATA;
+  if (stored) {
+    try {
+      merged = { ...DEFAULT_USER_DATA, ...JSON.parse(stored) };
+    } catch {
+      merged = DEFAULT_USER_DATA;
+    }
+  }
+
+  const mobile = localStorage.getItem(MOBILE_STORAGE_KEY) || "";
+  if (!merged.phone && mobile) {
+    merged = { ...merged, phone: mobile };
+  }
+
+  if (!merged.isVCVerified) {
+    return sanitizeForUnverified(merged);
+  }
+
+  return merged;
+};
 
 export const useUserData = () => {
-  const [userData, setUserDataState] = useState<UserData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        return { ...DEFAULT_USER_DATA, ...JSON.parse(stored) };
-      } catch {
-        return DEFAULT_USER_DATA;
-      }
-    }
-    return DEFAULT_USER_DATA;
-  });
+  const [userData, setUserDataState] = useState<UserData>(getInitialUserData);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
-    setUserDataState(prev => ({ ...prev, ...updates }));
+    setUserDataState(prev => {
+      const next = { ...prev, ...updates };
+      if (!next.isVCVerified) {
+        return sanitizeForUnverified(next);
+      }
+      return next;
+    });
   };
 
   return { userData, setUserData };

@@ -1,12 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Upload, FileCheck, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { uploadVcDocuments } from "@/api/vcUpload";
+import { getUserProfile } from "@/api/users";
+import { useUserData } from "@/hooks/useUserData";
 
 const VCDocumentsPage = () => {
   const navigate = useNavigate();
+  const { setUserData } = useUserData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -26,16 +30,38 @@ const VCDocumentsPage = () => {
     setSubmitError(null);
   };
 
-  const getOrCreateUserId = () => {
-    const key = "samai_user_id";
-    const existing = localStorage.getItem(key);
-    if (existing) {
-      return existing;
+  const getMobileNumber = () => localStorage.getItem("samai_mobile_number") || "";
+
+  useEffect(() => {
+    const mobileNumber = getMobileNumber();
+    if (!mobileNumber) return;
+    const cached = localStorage.getItem("samai_vc_uploaded_files");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setExistingFiles(parsed);
+          return;
+        }
+      } catch {
+        // ignore cache parse errors
+      }
     }
-    const generated = crypto.randomUUID();
-    localStorage.setItem(key, generated);
-    return generated;
-  };
+    (async () => {
+      try {
+        const profile = await getUserProfile(mobileNumber);
+        const files = (profile.documents || [])
+          .map(doc => doc?.vc_type)
+          .filter(Boolean);
+        if (files.length) {
+          setExistingFiles(files);
+          localStorage.setItem("samai_vc_uploaded_files", JSON.stringify(files));
+        }
+      } catch (error) {
+        console.error("Failed to fetch uploaded VC files:", error);
+      }
+    })();
+  }, []);
 
   const handleSubmit = async () => {
     if (uploadedFiles.length === 0 || isSubmitting) return;
@@ -43,7 +69,36 @@ const VCDocumentsPage = () => {
     setSubmitError(null);
     setSubmitSuccess(false);
     try {
-      await uploadVcDocuments(uploadedFiles, getOrCreateUserId());
+      const mobileNumber = getMobileNumber();
+      if (!mobileNumber) {
+        setSubmitError("Mobile number not found. Please verify your phone first.");
+        return;
+      }
+      await uploadVcDocuments(uploadedFiles, mobileNumber);
+      const profile = await getUserProfile(mobileNumber);
+      const mergedData = profile.merged || {};
+
+      if (profile.is_vc_verified) {
+        const files = (profile.documents || [])
+          .map(doc => doc?.vc_type)
+          .filter(Boolean);
+        if (files.length) {
+          setExistingFiles(files);
+          localStorage.setItem("samai_vc_uploaded_files", JSON.stringify(files));
+        }
+        localStorage.setItem("samai_vc_data", JSON.stringify(mergedData));
+        setUserData({
+          name: mergedData.fullName || profile.user?.name || "",
+          address: mergedData.address || "",
+          discom: mergedData.issuerName || "",
+          consumerId: mergedData.consumerNumber || "",
+          isVCVerified: true,
+        });
+        setUploadedFiles([]);
+      } else {
+        setSubmitError("Verification incomplete. Please upload all required VC documents.");
+        return;
+      }
       setSubmitSuccess(true);
     } catch (error) {
       console.error("VC upload failed:", error);
@@ -84,6 +139,31 @@ const VCDocumentsPage = () => {
         <p className="text-sm text-muted-foreground animate-fade-in">
           Upload your DISCOM Verifiable Credentials (Connection VC + Consumer or Generation VC)
         </p>
+
+        {/* Uploaded Docs Summary */}
+        {existingFiles.length > 0 && (
+          <div className="space-y-2 animate-slide-up">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Verified Documents ({existingFiles.length})
+            </p>
+            {existingFiles.map((name, index) => (
+              <div 
+                key={`${name}-${index}`}
+                className="flex items-center justify-between bg-card rounded-xl p-3 shadow-card border border-border"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <FileCheck size={16} className="text-accent" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate max-w-[220px]">{name}</p>
+                    <p className="text-xs text-muted-foreground">Verified</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Upload Button */}
         <input

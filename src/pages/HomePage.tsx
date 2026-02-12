@@ -14,6 +14,7 @@ import MarioCoin from "@/components/MarioCoin";
 import chatbotIcon from "@/assets/chatbot-icon.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
+import { getUserProfile } from "@/api/users";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import LanguageToggle from "@/components/LanguageToggle";
 
@@ -53,11 +54,48 @@ const HomePage = () => {
   const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
   
   // Get verification status from router state or userData (persisted)
-  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
+  const isVCVerified = Boolean(userData.isVCVerified || location.state?.isVCVerified);
+  const displayName = isVCVerified ? (userData.name?.split(" ")[0] || "User") : "User";
   const justPublished = location.state?.justPublished ?? false;
   
   // Determine if user is new (based on userData flag)
   const isNewUser = !userData.isReturningUser;
+
+  useEffect(() => {
+    const mobileNumber = localStorage.getItem("samai_mobile_number") || "";
+    const cachedVc = localStorage.getItem("samai_vc_data");
+    if (!isVCVerified || !mobileNumber || cachedVc) {
+      return;
+    }
+
+    let isActive = true;
+    (async () => {
+      try {
+        const profile = await getUserProfile(mobileNumber);
+        if (!isActive) return;
+
+        if (profile.merged) {
+          localStorage.setItem("samai_vc_data", JSON.stringify(profile.merged));
+        }
+
+        setUserData({
+          name: profile.merged?.fullName || profile.user?.name || "",
+          phone: mobileNumber,
+          address: profile.merged?.address || "",
+          city: "",
+          discom: profile.merged?.issuerName || "",
+          consumerId: profile.merged?.consumerNumber || "",
+          isVCVerified: profile.is_vc_verified,
+        });
+      } catch (error) {
+        console.error("Failed to refresh profile data:", error);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isVCVerified, setUserData]);
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -68,6 +106,29 @@ const HomePage = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showMegaCelebration, setShowMegaCelebration] = useState(false);
   const [earningsView, setEarningsView] = useState<"today" | "month">("today");
+
+  const handleLogout = () => {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("samai_")) {
+        localStorage.removeItem(key);
+      }
+    });
+    sessionStorage.clear();
+    setUserData({
+      name: "",
+      phone: "",
+      address: "",
+      city: "",
+      discom: "",
+      consumerId: "",
+      email: "",
+      upiId: "",
+      isVCVerified: false,
+      userContext: "",
+      isReturningUser: false,
+    });
+    navigate("/", { replace: true });
+  };
   
   // Animated earnings values - only for returning users
   // Both actual (earned) and expected scale 30x for month view
@@ -507,13 +568,15 @@ const HomePage = () => {
           
           <button
             onClick={() => {
+              if (!isVCVerified) return;
               if (tomorrowStatus === "not_published") {
                 navigate("/prepared");
               } else {
                 navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: tomorrowStatus === "published_confirmed" } });
               }
             }}
-            className="w-full text-left rounded-lg p-3"
+            disabled={!isVCVerified}
+            className={`w-full text-left rounded-lg p-3 ${!isVCVerified ? "opacity-60 cursor-not-allowed" : ""}`}
             style={{ background: "linear-gradient(135deg, hsl(175 50% 42%) 0%, hsl(185 45% 38%) 100%)" }}
           >
             <div className="flex items-start justify-between">
@@ -557,7 +620,7 @@ const HomePage = () => {
 
         {/* Chat Input Bar - Always visible */}
         <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-          <ChatInputBar />
+          <ChatInputBar disabled={!isVCVerified} />
         </div>
       </div>
     </div>
@@ -572,7 +635,7 @@ const HomePage = () => {
           <div className="flex items-center gap-2">
             <SamaiLogo size="sm" showText={false} />
             <div>
-              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {userData.name?.split(" ")[0] || "User"}!</p>
+              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {displayName}!</p>
               <div className="flex items-center gap-2">
                 <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
               </div>
@@ -595,7 +658,7 @@ const HomePage = () => {
                 <FileText size={14} className="mr-2" />
                 {t("home.todaysTrades")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/")} className="text-destructive">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut size={14} className="mr-2" />
                 {t("home.logout")}
               </DropdownMenuItem>
@@ -627,7 +690,7 @@ const HomePage = () => {
 };
 
 // QuickSpeak Card Component - Clickable to open Ask Samai page
-const ChatInputBar = () => {
+const ChatInputBar = ({ disabled }: { disabled?: boolean }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -639,13 +702,17 @@ const ChatInputBar = () => {
   ];
 
   const handleOpenAskSamai = () => {
+    if (disabled) return;
     navigate("/ask-samai");
   };
 
   return (
-    <button 
+    <button
       onClick={handleOpenAskSamai}
-      className="w-full text-left relative rounded-xl p-2.5 shadow-card overflow-hidden border border-primary/20 hover:shadow-lg transition-shadow" 
+      disabled={disabled}
+      className={`w-full text-left relative rounded-xl p-2.5 shadow-card overflow-hidden border border-primary/20 transition-shadow ${
+        disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-lg"
+      }`}
       style={{ background: "linear-gradient(135deg, hsl(35 90% 95%) 0%, hsl(40 85% 93%) 50%, hsl(45 80% 91%) 100%)" }}>
       
       {/* Header */}

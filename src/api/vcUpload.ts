@@ -1,6 +1,6 @@
 import type { VCExtractedData } from "@/utils/vcPdfParser";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
 const VC_UPLOAD_URL = `${API_BASE_URL}/api/vc/upload`;
 
 export interface VcUploadDocument {
@@ -19,12 +19,12 @@ export interface VcUploadResponse {
 
 export const uploadVcDocuments = async (
   files: File[],
-  userId?: string,
+  mobileNumber?: string,
 ): Promise<VcUploadResponse> => {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
-  if (userId) {
-    formData.append("user_id", userId);
+  if (mobileNumber) {
+    formData.append("mobile_number", mobileNumber);
   }
 
   const response = await fetch(VC_UPLOAD_URL, {

@@ -20,58 +20,61 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
   const [confirmed, setConfirmed] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
+  const isVerified = Boolean(userData.isVCVerified);
+  const placeholder = "—";
+
   // Use location data from route state (step 1) or fallback to userData
-  const address = locationData?.address || userData.address;
-  const city = locationData?.city || userData.city;
-  const locality = extractLocality(address);
+  const address = isVerified ? (locationData?.address || userData.address) : "";
+  const city = isVerified ? (locationData?.city || userData.city) : "";
+  const locality = isVerified ? extractLocality(address) : "";
 
   const devices = [
     { 
       icon: Zap, 
       title: "Solar Inverter", 
-      detail: "Growatt • 5 kW",
+      detail: placeholder,
       expanded: {
-        brand: "Growatt",
-        model: "MIN 5000TL-X",
-        capacity: "5 kW",
-        installDate: "March 2024",
-        serialNo: "GRW2024XXXXXX"
+        brand: placeholder,
+        model: placeholder,
+        capacity: placeholder,
+        installDate: placeholder,
+        serialNo: placeholder
       }
     },
     { 
       icon: Battery, 
       title: "Battery", 
-      detail: "Luminous • 10 kWh",
+      detail: placeholder,
       expanded: {
-        brand: "Luminous",
-        model: "Power Stack 10K",
-        capacity: "10 kWh",
-        cycles: "6000+",
-        warranty: "10 years"
+        brand: placeholder,
+        model: placeholder,
+        capacity: placeholder,
+        cycles: placeholder,
+        warranty: placeholder
       }
     },
     { 
       icon: Gauge, 
       title: "Smart Meter", 
-      detail: "Genus • Bi-directional",
+      detail: placeholder,
       expanded: {
-        brand: "Genus",
-        type: "Bi-directional",
-        meterNo: "KA-BLR-XXXXXX",
-        sanctionedLoad: "5 kW",
-        phase: "Single Phase"
+        brand: placeholder,
+        type: placeholder,
+        meterNo: placeholder,
+        sanctionedLoad: placeholder,
+        phase: placeholder
       }
     },
     { 
       icon: User, 
       title: "Profile", 
-      detail: `${userData.name}, ${locality}`,
+      detail: isVerified ? [userData.name, locality].filter(Boolean).join(", ") : placeholder,
       expanded: {
-        name: userData.name,
-        address: address,
-        city: city,
-        consumerId: userData.consumerId,
-        tariff: "LT-2 Domestic"
+        name: isVerified ? (userData.name || placeholder) : placeholder,
+        address: isVerified ? (address || placeholder) : placeholder,
+        city: isVerified ? (city || placeholder) : placeholder,
+        consumerId: isVerified ? (userData.consumerId || placeholder) : placeholder,
+        tariff: placeholder
       }
     },
   ];
@@ -151,10 +154,12 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
                 <p className="text-xs font-semibold text-foreground">Solar System Detected</p>
                 <p className="text-2xs text-muted-foreground">{locality}</p>
               </div>
-              <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-teal-500/15 to-green-500/10 px-2 py-1 rounded-full border border-accent/20">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-2xs font-medium text-accent">Verified</span>
-              </div>
+              {isVerified ? (
+                <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-teal-500/15 to-green-500/10 px-2 py-1 rounded-full border border-accent/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                  <span className="text-2xs font-medium text-accent">Verified</span>
+                </div>
+              ) : null}
             </div>
             
             {/* Quick Stats Grid - Colorful */}
@@ -163,21 +168,21 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-orange-400/20">
                   <Zap className="text-white" size={14} />
                 </div>
-                <p className="text-sm font-bold text-foreground">5 kW</p>
+                <p className="text-sm font-bold text-foreground">{placeholder}</p>
                 <p className="text-2xs text-muted-foreground">Inverter</p>
               </div>
               <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50 hover:shadow-md transition-shadow">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-green-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-teal-400/20">
                   <Battery className="text-white" size={14} />
                 </div>
-                <p className="text-sm font-bold text-foreground">10 kWh</p>
+                <p className="text-sm font-bold text-foreground">{placeholder}</p>
                 <p className="text-2xs text-muted-foreground">Battery</p>
               </div>
               <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50 hover:shadow-md transition-shadow">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center mx-auto mb-1 shadow-md shadow-purple-400/20">
                   <Gauge className="text-white" size={14} />
                 </div>
-                <p className="text-sm font-bold text-foreground">Bi-dir</p>
+                <p className="text-sm font-bold text-foreground">{placeholder}</p>
                 <p className="text-2xs text-muted-foreground">Meter</p>
               </div>
             </div>
