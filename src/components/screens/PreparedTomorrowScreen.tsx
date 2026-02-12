@@ -375,7 +375,7 @@ const PreparedTomorrowScreen = ({
   };
 
   try {
-    const API_URL = "https://atria-bbp.atriauniversity.ai/api/create";
+    const API_URL = "http://localhost:3002/api/create";
 
     const res = await fetch(API_URL, {
   method: "POST",
