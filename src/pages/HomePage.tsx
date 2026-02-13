@@ -55,7 +55,17 @@ const HomePage = () => {
   
   // Get verification status from router state or userData (persisted)
   const isVCVerified = Boolean(userData.isVCVerified || location.state?.isVCVerified);
-  const displayName = isVCVerified ? (userData.name?.split(" ")[0] || "User") : "User";
+  const cachedVcRaw = localStorage.getItem("samai_vc_data");
+  let cachedFullName = "";
+  if (cachedVcRaw) {
+    try {
+      cachedFullName = (JSON.parse(cachedVcRaw)?.fullName || "").trim();
+    } catch {
+      cachedFullName = "";
+    }
+  }
+  const resolvedName = (cachedFullName || userData.name || "").trim();
+  const displayName = isVCVerified ? (resolvedName.split(" ")[0] || "User") : "User";
   const justPublished = location.state?.justPublished ?? false;
   
   // Determine if user is new (based on userData flag)
@@ -96,6 +106,12 @@ const HomePage = () => {
       isActive = false;
     };
   }, [isVCVerified, setUserData]);
+
+  useEffect(() => {
+    if (isVCVerified && cachedFullName && !userData.name) {
+      setUserData({ name: cachedFullName });
+    }
+  }, [cachedFullName, isVCVerified, setUserData, userData.name]);
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);

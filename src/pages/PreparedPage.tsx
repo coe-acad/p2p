@@ -1,12 +1,25 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import PreparedTomorrowScreen from "@/components/screens/PreparedTomorrowScreen";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
+import { useUserData } from "@/hooks/useUserData";
 
 const PreparedPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { tradesData } = usePublishedTrades();
-  const isVCVerified = location.state?.isVCVerified ?? false;
+  const { userData } = useUserData();
+  const loginRaw = localStorage.getItem("samai_login_user");
+  let loginIsVerified = false;
+  if (loginRaw) {
+    try {
+      loginIsVerified = Boolean(JSON.parse(loginRaw)?.is_vc_verified);
+    } catch {
+      loginIsVerified = false;
+    }
+  }
+  const isVCVerified = Boolean(
+    location.state?.isVCVerified ?? userData.isVCVerified ?? loginIsVerified
+  );
   
   // Only show confirmed trades if explicitly flagged via showConfirmed state OR tradesData flag
   const showConfirmedFromState = location.state?.showConfirmed ?? false;

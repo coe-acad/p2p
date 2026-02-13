@@ -1,6 +1,19 @@
 import axios from "axios";
 
 export const publishTradesApi = async (activeTimeSlots: any[]) => {
+  const loginRaw = localStorage.getItem("samai_login_user");
+  let userId = "";
+  if (loginRaw) {
+    try {
+      userId = JSON.parse(loginRaw)?.user_id || "";
+    } catch {
+      userId = "";
+    }
+  }
+  if (!userId) {
+    throw new Error("Missing user_id for publish");
+  }
+
   const payload = {
     trades: activeTimeSlots.map(slot => {
       const { startTime, endTime } = splitTimeRange(slot.time);
@@ -12,6 +25,7 @@ export const publishTradesApi = async (activeTimeSlots: any[]) => {
         kWh: slot.kWh,
       };
     }),
+    user_id: userId,
     date: new Date().toISOString().split("T")[0],
     source: "prepared_tomorrow_screen",
   };
@@ -44,4 +58,3 @@ const toISOTime = (date: Date, timeStr: string) => {
 
   return dt.toISOString(); // returns "2026-01-28T06:00:00Z"
 };
-

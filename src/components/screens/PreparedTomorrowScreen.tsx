@@ -368,8 +368,22 @@ const PreparedTomorrowScreen = ({
     };
   });
 
+  const loginRaw = localStorage.getItem("samai_login_user");
+  let userId = "";
+  if (loginRaw) {
+    try {
+      userId = JSON.parse(loginRaw)?.user_id || "";
+    } catch {
+      userId = "";
+    }
+  }
+  if (!userId) {
+    throw new Error("Missing user_id for publish");
+  }
+
   const payload = {
     trades,
+    user_id: userId,
     date: format(tomorrow, "yyyy-MM-dd"),
     source: "prepared_tomorrow_screen",
   };
