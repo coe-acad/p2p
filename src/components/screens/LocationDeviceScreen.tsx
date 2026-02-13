@@ -4,6 +4,7 @@ import SamaiLogo from "../SamaiLogo";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
 import { uploadVcDocuments } from "@/api/vcUpload";
 import { formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
+import { markEarningsModalPending, saveEarningsSuggestion } from "@/utils/earningsSuggestion";
 
 interface LocationDeviceScreenProps {
   onContinue: (isVerified: boolean, locationData?: { address: string; city: string; discom: string }) => void;
@@ -335,6 +336,8 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
       }
 
       localStorage.setItem("samai_vc_data", JSON.stringify(mergedData));
+      saveEarningsSuggestion(mergedData as Record<string, unknown>);
+      markEarningsModalPending();
 
       setIsVerified(true);
       setUserData({ isVCVerified: true });

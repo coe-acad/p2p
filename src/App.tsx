@@ -12,8 +12,6 @@ import SuccessPage from "./pages/SuccessPage";
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
 import OnboardingLocationPage from "./pages/OnboardingLocationPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
-import CalculatingPage from "./pages/CalculatingPage";
-import EarningsHookPage from "./pages/EarningsHookPage";
 import PreparedPage from "./pages/PreparedPage";
 import PublishedPage from "./pages/PublishedPage";
 import HomePage from "./pages/HomePage";
@@ -58,8 +56,6 @@ const App = () => (
             <Route path="/onboarding/talk" element={<OnboardingTalkPage />} />
             
             {/* Post-Onboarding */}
-            <Route path="/calculating" element={<CalculatingPage />} />
-            <Route path="/earnings" element={<EarningsHookPage />} />
             <Route path="/prepared" element={<PreparedPage />} />
             <Route path="/published" element={<PublishedPage />} />
             

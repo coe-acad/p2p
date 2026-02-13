@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
 import { VCExtractedData } from "@/utils/vcPdfParser";
+import { loadEarningsSuggestion } from "@/utils/earningsSuggestion";
 import { getUserProfile, UserProfileResponse } from "@/api/users";
 
 const ProfilePage = () => {
@@ -73,6 +74,10 @@ const ProfilePage = () => {
   const isVerified = Boolean(profileData?.is_vc_verified ?? loginIsVerified ?? userData.isVCVerified);
   const vcData = (profileData?.merged || cachedVcData || {}) as VCExtractedData;
   const profileUser = profileData?.user;
+  const earningsSuggestion = loadEarningsSuggestion();
+  const earningsLabel = earningsSuggestion
+    ? `₹${earningsSuggestion.minEarnings}–₹${earningsSuggestion.maxEarnings} / day`
+    : t("profile.notSet");
 
   const address = vcData.address || userData.address;
   const locality = extractLocality(address);
@@ -131,6 +136,7 @@ const ProfilePage = () => {
     {
       title: t("profile.preferences"),
       items: [
+        { icon: Sparkles, label: "Samai's estimate", sublabel: earningsLabel, route: null },
         { icon: Sparkles, label: t("profile.howSamaiHelps"), sublabel: userData.automationLevel === "auto" ? t("profile.autoPlaceOrders") : t("profile.showRecommendations"), route: "/settings/automation" },
         { icon: MessageSquare, label: t("profile.yourContext"), sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : t("profile.notSet"), route: "/settings/context" },
         { icon: CalendarClock, label: t("profile.vacationsHolidays"), sublabel: userData.schoolHolidays || userData.summerVacationStart ? t("profile.datesSaved") : t("profile.notSet"), route: "/settings/vacations" },

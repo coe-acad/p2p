@@ -25,7 +25,7 @@ const PreparedPage = () => {
   const showConfirmedFromState = location.state?.showConfirmed ?? false;
   const hasConfirmedTrades = showConfirmedFromState && tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
   
-  // Force walkthrough during onboarding flow (coming from /calculating)
+  // Force walkthrough during onboarding flow (after verification modal)
   const fromOnboarding = location.state?.fromOnboarding ?? false;
 
   return (

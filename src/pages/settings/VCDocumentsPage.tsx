@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { uploadVcDocuments } from "@/api/vcUpload";
 import { getUserProfile } from "@/api/users";
 import { useUserData } from "@/hooks/useUserData";
+import { markEarningsModalPending, saveEarningsSuggestion } from "@/utils/earningsSuggestion";
 
 const VCDocumentsPage = () => {
   const navigate = useNavigate();
@@ -87,6 +88,8 @@ const VCDocumentsPage = () => {
           localStorage.setItem("samai_vc_uploaded_files", JSON.stringify(files));
         }
         localStorage.setItem("samai_vc_data", JSON.stringify(mergedData));
+        saveEarningsSuggestion(mergedData as Record<string, unknown>);
+        markEarningsModalPending();
         setUserData({
           name: mergedData.fullName || profile.user?.name || "",
           address: mergedData.address || "",
@@ -95,6 +98,7 @@ const VCDocumentsPage = () => {
           isVCVerified: true,
         });
         setUploadedFiles([]);
+        navigate("/home", { replace: true, state: { isVCVerified: true } });
       } else {
         setSubmitError("Verification incomplete. Please upload all required VC documents.");
         return;

@@ -2,41 +2,29 @@
  import { motion } from "framer-motion";
  import { Sparkles, IndianRupee, Sun, ArrowRight } from "lucide-react";
  import { Button } from "@/components/ui/button";
- import { useUserData } from "@/hooks/useUserData";
+ import { getOrCreateEarningsSuggestion } from "@/utils/earningsSuggestion";
  
  interface EarningsHookScreenProps {
    onContinue: () => void;
+   embedded?: boolean;
  }
  
- const EarningsHookScreen = ({ onContinue }: EarningsHookScreenProps) => {
-   const { userData } = useUserData();
+ const EarningsHookScreen = ({ onContinue, embedded = false }: EarningsHookScreenProps) => {
    const [showContent, setShowContent] = useState(false);
    
-   // Calculate earnings range based on solar capacity
-   // Default assumption: 5kW system generates ~20 kWh sellable daily at ₹6-7/unit
-   const getSolarCapacity = () => {
-     // Try to get from localStorage (set during VC parsing)
-     const stored = localStorage.getItem("samai_vc_data");
-     if (stored) {
-       try {
-         const vcData = JSON.parse(stored);
-         return parseInt(vcData.generationCapacity) || 5;
-       } catch {
-         return 5;
-       }
-     }
-     return 5; // Default 5kW
-   };
-   
-  const solarCapacityKW = getSolarCapacity();
-  // Earnings formula with diminishing returns for larger systems
-  // 5kW system → ₹80-95/day
-  // 50kW system → ₹150-200/day
-  const baseMin = 80;
-  const baseMax = 95;
-  const additionalCapacity = Math.max(0, solarCapacityKW - 5);
-  const minEarnings = Math.round(baseMin + additionalCapacity * 1.6);
-  const maxEarnings = Math.round(baseMax + additionalCapacity * 2.3);
+  const vcRaw = localStorage.getItem("samai_vc_data");
+  let vcData: Record<string, unknown> | undefined;
+  if (vcRaw) {
+    try {
+      vcData = JSON.parse(vcRaw);
+    } catch {
+      vcData = undefined;
+    }
+  }
+  const suggestion = getOrCreateEarningsSuggestion(vcData);
+  const solarCapacityKW = suggestion.capacityKw;
+  const minEarnings = suggestion.minEarnings;
+  const maxEarnings = suggestion.maxEarnings;
    
    useEffect(() => {
      // Slight delay before showing content for dramatic effect
@@ -44,8 +32,12 @@
      return () => clearTimeout(timer);
    }, []);
  
+   const containerClass = embedded
+     ? "w-full h-full bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden"
+     : "fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden";
+
    return (
-     <div className="fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden">
+     <div className={containerClass}>
        {/* Decorative background elements */}
        <div className="absolute inset-0 overflow-hidden pointer-events-none">
          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-amber-300/30 to-orange-300/30 rounded-full blur-3xl" />

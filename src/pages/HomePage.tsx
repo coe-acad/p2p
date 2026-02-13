@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun } from "lucide-react";
@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
@@ -17,6 +18,9 @@ import { useUserData } from "@/hooks/useUserData";
 import { getUserProfile } from "@/api/users";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import LanguageToggle from "@/components/LanguageToggle";
+import CalculatingScreen from "@/components/screens/CalculatingScreen";
+import EarningsHookScreen from "@/components/screens/EarningsHookScreen";
+import { markEarningsModalSeen, shouldShowEarningsModal } from "@/utils/earningsSuggestion";
 
 // Session storage keys
 const NOTIFICATION_SHOWN_KEY = "samai_confirmed_notification_shown";
@@ -112,6 +116,13 @@ const HomePage = () => {
       setUserData({ name: cachedFullName });
     }
   }, [cachedFullName, isVCVerified, setUserData, userData.name]);
+
+  useEffect(() => {
+    if (isVCVerified && shouldShowEarningsModal()) {
+      setEarningsStep("calculating");
+      setShowEarningsModal(true);
+    }
+  }, [isVCVerified]);
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -122,6 +133,17 @@ const HomePage = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showMegaCelebration, setShowMegaCelebration] = useState(false);
   const [earningsView, setEarningsView] = useState<"today" | "month">("today");
+  const [showEarningsModal, setShowEarningsModal] = useState(false);
+  const [earningsStep, setEarningsStep] = useState<"calculating" | "earnings">("calculating");
+
+  const closeEarningsModal = useCallback(() => {
+    setShowEarningsModal(false);
+    markEarningsModalSeen();
+  }, []);
+
+  const handleCalculatingComplete = useCallback(() => {
+    setEarningsStep("earnings");
+  }, []);
 
   const handleLogout = () => {
     Object.keys(localStorage).forEach((key) => {
@@ -701,6 +723,24 @@ const HomePage = () => {
       <div className="flex-shrink-0">
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
+
+      {/* Verification Success Modal (Calculating -> Earnings) */}
+      <Dialog
+        open={showEarningsModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEarningsModal();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden w-[95vw] max-w-md h-[85vh]">
+          {earningsStep === "calculating" ? (
+            <CalculatingScreen onComplete={handleCalculatingComplete} />
+          ) : (
+            <EarningsHookScreen onContinue={closeEarningsModal} embedded />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
