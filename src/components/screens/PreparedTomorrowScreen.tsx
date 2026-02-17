@@ -516,7 +516,6 @@ const PreparedTomorrowScreen = ({
           content={`कल के लिए आपका सोलर ट्रेडिंग प्लान तैयार है। कुल अनुमानित कमाई ${totalEarnings} रुपये है, ${Math.round(totalUnits)} किलोवाट घंटे बिजली बेचकर। ${activeTimeSlots.length} ट्रेड प्लान किए गए हैं। अगर आप सहमत हैं तो अप्रूव नाउ बटन दबाएं और समाई कल आपके लिए ट्रेडिंग संभाल लेगा। बदलाव करने के लिए चेंज बटन दबाएं।`}
           autoPlay={true}
           storageKey="samai_prepared_narration_played"
-          onSpeechComplete={handleNarrationComplete}
           className="animate-fade-in"
         />
 
