@@ -30,15 +30,6 @@ export default defineConfig(({ mode }) => ({
         }
         warn(warning);
       },
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("pdfjs-dist")) return "pdfjs";
-          if (id.includes("i18next") || id.includes("react-i18next")) return "i18n";
-          if (id.includes("react") || id.includes("react-dom")) return "react-vendor";
-          return "vendor";
-        },
-      },
     },
   },
 }));
