@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Leaf, Clock, TrendingUp, Zap, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ArrowLeft, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format, addDays, parse } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -80,13 +81,6 @@ const HOUR_TO_SLOT_ID: Record<string, string> = {
   "5 PM": "5PM",
 };
 
-const SUGGESTION_CHIPS = [
-  "Pause all trades for tomorrow",
-  "Don't sell between 1 and 3 PM",
-  "I'll have guests tomorrow evening",
-  "Only sell if price > ₹6",
-];
-
 const HOUR_OPTIONS = ["10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM"];
 
 const PreparedTomorrowScreen = ({ 
@@ -95,9 +89,17 @@ const PreparedTomorrowScreen = ({
   onTalkToSamai,
   onBack 
 }: PreparedTomorrowScreenProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
   const { publishTrades, updatePlannedTrades, tradesData, setTradesData } = usePublishedTrades();
+
+  const suggestionChips = [
+    { label: t("prepared.suggest.pauseTomorrow"), command: "pause all" },
+    { label: t("prepared.suggest.noSell1to3"), command: "don't sell between 1 and 3 PM" },
+    { label: t("prepared.suggest.guestsEvening"), command: "guests tomorrow evening" },
+    { label: t("prepared.suggest.onlySellAbove6"), command: "price > 6" },
+  ];
   
   // Reset approval state when user makes changes
   const resetApprovalState = () => {
@@ -368,7 +370,7 @@ const PreparedTomorrowScreen = ({
     // Pause all trades
     if (lowerCommand.includes('pause all') || lowerCommand.includes('stop all')) {
       setIsPaused(true);
-      setChatResponse("✓ All trades paused for tomorrow. No energy will be sold.");
+      setChatResponse(t("prepared.feedback.allPaused"));
       return;
     }
     
@@ -376,7 +378,7 @@ const PreparedTomorrowScreen = ({
     if (lowerCommand.includes('resume') || lowerCommand.includes('unpause')) {
       setIsPaused(false);
       setExcludedSlotIds([]);
-      setChatResponse("✓ All trades resumed! Your full trading plan is active.");
+      setChatResponse(t("prepared.feedback.allResumed"));
       return;
     }
     
@@ -414,7 +416,13 @@ const PreparedTomorrowScreen = ({
       setExcludedSlotIds(prev => [...new Set([...prev, ...hoursToExclude])]);
       const displayStart = startHour > 12 ? `${startHour - 12} PM` : startHour === 12 ? '12 PM' : `${startHour} AM`;
       const displayEnd = endHour > 12 ? `${endHour - 12} PM` : endHour === 12 ? '12 PM' : `${endHour} AM`;
-      setChatResponse(`✓ Won't sell between ${displayStart} and ${displayEnd}. ${hoursToExclude.length} time slots excluded.`);
+      setChatResponse(
+        t("prepared.feedback.noSellBetween", {
+          start: displayStart,
+          end: displayEnd,
+          count: hoursToExclude.length,
+        })
+      );
       return;
     }
     
@@ -425,7 +433,12 @@ const PreparedTomorrowScreen = ({
       const slotsToExclude = BASE_TIME_SLOTS.filter(slot => slot.rate < minPrice).map(slot => slot.id);
       setExcludedSlotIds(prev => [...new Set([...prev, ...slotsToExclude])]);
       const removedCount = slotsToExclude.length;
-      setChatResponse(`✓ Only selling when price > ₹${minPrice}. ${removedCount} lower-rate slots excluded.`);
+      setChatResponse(
+        t("prepared.feedback.onlySellAbove", {
+          price: minPrice,
+          count: removedCount,
+        })
+      );
       return;
     }
     
@@ -433,11 +446,11 @@ const PreparedTomorrowScreen = ({
     if (lowerCommand.includes('guest') || lowerCommand.includes('evening')) {
       const afternoonSlots = ["2PM", "3PM", "4PM", "5PM"];
       setExcludedSlotIds(prev => [...new Set([...prev, ...afternoonSlots.filter(id => HOUR_TO_SLOT_ID[Object.keys(HOUR_TO_SLOT_ID).find(k => HOUR_TO_SLOT_ID[k] === id) || ""])])]);
-      setChatResponse("✓ Afternoon/evening slots paused. You'll have full power for your guests!");
+      setChatResponse(t("prepared.feedback.afternoonPaused"));
       return;
     }
     
-    setChatResponse("I understood your request. Let me adjust your trading plan accordingly.");
+    setChatResponse(t("prepared.feedback.generic"));
   };
 
   const handleChatSubmit = () => {
@@ -445,9 +458,9 @@ const PreparedTomorrowScreen = ({
     processCommand(chatInput);
   };
 
-  const handleChipClick = (chip: string) => {
-    setChatInput(chip);
-    processCommand(chip);
+  const handleChipClick = (chip: { label: string; command: string }) => {
+    setChatInput(chip.label);
+    processCommand(chip.command);
   };
 
   const handleConfirmTimeChanges = () => {
@@ -479,7 +492,9 @@ const PreparedTomorrowScreen = ({
               </button>
             )}
             <div>
-              <h2 className="text-lg font-semibold text-foreground tracking-tight">All set for tomorrow</h2>
+              <h2 className="text-lg font-semibold text-foreground tracking-tight">
+                {t("prepared.allSetForTomorrow")}
+              </h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-xs text-muted-foreground">{tomorrowFormatted}</p>
                 {/* Dev toggle for testing auto mode */}
@@ -507,7 +522,9 @@ const PreparedTomorrowScreen = ({
         {/* Earnings Summary Card - with color gradient */}
         <div className="rounded-xl border border-border shadow-card overflow-hidden animate-scale-in">
           <div className="p-4 bg-gradient-to-br from-primary/5 via-primary/3 to-accent/5">
-            <p className="text-xs text-muted-foreground text-center">Expected Earnings</p>
+            <p className="text-xs text-muted-foreground text-center">
+              {t("prepared.expectedEarnings")}
+            </p>
             <div className="text-center py-2">
               <p className="text-3xl font-semibold text-foreground tracking-tight">₹{totalEarnings}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{Math.round(totalUnits)} kWh</p>
@@ -517,7 +534,7 @@ const PreparedTomorrowScreen = ({
           {/* Green Energy Bar - light green background */}
           <div className="bg-accent/15 px-3 py-1.5 flex items-center justify-center gap-1.5 border-t border-accent/20">
             <Leaf className="text-accent" size={12} />
-            <span className="text-xs font-medium text-accent">100% Solar</span>
+            <span className="text-xs font-medium text-accent">{t("prepared.solarOnly")}</span>
           </div>
         </div>
 
@@ -525,11 +542,13 @@ const PreparedTomorrowScreen = ({
         <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.05s" }}>
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Planned Trades</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {t("trades.plannedTrades")}
+              </p>
               {/* Non-closable countdown */}
               <div className="flex items-center gap-1 text-2xs text-muted-foreground bg-secondary rounded-full px-2 py-0.5">
                 <RefreshCw size={9} />
-                <span>Refreshes in {countdown}</span>
+                <span>{t("prepared.refreshesIn", { time: countdown })}</span>
               </div>
             </div>
             
@@ -539,13 +558,15 @@ const PreparedTomorrowScreen = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Pause size={14} className="text-amber-600" />
-                    <p className="text-xs font-medium text-amber-800">All trades paused</p>
+                    <p className="text-xs font-medium text-amber-800">
+                      {t("prepared.allTradesPaused")}
+                    </p>
                   </div>
                   <button 
                     onClick={() => setIsPaused(false)}
                     className="text-2xs text-amber-700 hover:text-amber-900 font-medium"
                   >
-                    Resume
+                    {t("prepared.resume")}
                   </button>
                 </div>
               </div>
@@ -554,12 +575,12 @@ const PreparedTomorrowScreen = ({
             {/* Empty state when all slots excluded */}
             {!isPaused && activeTimeSlots.length === 0 && (
               <div className="p-4 text-center">
-                <p className="text-sm text-muted-foreground">No trades planned</p>
+                <p className="text-sm text-muted-foreground">{t("prepared.noTradesPlanned")}</p>
                 <button 
                   onClick={() => setExcludedSlotIds([])}
                   className="text-xs text-primary mt-2 hover:underline"
                 >
-                  Reset exclusions
+                  {t("prepared.resetExclusions")}
                 </button>
               </div>
             )}
@@ -589,7 +610,7 @@ const PreparedTomorrowScreen = ({
                         </p>
                         {slot.isBatteryPowered && (
                           <span className="text-2xs text-amber-600 dark:text-amber-400 font-medium">
-                            · Battery
+                            · {t("prepared.battery")}
                           </span>
                         )}
                       </div>
@@ -613,7 +634,7 @@ const PreparedTomorrowScreen = ({
                           className="text-xs"
                         >
                           <Pencil size={12} className="mr-2" />
-                          Edit
+                          {t("common.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => {
@@ -623,7 +644,7 @@ const PreparedTomorrowScreen = ({
                           className="text-xs text-destructive focus:text-destructive"
                         >
                           <Trash2 size={12} className="mr-2" />
-                          Remove
+                          {t("prepared.remove")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -637,7 +658,7 @@ const PreparedTomorrowScreen = ({
               <div className="flex items-center gap-1.5 pt-2 mt-1">
                 <TrendingUp size={10} className="text-accent flex-shrink-0" />
                 <p className="text-2xs text-muted-foreground">
-                  Prices may improve as demand updates.
+                  {t("prepared.pricesMayImprove")}
                 </p>
               </div>
             )}
@@ -649,10 +670,10 @@ const PreparedTomorrowScreen = ({
               <>
                 <div className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-accent/15 border border-accent/30">
                   <Check size={16} className="text-accent" />
-                  <span className="text-sm font-medium text-accent">Approved</span>
+                  <span className="text-sm font-medium text-accent">{t("trades.approved")}</span>
                 </div>
                 <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
-                  <span>Change</span>
+                  <span>{t("common.change")}</span>
                 </button>
               </>
             ) : (
@@ -662,10 +683,10 @@ const PreparedTomorrowScreen = ({
                   disabled={activeTimeSlots.length === 0}
                   className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  Approve Now
+                  {t("trades.approveNow")}
                 </button>
                 <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
-                  <span>Change</span>
+                  <span>{t("common.change")}</span>
                 </button>
               </>
             )}
@@ -686,9 +707,12 @@ const PreparedTomorrowScreen = ({
       <Dialog open={showControlModal} onOpenChange={setShowControlModal}>
         <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
           <DialogHeader className="p-4 pb-3 border-b border-border">
-            <DialogTitle className="text-base font-semibold">Take control</DialogTitle>
+            <DialogTitle className="text-base font-semibold">{t("prepared.takeControl")}</DialogTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Today, {todayFormatted} · Adjust Samai's plan for tomorrow ({format(tomorrow, "EEEE")})
+              {t("prepared.adjustPlanForTomorrow", {
+                today: todayFormatted,
+                day: format(tomorrow, "EEEE"),
+              })}
             </p>
           </DialogHeader>
 
@@ -702,7 +726,7 @@ const PreparedTomorrowScreen = ({
                     onClick={() => setShowControlModal(false)}
                     className="mt-2 w-full py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
                   >
-                    Done
+                    {t("common.done")}
                   </button>
                 </div>
               )}
@@ -710,16 +734,16 @@ const PreparedTomorrowScreen = ({
               {/* Talk to Samai section - only show if no response yet */}
               {!chatResponse && (
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-2">Talk to Samai</p>
-                  <p className="text-xs text-muted-foreground mb-3">Try saying:</p>
+                  <p className="text-sm font-medium text-foreground mb-2">{t("home.talkToSamai")}</p>
+                  <p className="text-xs text-muted-foreground mb-3">{t("prepared.trySaying")}</p>
                   <div className="flex flex-wrap gap-2">
-                    {SUGGESTION_CHIPS.map((chip, index) => (
+                    {suggestionChips.map((chip, index) => (
                       <button
                         key={index}
                         onClick={() => handleChipClick(chip)}
                         className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:bg-secondary transition-colors"
                       >
-                        {chip}
+                        {chip.label}
                       </button>
                     ))}
                   </div>
@@ -732,7 +756,7 @@ const PreparedTomorrowScreen = ({
                   onClick={() => setModalStep('options')}
                   className="w-full text-xs text-primary text-left hover:underline"
                 >
-                  Or choose from options →
+                  {t("prepared.chooseFromOptions")}
                 </button>
               )}
             </div>
@@ -740,7 +764,7 @@ const PreparedTomorrowScreen = ({
 
           {modalStep === 'options' && (
             <div className="p-4 space-y-2">
-              <p className="text-sm font-medium text-foreground mb-3">What would you like to do?</p>
+              <p className="text-sm font-medium text-foreground mb-3">{t("prepared.whatWouldYouLikeToDo")}</p>
               
               {/* Pause option */}
               <button
@@ -751,8 +775,8 @@ const PreparedTomorrowScreen = ({
                   <Pause size={16} className="text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Pause all trades for tomorrow</p>
-                  <p className="text-xs text-muted-foreground">Samai won't publish any offers</p>
+                  <p className="text-sm font-medium text-foreground">{t("prepared.pauseAllTradesTomorrow")}</p>
+                  <p className="text-xs text-muted-foreground">{t("prepared.noOffersMessage")}</p>
                 </div>
               </button>
 
@@ -765,8 +789,8 @@ const PreparedTomorrowScreen = ({
                   <Sliders size={16} className="text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Adjust specific time windows</p>
-                  <p className="text-xs text-muted-foreground">Choose which hours to exclude</p>
+                  <p className="text-sm font-medium text-foreground">{t("prepared.adjustSpecificTimeWindows")}</p>
+                  <p className="text-xs text-muted-foreground">{t("prepared.chooseHoursToExclude")}</p>
                 </div>
               </button>
 
@@ -779,8 +803,8 @@ const PreparedTomorrowScreen = ({
                   <MessageCircle size={16} className="text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Talk to Samai</p>
-                  <p className="text-xs text-muted-foreground">Describe what you need in plain language</p>
+                  <p className="text-sm font-medium text-foreground">{t("home.talkToSamai")}</p>
+                  <p className="text-xs text-muted-foreground">{t("prepared.describeNeeds")}</p>
                 </div>
               </button>
 
@@ -788,7 +812,7 @@ const PreparedTomorrowScreen = ({
                 onClick={() => setModalStep('main')}
                 className="w-full text-xs text-muted-foreground text-center mt-2 hover:text-foreground"
               >
-                ← Back
+                ← {t("common.back")}
               </button>
             </div>
           )}
@@ -796,14 +820,14 @@ const PreparedTomorrowScreen = ({
           {modalStep === 'time' && (
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">Adjust time windows</p>
+                <p className="text-sm font-medium text-foreground">{t("prepared.adjustTimeWindows")}</p>
                 <button onClick={() => setModalStep('options')} className="text-muted-foreground hover:text-foreground">
                   <X size={16} />
                 </button>
               </div>
               
               <p className="text-xs text-muted-foreground">
-                Tap hours to exclude them. Excluded hours won't be published or traded.
+                {t("prepared.excludeHoursHint")}
               </p>
 
               <div className="grid grid-cols-4 gap-2">
@@ -830,7 +854,7 @@ const PreparedTomorrowScreen = ({
                 className="btn-green w-full !py-3 flex items-center justify-center gap-2"
               >
                 <Check size={16} />
-                <span>Confirm changes</span>
+                <span>{t("prepared.confirmChanges")}</span>
               </button>
             </div>
           )}
@@ -839,28 +863,28 @@ const PreparedTomorrowScreen = ({
           {modalStep === 'chat' && (
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">Talk to Samai</p>
+                <p className="text-sm font-medium text-foreground">{t("home.talkToSamai")}</p>
                 <button onClick={() => setModalStep('options')} className="text-muted-foreground hover:text-foreground">
                   <X size={16} />
                 </button>
               </div>
               
               <p className="text-xs text-muted-foreground">
-                Try these suggestions or type your own:
+                {t("prepared.trySuggestionsOrType")}
               </p>
 
               <div className="flex flex-wrap gap-2">
-                {SUGGESTION_CHIPS.map((chip, index) => (
+                {suggestionChips.map((chip, index) => (
                   <button
                     key={index}
                     onClick={() => handleChipClick(chip)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                      chatInput === chip 
+                      chatInput === chip.label 
                         ? 'border-primary bg-primary/10 text-primary' 
                         : 'border-border bg-card hover:bg-secondary'
                     }`}
                   >
-                    {chip}
+                    {chip.label}
                   </button>
                 ))}
               </div>
@@ -871,14 +895,14 @@ const PreparedTomorrowScreen = ({
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-                  placeholder="Or type your request..."
+                  placeholder={t("prepared.typeYourRequest")}
                   className="flex-1 px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <button
                   onClick={handleChatSubmit}
                   className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
                 >
-                  Send
+                  {t("prepared.send")}
                 </button>
               </div>
 
@@ -894,7 +918,7 @@ const PreparedTomorrowScreen = ({
                   className="btn-green w-full !py-3 flex items-center justify-center gap-2"
                 >
                   <Check size={16} />
-                  <span>Done</span>
+                  <span>{t("common.done")}</span>
                 </button>
               )}
             </div>
