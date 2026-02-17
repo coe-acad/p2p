@@ -138,7 +138,7 @@ const HomePage = () => {
   // Stops at 100% progress with MEGA celebration, then resets and restarts for prototype demo
   useEffect(() => {
     // Skip celebration logic for new users
-    if (isVCVerified && !isNewUser) {
+    if (!isNewUser) {
       const LAST_PRICE_KEY = "samai_last_trade_price";
 
   const fetchTradeStatus = async () => {
