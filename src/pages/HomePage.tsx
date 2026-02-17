@@ -138,39 +138,40 @@ const HomePage = () => {
   // Stops at 100% progress with MEGA celebration, then resets and restarts for prototype demo
   useEffect(() => {
     // Skip celebration logic for new users
-    if (isVCVerified && !isNewUser) {
-      const interval = setInterval(() => {
-        setDisplayedEarnings(prev => {
-          const expected = earningsView === "today" ? initialTodayData.expected : monthData.expected;
-          
-          // Check if we've reached 100%
-          if (prev >= expected) {
-            // Trigger MEGA celebration at 100%!
-            setShowMegaCelebration(true);
-            setTimeout(() => {
-              setShowMegaCelebration(false);
-              // Reset to initial values for prototype loop
-              setDisplayedKwh(earningsView === "today" ? initialTodayData.actualKwh : monthData.actualKwh);
-              setDisplayedEarnings(earningsView === "today" ? initialTodayData.actual : monthData.actual);
-            }, 5000);
-            return prev;
-          }
-          
-          // Trigger normal celebration if not at max
-          setShowCelebration(true);
-          setCelebrationCount(c => c + 1);
-          setTimeout(() => setShowCelebration(false), 3000);
-          
-          // Animate values increasing
-          const earningsIncrease = Math.floor(Math.random() * 8) + 3; // 3-10 rupees
-          const kwhIncrease = Math.round((Math.random() * 1.5 + 0.5) * 10) / 10; // 0.5-2 kWh
-          
-          setLastEarningsIncrease(earningsIncrease);
-          setDisplayedKwh(k => Math.min(Math.round((k + kwhIncrease) * 10) / 10, earningsView === "today" ? initialTodayData.expectedKwh : monthData.expectedKwh));
-          
-          return Math.min(prev + earningsIncrease, expected);
-        });
-      }, 10000); // Every 10 seconds
+    if (!isNewUser) {
+      const LAST_PRICE_KEY = "samai_last_trade_price";
+
+  const fetchTradeStatus = async () => {
+    try {
+      const response = await fetch(
+        "https://atria-bbp.atriauniversity.ai/api/trade-status"
+      );
+      const data = await response.json();
+
+      if (!data.status || data.price == null) {
+        return;
+      }
+
+      const newPrice = Number(data.price);
+      const storedPrice = Number(localStorage.getItem(LAST_PRICE_KEY)) || 0;
+
+      if (newPrice > storedPrice) {
+        const incrementAmount = newPrice;
+
+        setDisplayedEarnings(prev => prev + incrementAmount);
+
+        localStorage.setItem(LAST_PRICE_KEY, String(newPrice));
+        setShowCelebration(true);
+        setLastEarningsIncrease(incrementAmount);
+        setTimeout(() => setShowCelebration(false), 3000);
+      }
+
+    } catch (error) {
+      console.error("Trade status API failed:", error);
+    }
+  };
+
+  const interval = setInterval(fetchTradeStatus, 10000);
       return () => clearInterval(interval);
     }
   }, [isVCVerified, earningsView, isNewUser]);
