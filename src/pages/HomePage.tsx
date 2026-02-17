@@ -733,7 +733,7 @@ const HomePage = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden w-[95vw] max-w-md h-[85vh]">
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden w-[95vw] max-w-md h-[85vh] bg-transparent">
           {earningsStep === "calculating" ? (
             <CalculatingScreen onComplete={handleCalculatingComplete} />
           ) : (

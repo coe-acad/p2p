@@ -32,9 +32,9 @@
      return () => clearTimeout(timer);
    }, []);
  
-   const containerClass = embedded
-     ? "w-full h-full bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden"
-     : "fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden";
+  const containerClass = embedded
+    ? "relative w-full h-full bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden"
+    : "fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex flex-col items-center justify-center p-6 overflow-hidden";
 
    return (
      <div className={containerClass}>
