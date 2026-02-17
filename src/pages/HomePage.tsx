@@ -326,27 +326,6 @@ const HomePage = () => {
           </button>
         )}
 
-        {/* Pending VC Verification Card */}
-        {!isVCVerified && (
-          <button
-            onClick={() => navigate("/settings/vc-documents")}
-            className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-destructive/10 to-orange-50 dark:from-destructive/20 dark:to-orange-900/10 border border-destructive/30 rounded-xl animate-slide-up backdrop-blur-sm text-left hover:shadow-md transition-all group"
-          >
-            <div className="w-8 h-8 rounded-full bg-destructive/15 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="text-destructive" size={16} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">{t("home.completeDiscomVerification")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("home.requiredToPublish")}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-medium text-primary">{t("common.verify")}</span>
-              <ArrowRight size={14} className="text-primary group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        )}
-
-
         {/* Section 1: Earnings Snapshot - Green gradient card matching reference */}
         <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-accent/20" 
           style={{ background: "linear-gradient(135deg, hsl(35 90% 95%) 0%, hsl(45 85% 92%) 50%, hsl(140 45% 92%) 100%)" }}>
