@@ -28,8 +28,8 @@ const PaymentsPage = () => {
   
   // For returning users, show their saved UPI ID; for new users, show empty
   const isReturningUser = userData.isReturningUser ?? false;
-  const defaultUpiId = isReturningUser ? (userData.upiId || "jyotirmayee@upi") : (userData.upiId || "");
-  const defaultEmail = isReturningUser ? (userData.email || "jyotirmayee@gmail.com") : (userData.email || "");
+  const defaultUpiId = isReturningUser ? (userData.upiId || "seema@upi") : (userData.upiId || "");
+  const defaultEmail = isReturningUser ? (userData.email || "seema@gmail.com") : (userData.email || "");
   
   const [upiId, setUpiId] = useState(defaultUpiId);
   const [email, setEmail] = useState(defaultEmail);

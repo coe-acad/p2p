@@ -12,6 +12,8 @@ import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
 import chatbotIcon from "@/assets/chatbot-icon.png";
+import auLogo from "@/assets/AU-logo.png";
+import tecLogo from "@/assets/TEC-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
@@ -60,6 +62,8 @@ const HomePage = () => {
   const isNewUser = !userData.isReturningUser;
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
+  const displayName = (userData.name || "").trim();
+  const firstName = displayName.split(" ")[0] || "User";
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
   const [setupExpanded, setSetupExpanded] = useState(false);
   const [hideSetupBanner, setHideSetupBanner] = useState(() => {
@@ -323,27 +327,6 @@ const HomePage = () => {
           </button>
         )}
 
-        {/* Pending VC Verification Card */}
-        {!isVCVerified && (
-          <button
-            onClick={() => navigate("/settings/vc-documents")}
-            className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-destructive/10 to-orange-50 dark:from-destructive/20 dark:to-orange-900/10 border border-destructive/30 rounded-xl animate-slide-up backdrop-blur-sm text-left hover:shadow-md transition-all group"
-          >
-            <div className="w-8 h-8 rounded-full bg-destructive/15 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="text-destructive" size={16} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">{t("home.completeDiscomVerification")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("home.requiredToPublish")}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-medium text-primary">{t("common.verify")}</span>
-              <ArrowRight size={14} className="text-primary group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        )}
-
-
         {/* Section 1: Earnings Snapshot - Green gradient card matching reference */}
         <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-accent/20" 
           style={{ background: "linear-gradient(135deg, hsl(35 90% 95%) 0%, hsl(45 85% 92%) 50%, hsl(140 45% 92%) 100%)" }}>
@@ -573,7 +556,7 @@ const HomePage = () => {
           <div className="flex items-center gap-2">
             <SamaiLogo size="sm" showText={false} />
             <div>
-              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {userData.name?.split(" ")[0] || "User"}!</p>
+              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {firstName}!</p>
               <div className="flex items-center gap-2">
                 <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
               </div>
@@ -619,6 +602,16 @@ const HomePage = () => {
         </div>
       </div>
       
+      {/* Powered by AU x TEC */}
+      <div className="flex items-center justify-center gap-2 pb-2">
+        <span className="text-[10px] text-muted-foreground">Powered by</span>
+        <div className="flex items-center gap-1.5">
+          <img src={auLogo} alt="AU" className="h-4 w-auto" />
+          <span className="text-[10px] text-muted-foreground">×</span>
+          <img src={tecLogo} alt="TEC" className="h-4 w-auto" />
+        </div>
+      </div>
+
       {/* Bottom Navigation - Fixed at bottom, outside scroll area */}
       <div className="flex-shrink-0">
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

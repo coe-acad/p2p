@@ -12,18 +12,12 @@ const PreparedPage = () => {
   const showConfirmedFromState = location.state?.showConfirmed ?? false;
   const hasConfirmedTrades = showConfirmedFromState && tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
   
-  // Force walkthrough during onboarding flow (coming from /calculating)
-  const fromOnboarding = location.state?.fromOnboarding ?? false;
-
   return (
     <PreparedTomorrowScreen
-      isVCVerified={isVCVerified}
       hasConfirmedTrades={hasConfirmedTrades}
-      forceWalkthrough={fromOnboarding}
       onLooksGood={() => navigate("/published", { state: { isVCVerified } })}
       onViewAdjust={() => navigate("/dashboard")}
       onTalkToSamai={() => navigate("/onboarding/talk", { state: { isVCVerified } })}
-      onVerifyNow={() => navigate("/onboarding/location")}
       onBack={() => navigate("/home")}
     />
   );

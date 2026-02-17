@@ -18,4 +18,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        if (
+          warning.code === "EVAL" &&
+          typeof warning.id === "string" &&
+          warning.id.includes("pdfjs-dist")
+        ) {
+          return;
+        }
+        warn(warning);
+      },
+    },
+  },
 }));
