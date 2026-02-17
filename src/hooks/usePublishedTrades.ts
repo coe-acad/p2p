@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { convertTradesToSchema, type TradeSubmission } from "@/utils/tradeSchemaConverter";
 export interface PlannedTrade {
@@ -52,38 +52,61 @@ export const usePublishedTrades = () => {
   }, [tradesData]);
 
   const setTradesData = (updates: Partial<PublishedTradesData>) => {
-    setTradesDataState(prev => ({ ...prev, ...updates }));
+    setTradesDataState(prev => {
+      const newData = { ...prev, ...updates };
+      // Sync to localStorage immediately
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      return newData;
+    });
   };
 
+  // Update planned trades dynamically (for modifications on Prepared page)
+  // Memoized to prevent unnecessary re-renders in consuming components
+  const updatePlannedTrades = useCallback((trades: PlannedTrade[]) => {
+    setTradesDataState(prev => {
+      const newData = {
+        ...prev,
+        plannedTrades: trades,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      return newData;
+    });
+  }, []);
+
   const publishTrades = async (trades: PlannedTrade[]) => {
-    // Convert trades to backend schema
-    const tradeSubmissions = convertTradesToSchema(trades);
-    
-    // Submit to backend
-    try {
-      const { data, error } = await supabase.functions.invoke('submit-trades', {
-        body: { trades: tradeSubmissions }
-      });
-      
-      if (error) {
-        console.error('Failed to submit trades to backend:', error);
-      } else {
-        console.log('Trades submitted successfully:', data);
+    // Persist immediately (prevents race conditions when navigating)
+    const publishedAt = new Date().toISOString();
+    setTradesDataState(prev => {
+      const newData: PublishedTradesData = {
+        ...prev,
+        plannedTrades: trades,
+        isPublished: true,
+        publishedAt,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      return newData;
+    });
+
+    // Submit to backend (non-blocking for UI)
+    if (trades && trades.length > 0) {
+      const tradeSubmissions = convertTradesToSchema(trades);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("submit-trades", {
+          body: { trades: tradeSubmissions },
+        });
+
+        if (error) {
+          console.error("Failed to submit trades to backend:", error);
+        } else {
+          console.log("Trades submitted successfully:", data);
+        }
+      } catch (err) {
+        console.error("Error calling submit-trades:", err);
       }
-    } catch (err) {
-      console.error('Error calling submit-trades:', err);
+    } else {
+      console.log("No trades to submit, skipping backend call");
     }
-    
-    // Update local state regardless of backend response
-    const newData = {
-      ...tradesData,
-      plannedTrades: trades,
-      isPublished: true,
-      publishedAt: new Date().toISOString(),
-    };
-    // Synchronously write to localStorage before state update to prevent race condition
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-    setTradesDataState(newData);
   };
 
   const confirmTrades = (trades: ConfirmedTrade[]) => {
@@ -121,6 +144,7 @@ export const usePublishedTrades = () => {
     tradesData,
     setTradesData,
     publishTrades,
+    updatePlannedTrades,
     confirmTrades,
     setShowConfirmedTrades,
     clearTrades,

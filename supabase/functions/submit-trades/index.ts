@@ -38,10 +38,27 @@ serve(async (req) => {
     const { trades, userId, deviceId } = body;
 
     // Validate trades array
-    if (!Array.isArray(trades) || trades.length === 0) {
+    if (!Array.isArray(trades)) {
       return new Response(
         JSON.stringify({ error: 'Invalid trades array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Allow empty submissions (e.g., user paused/excluded all slots)
+    if (trades.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No trades to submit',
+          summary: {
+            tradesCount: 0,
+            totalQuantity: 0,
+            totalValue: 0,
+            submittedAt: new Date().toISOString(),
+          },
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

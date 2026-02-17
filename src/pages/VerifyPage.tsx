@@ -49,18 +49,18 @@ const VerifyPage = () => {
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
       
-      // Set Jyotirmayee's profile data for returning users
+      // Set Seema's profile data for returning users
       const returningUserContext = "आई एम ए स्कूल टीचर मेरे लिए स्कूल इंपॉर्टेंट है मैं 5 दिन स्कूल चलाती हूं 5 दिन सुबह से शाम तक बिजली का इस्तेमाल होता है ज्यादातर पंख लाइट एक्स्ट्रा सैटरडे संडे को स्कूल की छुट्टी होती है";
       const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
       localStorage.setItem("samai_user_data", JSON.stringify({ 
         ...currentData, 
-        name: "Jyotirmayee",
+        name: "Seema",
         phone: "+91 97697 21566",
-        address: "abc street, Delhi, India",
+        address: "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002",
         city: "Delhi, India",
         discom: "TPDDL",
         consumerId: "80000190017",
-        upiId: "jyotirmayee@upi",
+        upiId: "seema@upi",
         userContext: returningUserContext,
         automationLevel: "auto",
         isReturningUser: true,

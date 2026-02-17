@@ -14,6 +14,7 @@ export interface UserData {
   summerVacationEnd?: string; // e.g., "2026-06-15"
   upcomingEvents?: string; // Free-form text for other events
   // Payment settings
+  email?: string; // Required for billing
   upiId?: string; // e.g., "archana@upi"
   // Verification status
   isVCVerified?: boolean; // DISCOM VC verification status
@@ -23,10 +24,22 @@ export interface UserData {
   isReturningUser?: boolean; // If true, shows full transaction history and earnings
 }
 
+const DEFAULT_ADDRESS =
+  "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002";
+
+const normalizeName = (name?: string) => {
+  if (!name) return "Seema";
+  const trimmed = name.trim();
+  if (/^jyot(h)?irmayee$/i.test(trimmed)) return "Seema";
+  return trimmed;
+};
+
+const normalizeAddress = () => DEFAULT_ADDRESS;
+
 const DEFAULT_USER_DATA: UserData = {
-  name: "TPDL-Prosumer-7", // Default name for new users (from VC document)
+  name: "Seema", // Default name
   phone: "",
-  address: "",
+  address: DEFAULT_ADDRESS,
   city: "",
   discom: "",
   consumerId: "",
@@ -35,6 +48,7 @@ const DEFAULT_USER_DATA: UserData = {
   summerVacationStart: "",
   summerVacationEnd: "",
   upcomingEvents: "",
+  email: "",
   upiId: "",
   isVCVerified: false, // New users need to verify
   userContext: "",
@@ -48,7 +62,13 @@ export const useUserData = () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        return { ...DEFAULT_USER_DATA, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        return {
+          ...DEFAULT_USER_DATA,
+          ...parsed,
+          name: normalizeName(parsed?.name),
+          address: normalizeAddress(),
+        };
       } catch {
         return DEFAULT_USER_DATA;
       }
@@ -61,7 +81,12 @@ export const useUserData = () => {
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
-    setUserDataState(prev => ({ ...prev, ...updates }));
+    setUserDataState(prev => ({
+      ...prev,
+      ...updates,
+      name: updates.name ? normalizeName(updates.name) : prev.name,
+      address: normalizeAddress(),
+    }));
   };
 
   return { userData, setUserData };

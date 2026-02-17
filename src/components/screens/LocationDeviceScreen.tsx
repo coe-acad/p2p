@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, ExternalLink, Zap, Battery, Gauge, User, ChevronUp, Cpu, FileCheck, Sparkles } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+ import { parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
 
 interface LocationDeviceScreenProps {
   onContinue: (isVerified: boolean, locationData?: { address: string; city: string; discom: string }) => void;
@@ -31,8 +32,8 @@ interface ReverseGeocodeResult {
 
 const DISCOMS = [
   { state: "Maharashtra", name: "MSEDCL", fullName: "Maharashtra State Electricity Distribution Co. Ltd", portalUrl: "https://www.mahadiscom.in/" },
-  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited", portalUrl: "https://www.tatapower-ddl.com/" },
-  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited", portalUrl: "https://www.bsesdelhi.com/" },
+  { state: "Delhi", name: "TPDDL", fullName: "Tata Power Delhi Distribution Limited", portalUrl: "https://www.tatapower-ddl.com/solar-rooftop/p-to-p-trading" },
+  { state: "Delhi", name: "BSES Rajdhani", fullName: "BSES Rajdhani Power Limited", portalUrl: "https://www.bsesdelhi.com/web/brpl/p-to-p-trading" },
   { state: "Karnataka", name: "BESCOM", fullName: "Bangalore Electricity Supply Company", portalUrl: "https://bescom.karnataka.gov.in/" },
   { state: "Tamil Nadu", name: "TANGEDCO", fullName: "Tamil Nadu Generation and Distribution Corporation", portalUrl: "https://www.tangedco.gov.in/" },
   { state: "Gujarat", name: "UGVCL", fullName: "Uttar Gujarat Vij Company Limited", portalUrl: "https://www.ugvcl.com/" },
@@ -41,7 +42,7 @@ const DISCOMS = [
   { state: "Telangana", name: "TSSPDCL", fullName: "Telangana Southern Power Distribution", portalUrl: "https://tsspdcl.cgg.gov.in/" },
   { state: "Kerala", name: "KSEB", fullName: "Kerala State Electricity Board", portalUrl: "https://www.kseb.in/" },
   { state: "West Bengal", name: "WBSEDCL", fullName: "West Bengal State Electricity Distribution", portalUrl: "https://www.wbsedcl.in/" },
-  { state: "Uttar Pradesh", name: "UPPCL", fullName: "Uttar Pradesh Power Corporation", portalUrl: "https://www.uppcl.org/" },
+  { state: "Uttar Pradesh", name: "PVVNL", fullName: "Pashchimanchal Vidyut Vitran Nigam Limited", portalUrl: "https://pvvnl.org/P2P-Energy-Trading" },
 ];
 
 const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps) => {
@@ -71,60 +72,97 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
   const [deviceConfirmed, setDeviceConfirmed] = useState(false);
   const [expandedDevice, setExpandedDevice] = useState<number | null>(null);
 
+   // VC extracted data state
+   const [vcData, setVcData] = useState<VCExtractedData | null>(null);
+   const [parseError, setParseError] = useState<string | null>(null);
+   const [preparingVC, setPreparingVC] = useState(false);
+
+ 
   const isFormValid = location.trim() !== "" && selectedDiscom !== null && deviceConfirmed;
   const locality = extractLocality(location);
 
-  // Device data
-  const devices = [
-    { 
-      icon: Zap, 
-      title: "Solar Inverter", 
-      detail: "Growatt • 5 kW",
-      expanded: {
-        brand: "Growatt",
-        model: "MIN 5000TL-X",
-        capacity: "5 kW",
-        installDate: "March 2024",
-        serialNo: "GRW2024XXXXXX"
-      }
-    },
-    { 
-      icon: Battery, 
-      title: "Battery", 
-      detail: "Luminous • 10 kWh",
-      expanded: {
-        brand: "Luminous",
-        model: "Power Stack 10K",
-        capacity: "10 kWh",
-        cycles: "6000+",
-        warranty: "10 years"
-      }
-    },
-    { 
-      icon: Gauge, 
-      title: "Smart Meter", 
-      detail: "Genus • Bi-directional",
-      expanded: {
-        brand: "Genus",
-        type: "Bi-directional",
-        meterNo: "KA-BLR-XXXXXX",
-        sanctionedLoad: "5 kW",
-        phase: "Single Phase"
-      }
-    },
-    { 
-      icon: User, 
-      title: "Profile", 
-      detail: `${userData.name}, ${locality || "Location"}`,
-      expanded: {
-        name: userData.name,
-        address: location,
-        city: city,
-        consumerId: userData.consumerId,
-        tariff: "LT-2 Domestic"
-      }
-    },
-  ];
+   // Device data - dynamic based on VC or fallback to defaults
+   const formattedDevices = vcData ? formatDevicesFromVC(vcData, locality) : null;
+   
+   const devices = formattedDevices ? [
+     { 
+       icon: Zap, 
+       title: "Solar Inverter", 
+       detail: formattedDevices.inverter.detail,
+       expanded: formattedDevices.inverter.expanded
+     },
+     { 
+       icon: Battery, 
+       title: "Battery", 
+       detail: formattedDevices.battery.detail,
+       expanded: formattedDevices.battery.expanded
+     },
+     { 
+       icon: Gauge, 
+       title: "Smart Meter", 
+       detail: formattedDevices.meter.detail,
+       expanded: formattedDevices.meter.expanded
+     },
+     { 
+       icon: User, 
+       title: "Profile", 
+       detail: formattedDevices.profile.detail,
+       expanded: formattedDevices.profile.expanded
+     },
+   ] : [
+     { 
+       icon: Zap, 
+       title: "Solar Inverter", 
+       detail: "Solar • 5 kW",
+       expanded: {
+         type: "Solar",
+         capacity: "5 kW",
+         commissioningDate: "N/A",
+         manufacturer: "N/A",
+         model: "N/A"
+       }
+     },
+     { 
+       icon: Battery, 
+       title: "Battery", 
+       detail: "Storage • 10 kWh",
+       expanded: {
+         capacity: "10 kWh",
+         type: "Lithium-ion",
+         estimatedCycles: "6000+"
+       }
+     },
+     { 
+       icon: Gauge, 
+       title: "Smart Meter", 
+       detail: "DISCOM • Bi-directional",
+       expanded: {
+         meterNumber: "N/A",
+         sanctionedLoad: "N/A",
+         connectionType: "N/A",
+         premisesType: "N/A"
+       }
+     },
+     { 
+       icon: User, 
+       title: "Profile", 
+       detail: `${userData.name}, ${locality || "Location"}`,
+       expanded: {
+         name: userData.name,
+         consumerNumber: userData.consumerId || "N/A",
+         address: location,
+         tariffCategory: "N/A",
+         serviceDate: "N/A"
+       }
+     },
+   ];
+ 
+   // Summary stats for card display
+   const summaryStats = formattedDevices?.summary || {
+     inverterKw: "5",
+     batteryKwh: "10",
+     meterType: "Bi-dir"
+   };
 
   // Auto-select DISCOM based on state
   const autoSelectDiscom = (stateName: string) => {
@@ -256,27 +294,108 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setUploadedFiles(prev => [...prev, ...newFiles]);
-      
-      // Simulate verification after upload
-      if (newFiles.length > 0) {
-        setIsVerifying(true);
-        setTimeout(() => {
-          setIsVerifying(false);
-          setIsVerified(true);
-        }, 1500);
-      }
+  const fetchUtilityCredential = async () => {
+    const url =
+      "https://35.244.45.209.sslip.io/credential/credentials/did:rcw:c5f53fcb-bfaa-4d09-9602-5a30a1c0cc8a";
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Credential API failed: ${response.status}`);
     }
+
+    const data = await response.json();
+
+    // Basic validation like your Postman test
+    if (
+      !data.type ||
+      !String(data.type).includes("UtilityCustomerCredential")
+    ) {
+      throw new Error("Invalid credential type");
+    }
+
+    return data;
   };
+
+
+   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     if (e.target.files) {
+       const newFiles = Array.from(e.target.files);
+       setUploadedFiles(prev => [...prev, ...newFiles]);
+       setParseError(null);
+       
+       // Parse PDF files to extract VC data
+       if (newFiles.length > 0) {
+         setPreparingVC(true);
+         setIsVerifying(true);
+         
+         try {
+            const [credentialData] = await Promise.all([
+              fetchUtilityCredential(),
+
+              // keep UI visible at least 2.5 sec
+              new Promise((res) => setTimeout(res, 2500)),
+            ]);
+
+            console.log("Credential from API:", credentialData);
+
+           setPreparingVC(false);
+           setIsVerifying(true);
+           // Find PDF files and parse them
+           const pdfFiles = newFiles.filter(
+             (f) => f.type === "application/pdf" || f.name.endsWith(".pdf"),
+           );
+
+           if (pdfFiles.length > 0) {
+             // Parse the first PDF (or merge data from multiple)
+             const parsedData = await parseVCPdf(pdfFiles[0]);
+             setVcData(parsedData);
+
+             // Update user data with extracted info
+             if (parsedData.fullName) {
+               setUserData({ name: parsedData.fullName });
+             }
+             if (parsedData.address && !location) {
+               setLocation(parsedData.address);
+             }
+             if (parsedData.consumerNumber) {
+               setUserData({ consumerId: parsedData.consumerNumber });
+             }
+
+             // Store VC data in localStorage for earnings calculation
+             localStorage.setItem("samai_vc_data", JSON.stringify(parsedData));
+
+             console.log("VC data extracted:", parsedData);
+           }
+
+           setIsVerifying(false);
+           setIsVerified(true);
+           setUserData({ isVCVerified: true });
+         } catch (error) {
+           console.error('Error parsing VC:', error);
+           setParseError('Could not parse document. Please try again.');
+           setIsVerifying(false);
+           // Still mark as verified for non-PDF files
+           if (!newFiles.some(f => f.type === 'application/pdf')) {
+             setIsVerified(true);
+             setUserData({ isVCVerified: true });
+           }
+         }
+       }
+     }
+   };
 
   const removeFile = (index: number) => {
     const newFiles = uploadedFiles.filter((_, i) => i !== index);
     setUploadedFiles(newFiles);
     if (newFiles.length === 0) {
       setIsVerified(false);
+      setVcData(null);
     }
   };
 
@@ -333,7 +452,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
         {/* Section 1: Verify Electricity Connection */}
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "0.05s" }}>
           {/* Location & DISCOM Card */}
-          <div className="bg-card rounded-xl border border-primary/20 p-2.5 shadow-card relative z-30 overflow-hidden">
+          <div className="bg-card rounded-xl border border-primary/20 p-2.5 shadow-card relative z-30">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-amber-50/30 pointer-events-none" />
             
             {/* Location Row */}
@@ -373,10 +492,10 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
                 )}
                 
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-28 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-card border border-border rounded-lg shadow-xl z-[300] max-h-28 overflow-y-auto">
                     {suggestions.map((suggestion) => (
-                      <button key={suggestion.place_id} onClick={() => handleSuggestionSelect(suggestion)} className="w-full px-2 py-1 text-left hover:bg-secondary transition-colors text-2xs text-foreground truncate">
-                        {suggestion.display_name}
+                      <button key={suggestion.place_id} onClick={() => handleSuggestionSelect(suggestion)} className="w-full px-2 py-1.5 text-left hover:bg-primary/5 transition-colors text-2xs text-foreground first:rounded-t-lg last:rounded-b-lg">
+                        <span className="line-clamp-2">{suggestion.display_name}</span>
                       </button>
                     ))}
                   </div>
@@ -413,7 +532,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
           </div>
 
           {/* VC Upload Section */}
-          <div className="space-y-1.5 z-10">
+          <div className="space-y-1.5 relative z-10">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-medium text-foreground">Upload DISCOM Documents</span>
               <button onClick={() => setShowHelpModal(true)} className="text-2xs text-primary hover:underline flex items-center gap-0.5 flex-shrink-0">
@@ -445,6 +564,19 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
               </div>
             )}
 
+            {preparingVC && (
+            <div className="flex flex-col items-center justify-center gap-2 py-3 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
+              <Loader2 size={16} className="animate-spin text-primary" />
+              <span className="text-2xs font-medium text-primary">
+                Getting credentials...
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Connecting to DISCOM registry
+              </span>
+            </div>
+          )}
+
+
             {/* Verification Status */}
             {isVerifying && (
               <div className="flex items-center justify-center gap-2 py-2 text-primary">
@@ -459,6 +591,13 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
                 <span className="text-2xs font-medium text-accent">Documents verified successfully!</span>
               </div>
             )}
+ 
+               {parseError && (
+                 <div className="flex items-center justify-center gap-2 py-2 bg-destructive/10 rounded-lg border border-destructive/30">
+                   <AlertTriangle size={14} className="text-destructive" />
+                   <span className="text-2xs font-medium text-destructive">{parseError}</span>
+                 </div>
+               )}
           </div>
         </div>
 
@@ -503,21 +642,21 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center mx-auto mb-0.5">
                       <Zap className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">5 kW</p>
+                    <p className="text-xs font-bold text-foreground">{summaryStats.inverterKw} kW</p>
                     <p className="text-2xs text-muted-foreground">Inverter</p>
                   </div>
                   <div className="bg-card/80 backdrop-blur-sm rounded-md p-1.5 text-center border border-border/50">
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-teal-400 to-green-500 flex items-center justify-center mx-auto mb-0.5">
                       <Battery className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">10 kWh</p>
+                    <p className="text-xs font-bold text-foreground">{summaryStats.batteryKwh} kWh</p>
                     <p className="text-2xs text-muted-foreground">Battery</p>
                   </div>
                   <div className="bg-card/80 backdrop-blur-sm rounded-md p-1.5 text-center border border-border/50">
                     <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center mx-auto mb-0.5">
                       <Gauge className="text-white" size={11} />
                     </div>
-                    <p className="text-xs font-bold text-foreground">Bi-dir</p>
+                    <p className="text-xs font-bold text-foreground">{summaryStats.meterType}</p>
                     <p className="text-2xs text-muted-foreground">Meter</p>
                   </div>
                 </div>
@@ -579,8 +718,15 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
         <div className="mt-auto pt-3 pb-4 space-y-1 animate-slide-up" style={{ animationDelay: "0.3s" }}>
           <button
             onClick={() => {
-              setUserData({ address: location, city: city, discom: selectedDiscom?.name || "" });
-              onContinue(isVerified, { address: location, city, discom: selectedDiscom?.name || "" });
+              setUserData({ 
+                address: location, 
+                city: city, 
+                discom: selectedDiscom?.name || "",
+                consumerId: vcData?.consumerNumber || userData.consumerId,
+                name: vcData?.fullName || userData.name,
+                isVCVerified: true
+              });
+              onContinue(true, { address: location, city, discom: selectedDiscom?.name || "" });
             }}
             disabled={!isFormValid || !isVerified}
             className="btn-solar w-full text-sm !py-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -605,7 +751,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
               <button
                 onClick={() => {
                   setIsVerified(true);
-                  setUserData({ address: location, city: city, discom: selectedDiscom?.name || "" });
+                  setUserData({ isVCVerified: true, address: location, city: city, discom: selectedDiscom?.name || "" });
                 }}
                 className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-1"
               >
