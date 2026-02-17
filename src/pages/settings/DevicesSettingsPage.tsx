@@ -1,11 +1,13 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Zap, Battery, Gauge, Home } from "lucide-react";
 import { useState } from "react";
+import { useUserData } from "@/hooks/useUserData";
 
 const DevicesSettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const deviceType = searchParams.get("type") || "inverter";
+  const { userData } = useUserData();
 
   const devicesMap: Record<string, {
     icon: typeof Zap;
@@ -49,11 +51,11 @@ const DevicesSettingsPage = () => {
     profile: {
       icon: Home,
       label: "Home Profile",
-      sublabel: "Prosumer • TPDDL",
+      sublabel: `Prosumer • ${userData.discom || "TPDDL"}`,
       details: [
         { label: "Type", value: "Prosumer" },
-        { label: "DISCOM", value: "Tata Power Delhi Distribution" },
-        { label: "Address", value: "abc street, Delhi, India" },
+        { label: "DISCOM", value: userData.discom || "TPDDL" },
+        { label: "Address", value: userData.address || "" },
         { label: "Connection Date", value: "20-03-2024" },
       ]
     },

@@ -12,6 +12,8 @@ import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
 import chatbotIcon from "@/assets/chatbot-icon.png";
+import auLogo from "@/assets/AU-logo.png";
+import tecLogo from "@/assets/TEC-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
@@ -60,6 +62,8 @@ const HomePage = () => {
   const isNewUser = !userData.isReturningUser;
   
   const [activeTab, setActiveTab] = useState<TabType>("home");
+  const displayName = (userData.name || "").trim();
+  const firstName = displayName.split(" ")[0] || "User";
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
   const [setupExpanded, setSetupExpanded] = useState(false);
   const [hideSetupBanner, setHideSetupBanner] = useState(() => {
@@ -572,7 +576,7 @@ const HomePage = () => {
           <div className="flex items-center gap-2">
             <SamaiLogo size="sm" showText={false} />
             <div>
-              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {userData.name?.split(" ")[0] || "User"}!</p>
+              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {firstName}!</p>
               <div className="flex items-center gap-2">
                 <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
               </div>
@@ -618,6 +622,16 @@ const HomePage = () => {
         </div>
       </div>
       
+      {/* Powered by AU x TEC */}
+      <div className="flex items-center justify-center gap-2 pb-2">
+        <span className="text-[10px] text-muted-foreground">Powered by</span>
+        <div className="flex items-center gap-1.5">
+          <img src={auLogo} alt="AU" className="h-4 w-auto" />
+          <span className="text-[10px] text-muted-foreground">×</span>
+          <img src={tecLogo} alt="TEC" className="h-4 w-auto" />
+        </div>
+      </div>
+
       {/* Bottom Navigation - Fixed at bottom, outside scroll area */}
       <div className="flex-shrink-0">
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

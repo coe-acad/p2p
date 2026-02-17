@@ -1,7 +1,29 @@
- import * as pdfjsLib from 'pdfjs-dist';
+ type PdfjsLib = typeof import("pdfjs-dist/legacy/build/pdf");
  
- // Set up the worker using CDN for v3.x compatibility
- pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+ let pdfjsLibPromise: Promise<PdfjsLib> | null = null;
+ let workerSrcPromise: Promise<string> | null = null;
+ 
+ const getPdfjs = async () => {
+   if (!pdfjsLibPromise) {
+     pdfjsLibPromise = import("pdfjs-dist/legacy/build/pdf");
+   }
+   if (!workerSrcPromise) {
+     workerSrcPromise = import("pdfjs-dist/legacy/build/pdf.worker?url").then(
+       (mod) => mod.default,
+     );
+   }
+ 
+   const [pdfjsLib, workerSrc] = await Promise.all([
+     pdfjsLibPromise,
+     workerSrcPromise,
+   ]);
+ 
+   if (pdfjsLib.GlobalWorkerOptions.workerSrc !== workerSrc) {
+     pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+   }
+ 
+   return pdfjsLib;
+ };
  
  export interface VCExtractedData {
    // Profile
@@ -132,6 +154,7 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
  
  export async function parseVCPdf(file: File): Promise<VCExtractedData> {
    try {
+     const pdfjsLib = await getPdfjs();
      const arrayBuffer = await file.arrayBuffer();
      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
      
@@ -184,20 +207,20 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
        extractedData.meterType = 'Standard';
      }
      
-     console.log('Parsed VC data:', extractedData);
+     console.log("Parsed VC data:", extractedData);
      return extractedData;
      
    } catch (error) {
-     console.error('Error parsing VC PDF:', error);
-     throw new Error('Failed to parse VC document');
+     console.error("Error parsing VC PDF:", error);
+     throw new Error("Failed to parse VC document");
    }
  }
  
  // Helper to format device display data from extracted VC
  export function formatDevicesFromVC(vcData: VCExtractedData, locality: string) {
    const inverterCapacity = vcData.inverterCapacity || vcData.generationCapacity 
-     ? `${vcData.generationCapacity || '5'} kW` 
-     : '5 kW';
+     ? `${vcData.generationCapacity || "5"} kW` 
+     : "5 kW";
    
    const batteryCapacity = vcData.batteryCapacity || '10 kWh';
    

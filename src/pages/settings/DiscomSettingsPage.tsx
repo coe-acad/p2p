@@ -13,6 +13,10 @@ const DiscomSettingsPage = () => {
 
   const discoms = ["BESCOM", "MESCOM", "HESCOM", "GESCOM", "CESC"];
 
+  useEffect(() => {
+    setAddress(userData.address || "");
+  }, [userData.address]);
+
   const handleSave = () => {
     setUserData({
       address,

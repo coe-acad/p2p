@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Leaf, Clock, TrendingUp, Zap, AlertTriangle, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ShieldX, ChevronRight, HelpCircle, ArrowLeft, Timer, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Leaf, Clock, TrendingUp, Zap, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ArrowLeft, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format, addDays, parse } from "date-fns";
 import {
   Dialog,
@@ -21,23 +21,16 @@ import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import VoiceNarration from "../VoiceNarration";
 
 
-const WALKTHROUGH_STORAGE_KEY = "samai_prepared_walkthrough_seen";
 const SESSION_APPROVED_KEY = "samai_session_approved";
 const PREPARED_EXCLUSIONS_KEY = "samai_prepared_excluded_slot_ids";
 const PREPARED_PAUSED_KEY = "samai_prepared_trades_paused";
+const APPROVAL_TTL_MS = 3 * 60 * 60 * 1000;
 
 // Already confirmed/matched trades that won't be refreshed
 const CONFIRMED_TRADES = [
   { time: "10:00 AM – 11:00 AM", kWh: 3, rate: 6.50, earnings: 20, buyer: "GridCo" },
   { time: "3:00 PM – 4:00 PM", kWh: 4, rate: 6.25, earnings: 25, buyer: "TPDDL" },
 ];
-
-interface WalkthroughStep {
-  id: string;
-  title: string;
-  description: string;
-  targetRef: React.RefObject<HTMLElement>;
-}
 
  const toISOTimeRange = (timeRange: string, targetDate: Date) => {
   // Example input: "10:00 AM – 11:00 AM"
@@ -52,178 +45,11 @@ interface WalkthroughStep {
   };
 };
 
-const WalkthroughOverlay = ({ 
-  steps, 
-  currentStep, 
-  onNext, 
-  onSkip,
-  onComplete 
-}: { 
-  steps: WalkthroughStep[];
-  currentStep: number;
-  onNext: () => void;
-  onSkip: () => void;
-  onComplete: () => void;
-}) => {
-  const step = steps[currentStep];
-  const isLastStep = currentStep === steps.length - 1;
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-  const [highlightRect, setHighlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
-  const [tooltipAbove, setTooltipAbove] = useState(false);
-  const [isPositioned, setIsPositioned] = useState(false);
-
-  const updatePositions = () => {
-    if (step?.targetRef.current) {
-      const rect = step.targetRef.current.getBoundingClientRect();
-      const padding = 8;
-      const tooltipHeight = 180;
-      const viewportHeight = window.innerHeight;
-      
-      setHighlightRect({
-        top: rect.top - padding,
-        left: rect.left - padding,
-        width: rect.width + padding * 2,
-        height: rect.height + padding * 2,
-      });
-
-      const wouldOverflowBottom = rect.bottom + 16 + tooltipHeight > viewportHeight;
-      const hasSpaceAbove = rect.top - 16 - tooltipHeight > 0;
-      
-      const shouldPositionAbove = wouldOverflowBottom && hasSpaceAbove;
-      setTooltipAbove(shouldPositionAbove);
-
-      setTooltipPosition({
-        top: shouldPositionAbove ? rect.top - 16 - tooltipHeight : rect.bottom + 16,
-        left: Math.max(16, Math.min(rect.left + rect.width / 2 - 140, window.innerWidth - 296)),
-      });
-      
-      setIsPositioned(true);
-    }
-  };
-
-  useEffect(() => {
-    setIsPositioned(false);
-    
-    if (step?.targetRef.current) {
-      // First scroll the element into view
-      step.targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      // Wait for scroll to complete, then update positions
-      const scrollTimer = setTimeout(() => {
-        updatePositions();
-      }, 350);
-      
-      return () => clearTimeout(scrollTimer);
-    }
-  }, [step, currentStep]);
-
-  // Also update on window resize
-  useEffect(() => {
-    const handleResize = () => updatePositions();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [step]);
-
-  if (!isPositioned) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black/75" />
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-50">
-      {/* Dark overlay with cutout */}
-      <svg className="absolute inset-0 w-full h-full">
-        <defs>
-          <mask id="walkthrough-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            <rect 
-              x={highlightRect.left} 
-              y={highlightRect.top} 
-              width={highlightRect.width} 
-              height={highlightRect.height} 
-              rx="12"
-              fill="black" 
-            />
-          </mask>
-        </defs>
-        <rect 
-          x="0" 
-          y="0" 
-          width="100%" 
-          height="100%" 
-          fill="rgba(0,0,0,0.75)" 
-          mask="url(#walkthrough-mask)" 
-        />
-      </svg>
-
-      {/* Highlight border */}
-      <div 
-        className="absolute rounded-xl border-2 border-primary shadow-[0_0_0_4px_rgba(var(--primary-rgb),0.2)] transition-all duration-300"
-        style={{
-          top: highlightRect.top,
-          left: highlightRect.left,
-          width: highlightRect.width,
-          height: highlightRect.height,
-        }}
-      />
-
-      {/* Tooltip */}
-      <div 
-        className="absolute w-[280px] bg-card rounded-xl shadow-lg border border-border p-4 transition-all duration-300 animate-fade-in"
-        style={{
-          top: tooltipPosition.top,
-          left: tooltipPosition.left,
-        }}
-      >
-        {/* Step counter and indicator */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">
-            {currentStep + 1}/{steps.length}
-          </span>
-          <div className="flex items-center gap-1">
-            {steps.map((_, idx) => (
-              <div 
-                key={idx}
-                className={`h-1.5 rounded-full transition-all ${
-                  idx === currentStep ? 'w-3 bg-primary' : 'w-1.5 bg-border'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <h3 className="text-sm font-semibold text-foreground mb-1">{step.title}</h3>
-        <p className="text-xs text-muted-foreground mb-4">{step.description}</p>
-
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={onSkip}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Skip tour
-          </button>
-          <button 
-            onClick={isLastStep ? onComplete : onNext}
-            className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            {isLastStep ? "Got it!" : "Next"}
-            {!isLastStep && <ChevronRight size={14} />}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 interface PreparedTomorrowScreenProps {
-  isVCVerified?: boolean;
   hasConfirmedTrades?: boolean;
-  forceWalkthrough?: boolean;
   onLooksGood: () => void;
   onViewAdjust: () => void;
   onTalkToSamai: () => void;
-  onVerifyNow?: () => void;
   onBack?: () => void;
 }
 
@@ -264,12 +90,9 @@ const SUGGESTION_CHIPS = [
 const HOUR_OPTIONS = ["10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM"];
 
 const PreparedTomorrowScreen = ({ 
-  isVCVerified = true, 
   hasConfirmedTrades = false,
-  forceWalkthrough = false,
   onLooksGood, 
   onTalkToSamai,
-  onVerifyNow,
   onBack 
 }: PreparedTomorrowScreenProps) => {
   const navigate = useNavigate();
@@ -283,6 +106,29 @@ const PreparedTomorrowScreen = ({
       sessionStorage.removeItem(SESSION_APPROVED_KEY);
     }
   };
+
+  // Auto-reset approval state after TTL
+  useEffect(() => {
+    if (!tradesData.isPublished || !tradesData.publishedAt) return;
+    const publishedAtMs = Date.parse(tradesData.publishedAt);
+    if (Number.isNaN(publishedAtMs)) return;
+
+    const elapsed = Date.now() - publishedAtMs;
+    const remaining = APPROVAL_TTL_MS - elapsed;
+
+    if (remaining <= 0) {
+      setTradesData({ isPublished: false });
+      sessionStorage.removeItem(SESSION_APPROVED_KEY);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setTradesData({ isPublished: false });
+      sessionStorage.removeItem(SESSION_APPROVED_KEY);
+    }, remaining);
+
+    return () => clearTimeout(timer);
+  }, [tradesData.isPublished, tradesData.publishedAt, setTradesData]);
   const isAutoMode = userData.automationLevel === "auto";
   
   // State for excluded hours + pause state (persisted until sign out)
@@ -442,154 +288,7 @@ const PreparedTomorrowScreen = ({
   const totalEarnings = plannedEarnings + confirmedEarnings;
   
   const tomorrow = addDays(new Date(), 1);
-  const [showVerificationError, setShowVerificationError] = useState(false);
-
-  // Walkthrough state
-  const [showWalkthrough, setShowWalkthrough] = useState(false);
-  const [walkthroughStep, setWalkthroughStep] = useState(0);
-  const [narrationComplete, setNarrationComplete] = useState(false);
-  const shouldWaitForNarration = useRef(false);
-
-  // Refs for walkthrough targets
-  const earningsRef = useRef<HTMLDivElement>(null);
-  const timeSlotsRef = useRef<HTMLDivElement>(null);
-  const refreshTimerRef = useRef<HTMLDivElement>(null);
-  const looksGoodRef = useRef<HTMLButtonElement>(null);
-  const changeRef = useRef<HTMLButtonElement>(null);
-  const confirmedRef = useRef<HTMLDivElement>(null);
-  const autoCountdownRef = useRef<HTMLDivElement>(null);
-
-  // Auto-mode countdown (2 hours = 7200 seconds)
-  const [autoCountdownSeconds, setAutoCountdownSeconds] = useState(2 * 60 * 60);
-  
-  useEffect(() => {
-    if (!isAutoMode) return;
-    
-    const interval = setInterval(() => {
-      setAutoCountdownSeconds(prev => {
-        if (prev <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [isAutoMode]);
-
-  const formatAutoCountdown = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours}h ${mins}m ${secs}s`;
-  };
-
-  // Build walkthrough steps dynamically based on mode and confirmed trades
-  const walkthroughSteps: WalkthroughStep[] = [
-    {
-      id: 'earnings',
-      title: 'Expected Earnings',
-      description: 'This shows your projected earnings for tomorrow based on current energy prices and your solar capacity.',
-      targetRef: earningsRef,
-    },
-    {
-      id: 'timeslots',
-      title: 'Planned Trades',
-      description: 'These are the time slots when Samai plans to sell your excess energy. Each shows the rate and expected earnings.',
-      targetRef: timeSlotsRef,
-    },
-    // Add auto-mode countdown step if in auto mode
-    ...(isAutoMode ? [{
-      id: 'autoCountdown',
-      title: 'Auto-Posting Countdown',
-      description: 'Since you chose automatic selling, these trades will be posted to the market in 2 hours. You can approve earlier or make changes before then.',
-      targetRef: autoCountdownRef,
-    }] : []),
-    {
-      id: 'refresh',
-      title: 'Auto-Refresh Timer',
-      description: 'Prices update every 6 hours. This timer shows when the next update happens, so your plan always reflects current market rates.',
-      targetRef: refreshTimerRef,
-    },
-    {
-      id: 'looksGood',
-      title: 'Approve Now',
-      description: 'Tap here to approve and post these trades to the market immediately.',
-      targetRef: looksGoodRef,
-    },
-    {
-      id: 'change',
-      title: 'Make Adjustments',
-      description: 'Need to change something? Tap here to pause trades, adjust time windows, or talk to Samai in plain language.',
-      targetRef: changeRef,
-    },
-    // Only include confirmed trades step if there are confirmed trades
-    ...(hasConfirmedTrades ? [{
-      id: 'confirmed',
-      title: 'Confirmed Trades',
-      description: 'These trades are already matched with buyers and locked in. They won\'t change at the next refresh.',
-      targetRef: confirmedRef,
-    }] : []),
-  ];
-
-  // Check if walkthrough should be shown on mount - only run once
-  const walkthroughInitialized = useRef(false);
-  
-  useEffect(() => {
-    // Prevent re-triggering if already initialized or already showing
-    if (walkthroughInitialized.current || showWalkthrough) return;
-    
-    const hasSeenWalkthrough = localStorage.getItem(WALKTHROUGH_STORAGE_KEY);
-    
-    // Show walkthrough if coming from onboarding (forceWalkthrough) or if never seen
-    if (forceWalkthrough || !hasSeenWalkthrough) {
-      walkthroughInitialized.current = true;
-      
-      // Always wait for narration to complete before showing walkthrough for new users
-      // The walkthrough will be triggered by handleNarrationComplete callback
-      shouldWaitForNarration.current = true;
-      return;
-    }
-  }, []);
-
-  // Handler for when narration completes
-  const handleNarrationComplete = () => {
-    setNarrationComplete(true);
-    // If we were waiting for narration before showing walkthrough, start it now
-    if (shouldWaitForNarration.current && !showWalkthrough) {
-      const timer = setTimeout(() => setShowWalkthrough(true), 300);
-      return () => clearTimeout(timer);
-    }
-  };
-
-  const handleWalkthroughComplete = () => {
-    localStorage.setItem(WALKTHROUGH_STORAGE_KEY, 'true');
-    setShowWalkthrough(false);
-    setWalkthroughStep(0);
-  };
-
-  const handleWalkthroughSkip = () => {
-    localStorage.setItem(WALKTHROUGH_STORAGE_KEY, 'true');
-    setShowWalkthrough(false);
-    setWalkthroughStep(0);
-  };
-
-  const handleWalkthroughNext = () => {
-    setWalkthroughStep(prev => prev + 1);
-  };
-
-  const handleReplayTour = () => {
-    setWalkthroughStep(0);
-    setShowWalkthrough(true);
-  };
-
   const handleLooksGood = () => {
-    // if (!isVCVerified) {
-    //   setShowVerificationError(true);
-    // } else {
-    //   handlePublish();
-    // }
     handlePublish();
   };
   const tomorrowFormatted = format(tomorrow, "EEEE, MMMM d");
@@ -767,17 +466,6 @@ const PreparedTomorrowScreen = ({
   return (
     <div className="screen-container !py-6">
       <div className="w-full max-w-md flex flex-col gap-3 px-4">
-        {/* Warning Banner */}
-        {!isVCVerified && (
-          <div className="flex items-center gap-2.5 p-2.5 bg-destructive/5 border border-destructive/10 rounded-lg animate-slide-up">
-            <AlertTriangle className="text-destructive flex-shrink-0" size={14} />
-            <p className="text-xs text-foreground flex-1">DISCOM verification pending</p>
-            <button onClick={onVerifyNow} className="text-xs font-medium text-primary">
-              Verify
-            </button>
-          </div>
-        )}
-
         {/* Narration content for voice readout */}
         {/* Header with Back button, Logo and date */}
         <div className="flex items-center justify-between animate-fade-in">
@@ -794,13 +482,6 @@ const PreparedTomorrowScreen = ({
               <h2 className="text-lg font-semibold text-foreground tracking-tight">All set for tomorrow</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-xs text-muted-foreground">{tomorrowFormatted}</p>
-                <button 
-                  onClick={handleReplayTour}
-                  className="flex items-center gap-1 text-2xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <HelpCircle size={10} />
-                  <span>Tour</span>
-                </button>
                 {/* Dev toggle for testing auto mode */}
                 <button
                   onClick={toggleAutoMode}
@@ -825,10 +506,7 @@ const PreparedTomorrowScreen = ({
         />
 
         {/* Earnings Summary Card - with color gradient */}
-        <div 
-          ref={earningsRef}
-          className={`rounded-xl border border-border shadow-card overflow-hidden animate-scale-in ${!isVCVerified ? 'opacity-70' : ''}`}
-        >
+        <div className="rounded-xl border border-border shadow-card overflow-hidden animate-scale-in">
           <div className="p-4 bg-gradient-to-br from-primary/5 via-primary/3 to-accent/5">
             <p className="text-xs text-muted-foreground text-center">Expected Earnings</p>
             <div className="text-center py-2">
@@ -845,12 +523,12 @@ const PreparedTomorrowScreen = ({
         </div>
 
         {/* Time Slots */}
-        <div ref={timeSlotsRef} className="bg-card rounded-xl border border-border shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.05s" }}>
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.05s" }}>
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Planned Trades</p>
               {/* Non-closable countdown */}
-              <div ref={refreshTimerRef} className="flex items-center gap-1 text-2xs text-muted-foreground bg-secondary rounded-full px-2 py-0.5">
+              <div className="flex items-center gap-1 text-2xs text-muted-foreground bg-secondary rounded-full px-2 py-0.5">
                 <RefreshCw size={9} />
                 <span>Refreshes in {countdown}</span>
               </div>
@@ -966,22 +644,6 @@ const PreparedTomorrowScreen = ({
             )}
           </div>
 
-          {/* Auto-mode countdown banner */}
-          {isAutoMode && (
-            <div 
-              ref={autoCountdownRef}
-              className="mx-3 mb-2 p-3 bg-amber-50 border border-amber-200 rounded-xl"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Timer size={14} className="text-amber-600" />
-                <p className="text-xs font-medium text-amber-800">Auto-posting in {formatAutoCountdown(autoCountdownSeconds)}</p>
-              </div>
-              <p className="text-2xs text-amber-700">
-                These trades will be posted to the market automatically. Approve now to post immediately, or make changes before then.
-              </p>
-            </div>
-          )}
-
           {/* Actions inside the card */}
           <div className="flex gap-2 p-3 pt-0">
             {tradesData.isPublished ? (
@@ -990,21 +652,20 @@ const PreparedTomorrowScreen = ({
                   <Check size={16} className="text-accent" />
                   <span className="text-sm font-medium text-accent">Approved</span>
                 </div>
-                <button ref={changeRef} onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
+                <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
                   <span>Change</span>
                 </button>
               </>
             ) : (
               <>
                 <button
-                  ref={looksGoodRef}
                   onClick={handleLooksGood}
                   disabled={activeTimeSlots.length === 0}
                   className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   Approve Now
                 </button>
-                <button ref={changeRef} onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
+                <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
                   <span>Change</span>
                 </button>
               </>
@@ -1018,7 +679,6 @@ const PreparedTomorrowScreen = ({
             trades={CONFIRMED_TRADES}
             className="animate-slide-up"
             style={{ animationDelay: "0.1s" }}
-            innerRef={confirmedRef}
           />
         )}
       </div>
@@ -1243,52 +903,6 @@ const PreparedTomorrowScreen = ({
         </DialogContent>
       </Dialog>
 
-      {/* Verification Error Modal */}
-      <Dialog open={showVerificationError} onOpenChange={setShowVerificationError}>
-        <DialogContent className="sm:max-w-sm p-0 gap-0 overflow-hidden">
-          <div className="p-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-              <ShieldX size={32} className="text-destructive" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Verification Required</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              You need to complete DISCOM verification before you can publish trades. This ensures your energy connection is valid.
-            </p>
-            <div className="space-y-2">
-              <button 
-                onClick={() => {
-                  setShowVerificationError(false);
-                  onVerifyNow?.();
-                }}
-                className="btn-solar w-full !py-3"
-              >
-                Verify Now
-              </button>
-              <button 
-                onClick={() => {
-                  setShowVerificationError(false);
-                  setUserData({ isVCVerified: false });
-                  navigate("/home", { state: { isVCVerified: false } });
-                }}
-                className="w-full text-sm text-muted-foreground hover:text-foreground py-2"
-              >
-                I'll do this later
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Walkthrough Overlay */}
-      {showWalkthrough && (
-        <WalkthroughOverlay
-          steps={walkthroughSteps}
-          currentStep={walkthroughStep}
-          onNext={handleWalkthroughNext}
-          onSkip={handleWalkthroughSkip}
-          onComplete={handleWalkthroughComplete}
-        />
-      )}
     </div>
   );
 };
