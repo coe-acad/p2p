@@ -20,6 +20,23 @@ export interface UserData {
   upiId?: string;
   // Verification status
   isVCVerified?: boolean;
+  aadhaarVerified?: boolean;
+  // VC document extracted fields
+  vcFullName?: string;
+  vcAddress?: string;
+  vcConsumerNumber?: string;
+  vcMeterNumber?: string;
+  vcServiceConnectionDate?: string;
+  vcIssuerName?: string;
+  vcPremisesType?: string;
+  vcConnectionType?: string;
+  vcSanctionedLoad?: string;
+  vcTariffCategory?: string;
+  vcGenerationType?: string;
+  vcGenerationCapacity?: string;
+  vcCommissioningDate?: string;
+  vcManufacturer?: string;
+  vcModelNumber?: string;
   // User context from "Talk to Samai"
   userContext?: string;
   // Demo mode: returning user with 30 days of trading history
@@ -53,6 +70,7 @@ const DEFAULT_USER_DATA: UserData = {
   email: "",
   upiId: "",
   isVCVerified: false,
+  aadhaarVerified: false,
   userContext: "",
   isReturningUser: false,
 };

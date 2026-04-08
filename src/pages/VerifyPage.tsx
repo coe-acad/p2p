@@ -37,7 +37,12 @@ const VerifyPage = () => {
   const { setUserData } = useUserData();
 
   const handleVerified = (phone?: string) => {
-    if (phone) setUserData({ phone: `+91${phone}` });
+    if (phone) {
+      setUserData({
+        phone: `+91${phone}`,
+        aadhaarVerified: true,
+      });
+    }
     if (isReturningUser) {
       // Returning user - populate with 30 days of trading history and go to home
       const { confirmedTrades } = generateReturningUserData();
@@ -67,7 +72,8 @@ const VerifyPage = () => {
         userContext: returningUserContext,
         automationLevel: "auto",
         isReturningUser: true,
-        isVCVerified: true
+        isVCVerified: true,
+        aadhaarVerified: true
       }));
       
       navigate("/home", { replace: true });
