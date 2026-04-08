@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Shield, Check, X, CreditCard, Building2, Receipt, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 
 interface VerificationScreenProps {
-  onVerified: () => void;
+  onVerified: (phone?: string) => void;
   onBack: () => void;
   isReturningUser?: boolean;
 }
@@ -48,6 +50,11 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   // Fetching loading state
   const [fetchingProgress, setFetchingProgress] = useState(0);
   const [fetchingStep, setFetchingStep] = useState(0);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpError, setOtpError] = useState("");
+
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
   
   const fetchingMessages = [
     { icon: Loader2, text: "Connecting to DigiLocker...", spin: true },
@@ -73,7 +80,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         setTimeout(() => setFetchingStep(2), 2000),
         setTimeout(() => {
           localStorage.setItem("samai_aadhaar_verified", "true");
-          onVerified();
+          onVerified(phoneNumber);
         }, 3000),
       ];
       
@@ -92,12 +99,32 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     }
   };
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (!isValidIndianMobile(phoneNumber)) {
       setPhoneError("Must start with 6, 7, 8, or 9");
       return;
     }
-    setStep("otp");
+    setIsSendingOtp(true);
+    setPhoneError("");
+    try {
+      if (!recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible",
+        });
+      }
+      confirmationResultRef.current = await signInWithPhoneNumber(
+        auth,
+        `+91${phoneNumber}`,
+        recaptchaVerifierRef.current
+      );
+      setStep("otp");
+    } catch (err: any) {
+      setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
+      recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -105,20 +132,36 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
+      setOtpError("");
       if (value && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
       if (newOtp.every(d => d) && newOtp.join("").length === 6) {
-        const enteredOtp = newOtp.join("");
-        // Accept fixed OTP 212900 for demo, or proceed regardless for prototype
-        if (enteredOtp === "212900" || true) {
-          // Returning users skip Aadhaar, new users go to Aadhaar step
-          if (isReturningUser) {
-            setTimeout(() => onVerified(), 500);
-          } else {
-            setTimeout(() => setStep("aadhaar"), 500);
-          }
-        }
+        verifyOtp(newOtp.join(""));
       }
     }
+  };
+
+  const verifyOtp = async (enteredOtp: string) => {
+    if (!confirmationResultRef.current) return;
+    try {
+      await confirmationResultRef.current.confirm(enteredOtp);
+      if (isReturningUser) {
+        onVerified(phoneNumber);
+      } else {
+        setStep("aadhaar");
+      }
+    } catch {
+      setOtpError("Invalid OTP. Please try again.");
+      setOtp(["", "", "", "", "", ""]);
+      document.getElementById("otp-0")?.focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
+    setOtp(["", "", "", "", "", ""]);
+    setOtpError("");
+    await handlePhoneSubmit();
   };
 
   const handleAadhaarChange = (value: string) => {
@@ -197,7 +240,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           <div className="flex items-center gap-2">
             {/* Dev skip button for testing */}
             <button 
-              onClick={onVerified}
+              onClick={() => onVerified()}
               className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground"
               title="Skip verification (dev)"
             >
@@ -272,7 +315,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
                   ))}
                 </div>
               </div>
-              <button className="text-2xs text-muted-foreground hover:text-primary text-center">
+              {otpError && <p className="text-2xs text-destructive text-center">{otpError}</p>}
+              <button onClick={handleResendOtp} className="text-2xs text-muted-foreground hover:text-primary text-center">
                 Resend OTP
               </button>
             </div>
@@ -544,10 +588,10 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           {step === "phone" && (
             <button
               onClick={handlePhoneSubmit}
-              disabled={phoneNumber.length !== 10 || !!phoneError}
+              disabled={phoneNumber.length !== 10 || !!phoneError || isSendingOtp}
               className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send OTP
+              {isSendingOtp ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Send OTP"}
             </button>
           )}
           {step === "aadhaar" && aadhaarMethod === "digilocker" && (
@@ -600,6 +644,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           </p>
         </div>
       </div>
+
+      {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
+      <div id="recaptcha-container" />
 
       {/* Terms & Conditions Modal */}
       {showTermsModal && (

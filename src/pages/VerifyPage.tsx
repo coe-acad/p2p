@@ -1,6 +1,7 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePublishedTrades, type ConfirmedTrade } from "@/hooks/usePublishedTrades";
+import { useUserData } from "@/hooks/useUserData";
 
 // Generate mock 30-day trading history for returning users
 const generateReturningUserData = () => {
@@ -33,8 +34,10 @@ const VerifyPage = () => {
   const intent = location.state?.intent || "sell";
   const isReturningUser = location.state?.isReturningUser || false;
   const { confirmTrades, setShowConfirmedTrades } = usePublishedTrades();
+  const { setUserData } = useUserData();
 
-  const handleVerified = () => {
+  const handleVerified = (phone?: string) => {
+    if (phone) setUserData({ phone: `+91${phone}` });
     if (isReturningUser) {
       // Returning user - populate with 30 days of trading history and go to home
       const { confirmedTrades } = generateReturningUserData();

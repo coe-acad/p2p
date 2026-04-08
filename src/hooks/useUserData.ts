@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export interface UserData {
   name: string;
@@ -9,19 +11,19 @@ export interface UserData {
   consumerId: string;
   automationLevel: "recommend" | "auto";
   // Vacation/holiday preferences for personalized nudges
-  schoolHolidays?: string; // e.g., "March 15-30, 2026"
-  summerVacationStart?: string; // e.g., "2026-05-01"
-  summerVacationEnd?: string; // e.g., "2026-06-15"
-  upcomingEvents?: string; // Free-form text for other events
+  schoolHolidays?: string;
+  summerVacationStart?: string;
+  summerVacationEnd?: string;
+  upcomingEvents?: string;
   // Payment settings
-  email?: string; // Required for billing
-  upiId?: string; // e.g., "archana@upi"
+  email?: string;
+  upiId?: string;
   // Verification status
-  isVCVerified?: boolean; // DISCOM VC verification status
+  isVCVerified?: boolean;
   // User context from "Talk to Samai"
-  userContext?: string; // Transcribed/typed context about usage patterns
+  userContext?: string;
   // Demo mode: returning user with 30 days of trading history
-  isReturningUser?: boolean; // If true, shows full transaction history and earnings
+  isReturningUser?: boolean;
 }
 
 const DEFAULT_ADDRESS =
@@ -37,7 +39,7 @@ const normalizeName = (name?: string) => {
 const normalizeAddress = () => DEFAULT_ADDRESS;
 
 const DEFAULT_USER_DATA: UserData = {
-  name: "Seema", // Default name
+  name: "Seema",
   phone: "",
   address: DEFAULT_ADDRESS,
   city: "",
@@ -50,12 +52,42 @@ const DEFAULT_USER_DATA: UserData = {
   upcomingEvents: "",
   email: "",
   upiId: "",
-  isVCVerified: false, // New users need to verify
+  isVCVerified: false,
   userContext: "",
-  isReturningUser: false, // Default to new user
+  isReturningUser: false,
 };
 
 const STORAGE_KEY = "samai_user_data";
+
+// Sync user data to Firestore, keyed by phone number
+const syncToFirestore = async (data: UserData) => {
+  if (!data.phone) return;
+  try {
+    const userRef = doc(db, "users", data.phone);
+    await setDoc(
+      userRef,
+      { ...data, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error("Firestore sync failed:", err);
+  }
+};
+
+// Load user data from Firestore by phone number
+export const loadUserFromFirestore = async (phone: string): Promise<Partial<UserData> | null> => {
+  try {
+    const userRef = doc(db, "users", phone);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      return snap.data() as Partial<UserData>;
+    }
+    return null;
+  } catch (err) {
+    console.error("Firestore load failed:", err);
+    return null;
+  }
+};
 
 export const useUserData = () => {
   const [userData, setUserDataState] = useState<UserData>(() => {
@@ -81,12 +113,17 @@ export const useUserData = () => {
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
-    setUserDataState(prev => ({
-      ...prev,
-      ...updates,
-      name: updates.name ? normalizeName(updates.name) : prev.name,
-      address: normalizeAddress(),
-    }));
+    setUserDataState(prev => {
+      const next: UserData = {
+        ...prev,
+        ...updates,
+        name: updates.name ? normalizeName(updates.name) : prev.name,
+        address: normalizeAddress(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      syncToFirestore(next);
+      return next;
+    });
   };
 
   return { userData, setUserData };
@@ -96,9 +133,7 @@ export const useUserData = () => {
 export const extractLocality = (fullAddress: string): string => {
   if (!fullAddress) return "";
   const parts = fullAddress.split(",").map(p => p.trim());
-  // Return first 2-3 meaningful parts (skip house number if present)
   if (parts.length >= 2) {
-    // If first part looks like a house number, skip it
     const startsWithNumber = /^\d/.test(parts[0]);
     if (startsWithNumber && parts.length >= 3) {
       return parts.slice(1, 3).join(", ");
