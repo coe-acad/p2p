@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-import { convertTradesToSchema } from "@/utils/tradeSchemaConverter";
-import { auth } from "@/lib/firebase";
+import { submitTrades } from "@/services/tradeService";
 export interface PlannedTrade {
   id: string;
   time: string;
@@ -90,24 +88,9 @@ export const usePublishedTrades = () => {
 
     // Submit to backend (non-blocking for UI)
     if (trades && trades.length > 0) {
-      const tradeSubmissions = convertTradesToSchema(trades);
-
-      try {
-        const idToken = auth.currentUser
-          ? await auth.currentUser.getIdToken()
-          : null;
-
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002"}/api/create`,
-          { trades: tradeSubmissions },
-          idToken
-            ? { headers: { Authorization: `Bearer ${idToken}` } }
-            : undefined
-        );
-        console.log("Trades submitted successfully:", data);
-      } catch (err) {
-        console.error("Failed to submit trades to backend:", err);
-      }
+      submitTrades(trades)
+        .then(() => console.log("Trades submitted successfully"))
+        .catch(err => console.error("Failed to submit trades to backend:", err));
     } else {
       console.log("No trades to submit, skipping backend call");
     }
