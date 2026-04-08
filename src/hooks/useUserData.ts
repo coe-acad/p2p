@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { saveUser, loadUser } from "@/services/userService";
 
 export interface UserData {
   name: string;
@@ -77,36 +76,6 @@ const DEFAULT_USER_DATA: UserData = {
 
 const STORAGE_KEY = "samai_user_data";
 
-// Sync user data to Firestore, keyed by phone number
-const syncToFirestore = async (data: UserData) => {
-  if (!data.phone) return;
-  try {
-    const userRef = doc(db, "users", data.phone);
-    await setDoc(
-      userRef,
-      { ...data, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (err) {
-    console.error("Firestore sync failed:", err);
-  }
-};
-
-// Load user data from Firestore by phone number
-export const loadUserFromFirestore = async (phone: string): Promise<Partial<UserData> | null> => {
-  try {
-    const userRef = doc(db, "users", phone);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      return snap.data() as Partial<UserData>;
-    }
-    return null;
-  } catch (err) {
-    console.error("Firestore load failed:", err);
-    return null;
-  }
-};
-
 export const useUserData = () => {
   const [userData, setUserDataState] = useState<UserData>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -139,7 +108,7 @@ export const useUserData = () => {
         address: normalizeAddress(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      syncToFirestore(next);
+      saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });
   };
@@ -160,3 +129,6 @@ export const extractLocality = (fullAddress: string): string => {
   }
   return fullAddress;
 };
+
+// Re-export loadUser for components that need to fetch by phone (e.g. login flow)
+export { loadUser as loadUserFromFirestore };
