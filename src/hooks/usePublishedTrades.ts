@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { convertTradesToSchema } from "@/utils/tradeSchemaConverter";
+import { auth } from "@/lib/firebase";
 export interface PlannedTrade {
   id: string;
   time: string;
@@ -92,9 +93,16 @@ export const usePublishedTrades = () => {
       const tradeSubmissions = convertTradesToSchema(trades);
 
       try {
+        const idToken = auth.currentUser
+          ? await auth.currentUser.getIdToken()
+          : null;
+
         const { data } = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002"}/api/create`,
-          { trades: tradeSubmissions }
+          { trades: tradeSubmissions },
+          idToken
+            ? { headers: { Authorization: `Bearer ${idToken}` } }
+            : undefined
         );
         console.log("Trades submitted successfully:", data);
       } catch (err) {
