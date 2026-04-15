@@ -32,3 +32,19 @@ export const getTradeStatus = async (
   });
   return data;
 };
+
+export interface TradeHistoryItem {
+  type: "trade" | "catalog";
+  transaction_id?: string;
+  catalog_id?: string;
+  offer_ids?: string[];
+  status: string;
+  updated_at?: string;
+  created_at?: string;
+}
+
+export const getTradeHistory = async (): Promise<TradeHistoryItem[]> => {
+  const headers = await getAuthHeaders();
+  const { data } = await axios.get(`${BACKEND_URL}/api/trades`, { headers });
+  return data.items || [];
+};

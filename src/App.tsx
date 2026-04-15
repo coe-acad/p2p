@@ -34,6 +34,7 @@ import UserContextPage from "./pages/settings/UserContextPage";
 import AutomationSettingsPage from "./pages/settings/AutomationSettingsPage";
 import VacationsSettingsPage from "./pages/settings/VacationsSettingsPage";
 import PaymentSettingsPage from "./pages/settings/PaymentSettingsPage";
+import TradeHistorySettingsPage from "./pages/settings/TradeHistorySettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/settings/automation" element={<AutomationSettingsPage />} />
             <Route path="/settings/vacations" element={<VacationsSettingsPage />} />
             <Route path="/settings/payment" element={<PaymentSettingsPage />} />
+            <Route path="/settings/trade-history" element={<TradeHistorySettingsPage />} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

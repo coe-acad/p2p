@@ -2,6 +2,7 @@ import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePublishedTrades, type ConfirmedTrade } from "@/hooks/usePublishedTrades";
 import { useUserData } from "@/hooks/useUserData";
+import { ensureUserOnServer } from "@/services/userService";
 
 // Generate mock 30-day trading history for returning users
 const generateReturningUserData = () => {
@@ -42,6 +43,9 @@ const VerifyPage = () => {
         phone: `+91${phone}`,
         aadhaarVerified: true,
       });
+      ensureUserOnServer().catch((err) =>
+        console.error("Failed to ensure user on server:", err)
+      );
     }
     if (isReturningUser) {
       // Returning user - populate with 30 days of trading history and go to home
