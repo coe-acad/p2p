@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Check } from "lucide-react";
 import { useState } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const RoleSettingsPage = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const RoleSettingsPage = () => {
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+      <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -66,7 +67,7 @@ const RoleSettingsPage = () => {
         <p className="text-xs text-muted-foreground text-center mt-2">
           You can select one or both roles
         </p>
-      </div>
+      </PageContainer>
     </div>
   );
 };

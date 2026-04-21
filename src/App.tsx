@@ -10,7 +10,6 @@ import VerifyPage from "./pages/VerifyPage";
 import SuccessPage from "./pages/SuccessPage";
 
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
-import OnboardingLocationPage from "./pages/OnboardingLocationPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import CalculatingPage from "./pages/CalculatingPage";
 import EarningsHookPage from "./pages/EarningsHookPage";
@@ -45,8 +44,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        {/* Force mobile viewport wrapper */}
-        <div className="max-w-md mx-auto min-h-screen relative">
+        <div className="min-h-screen bg-background">
           <Routes>
             {/* Initial Flow - Welcome is the common landing for all users */}
             <Route path="/" element={<WelcomePage />} />
@@ -54,9 +52,8 @@ const App = () => (
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/success" element={<SuccessPage />} />
             
-            {/* Onboarding Steps (2 steps: Location+Devices combined, then Talk) */}
+            {/* Onboarding Steps (Talk to Samai after verification) */}
             <Route path="/onboarding" element={<OnboardingIntroPage />} />
-            <Route path="/onboarding/location" element={<OnboardingLocationPage />} />
             <Route path="/onboarding/talk" element={<OnboardingTalkPage />} />
             
             {/* Post-Onboarding */}

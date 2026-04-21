@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Package, Clock } from "lucide-react";
 import { getTradeHistory, TradeHistoryItem } from "@/services/tradeService";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 const statusLabel = (status: string) => {
   switch (status) {
@@ -38,8 +39,9 @@ const TradeHistorySettingsPage = () => {
   }, []);
 
   return (
-    <div className="screen-container !justify-start !pt-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4">
+        <div className="w-full max-w-xl flex flex-col h-full px-4 lg:max-w-4xl lg:px-0">
         <div className="flex items-center gap-2 pb-3 animate-fade-in">
           <button
             onClick={() => navigate("/profile")}
@@ -86,8 +88,9 @@ const TradeHistorySettingsPage = () => {
             ))
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 

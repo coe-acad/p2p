@@ -102,6 +102,10 @@
 }
 
 @layer base {
+  html, body, #root {
+    min-height: 100%;
+  }
+
   * {
     @apply border-border;
   }
@@ -112,6 +116,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -206,10 +211,15 @@
     background: linear-gradient(135deg, transparent 0%, hsl(0 0% 100% / 0.1) 50%, transparent 100%);
   }
   
-  /* Screen container */
+  /* Screen container - responsive centering */
   .screen-container {
-    @apply min-h-screen flex flex-col items-center justify-center px-5 py-10;
+    @apply flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-12;
     background: hsl(var(--background));
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
   
   /* Shadow utilities */

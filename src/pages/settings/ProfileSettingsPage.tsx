@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { useUserData } from "@/hooks/useUserData";
+import PageContainer from "@/components/layout/PageContainer";
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ const ProfileSettingsPage = () => {
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+      <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button
@@ -120,7 +121,7 @@ const ProfileSettingsPage = () => {
         <p className="text-xs text-muted-foreground text-center">
           This information is used in your energy trade listings
         </p>
-      </div>
+      </PageContainer>
     </div>
   );
 };

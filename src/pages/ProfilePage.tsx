@@ -2,6 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { PageContainer } from "@/components/layout/PageContainer";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -55,8 +57,9 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4 !pb-6">
+        <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -118,8 +121,9 @@ const ProfilePage = () => {
         >
           {t("profile.startDemoOver")}
         </button>
+        </PageContainer>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 

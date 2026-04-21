@@ -84,8 +84,13 @@ const VerifyPage = () => {
       
       navigate("/home", { replace: true });
     } else {
-      // New user - continue to success/onboarding
-      navigate("/success", { state: { intent } });
+      // New user - all 5 verification steps complete, go to home
+      localStorage.setItem("samai_onboarding_complete", "true");
+      localStorage.setItem("samai_aadhaar_verified", "true");
+      localStorage.setItem("samai_onboarding_location_done", "true");
+      localStorage.setItem("samai_onboarding_devices_done", "true");
+
+      navigate("/home", { replace: true });
     }
   };
 

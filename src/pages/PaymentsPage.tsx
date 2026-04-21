@@ -6,6 +6,7 @@ import SamaiLogo from "@/components/SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { useToast } from "@/hooks/use-toast";
 import PaymentDetailSheet from "@/components/payments/PaymentDetailSheet";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 type PaymentStatus = "received" | "confirmed" | "pending";
 
@@ -156,8 +157,9 @@ const PaymentsPage = () => {
   };
 
   return (
-    <div className="screen-container !justify-start !pt-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4">
+        <div className="w-full max-w-xl flex flex-col h-full px-4 lg:max-w-4xl lg:px-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 animate-fade-in">
           <div className="flex items-center gap-2">
@@ -409,15 +411,16 @@ const PaymentsPage = () => {
             </>
           )}
         </div>
-      </div>
+        </div>
 
-      {/* Payment Detail Sheet */}
-      <PaymentDetailSheet 
-        transaction={selectedTransaction}
-        open={!!selectedTransaction}
-        onOpenChange={(open) => !open && setSelectedTransaction(null)}
-      />
-    </div>
+        {/* Payment Detail Sheet */}
+        <PaymentDetailSheet 
+          transaction={selectedTransaction}
+          open={!!selectedTransaction}
+          onOpenChange={(open) => !open && setSelectedTransaction(null)}
+        />
+      </div>
+    </MainAppShell>
   );
 };
 
