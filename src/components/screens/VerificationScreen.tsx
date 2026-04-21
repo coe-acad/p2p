@@ -155,6 +155,10 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       if (isReturningUser) {
         onVerified(phoneNumber);
       } else {
+        // Save phone number immediately so profile data can be saved to Firestore
+        setUserData({
+          phone: `+91${phoneNumber}`,
+        });
         setStep("profile");
       }
     } catch {

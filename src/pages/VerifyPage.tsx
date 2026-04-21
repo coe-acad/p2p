@@ -43,6 +43,8 @@ const VerifyPage = () => {
         phone: `+91${phone}`,
         aadhaarVerified: true,
       });
+      // Note: Profile data (name, consumerId) should already be synced from profile step
+      // This ensures the basic user record exists on backend
       ensureUserOnServer().catch((err) =>
         console.error("Failed to ensure user on server:", err)
       );

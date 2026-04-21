@@ -11,9 +11,13 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
 export const saveUser = async (data: UserData): Promise<void> => {
   if (!data.phone) return;
   const userRef = doc(db, COLLECTION, data.phone);
+  // Filter out undefined values - Firestore doesn't allow them
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([, value]) => value !== undefined)
+  );
   await setDoc(
     userRef,
-    { ...data, updatedAt: serverTimestamp() },
+    { ...cleanData, updatedAt: serverTimestamp() },
     { merge: true }
   );
 };
