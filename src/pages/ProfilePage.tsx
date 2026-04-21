@@ -14,7 +14,7 @@ const ProfilePage = () => {
     {
       title: t("profile.account"),
       items: [
-        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name, route: "/settings/mobile" },
+        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/settings/profile" },
         { icon: ShoppingCart, label: t("profile.yourRole"), sublabel: t("profile.seller"), route: "/settings/role" },
         { icon: Settings, label: t("profile.homeProfile"), sublabel: "3 BHK • Residential", route: "/settings/devices?type=profile" },
         { icon: Building2, label: t("profile.location"), sublabel: locality, route: "/settings/discom" },

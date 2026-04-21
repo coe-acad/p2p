@@ -20,44 +20,44 @@ export interface UserData {
   // Verification status
   isVCVerified?: boolean;
   aadhaarVerified?: boolean;
-  // VC document extracted fields
-  vcFullName?: string;
-  vcAddress?: string;
-  vcConsumerNumber?: string;
-  vcMeterNumber?: string;
-  vcServiceConnectionDate?: string;
-  vcIssuerName?: string;
-  vcPremisesType?: string;
-  vcConnectionType?: string;
-  vcSanctionedLoad?: string;
-  vcTariffCategory?: string;
-  vcGenerationType?: string;
-  vcGenerationCapacity?: string;
-  vcCommissioningDate?: string;
-  vcManufacturer?: string;
-  vcModelNumber?: string;
+  vcVerifiedAt?: string;
+  // Utility Customer VC fields
+  utilityCustomer?: {
+    fullName?: string;
+    address?: string;
+    consumerNumber?: string;
+    meterNumber?: string;
+    serviceConnectionDate?: string;
+    issuerName?: string;
+  };
+  // Generation Profile VC fields
+  generationProfile?: {
+    generationType?: string;
+    generationCapacity?: string;
+    commissioningDate?: string;
+    manufacturer?: string;
+    modelNumber?: string;
+  };
   // User context from "Talk to Samai"
   userContext?: string;
   // Demo mode: returning user with 30 days of trading history
   isReturningUser?: boolean;
 }
 
-const DEFAULT_ADDRESS =
-  "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002";
-
 const normalizeName = (name?: string) => {
-  if (!name) return "Seema";
-  const trimmed = name.trim();
-  if (/^jyot(h)?irmayee$/i.test(trimmed)) return "Seema";
-  return trimmed;
+  if (!name) return "";
+  return name.trim();
 };
 
-const normalizeAddress = () => DEFAULT_ADDRESS;
+const normalizeAddress = (address?: string) => {
+  if (!address) return "";
+  return address.trim();
+};
 
 const DEFAULT_USER_DATA: UserData = {
-  name: "Seema",
+  name: "",
   phone: "",
-  address: DEFAULT_ADDRESS,
+  address: "",
   city: "",
   discom: "",
   consumerId: "",
@@ -70,6 +70,9 @@ const DEFAULT_USER_DATA: UserData = {
   upiId: "",
   isVCVerified: false,
   aadhaarVerified: false,
+  vcVerifiedAt: undefined,
+  utilityCustomer: undefined,
+  generationProfile: undefined,
   userContext: "",
   isReturningUser: false,
 };
@@ -86,7 +89,7 @@ export const useUserData = () => {
           ...DEFAULT_USER_DATA,
           ...parsed,
           name: normalizeName(parsed?.name),
-          address: normalizeAddress(),
+          address: normalizeAddress(parsed?.address),
         };
       } catch {
         return DEFAULT_USER_DATA;
@@ -105,7 +108,7 @@ export const useUserData = () => {
         ...prev,
         ...updates,
         name: updates.name ? normalizeName(updates.name) : prev.name,
-        address: normalizeAddress(),
+        address: updates.address ? normalizeAddress(updates.address) : prev.address,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       saveUser(next).catch(err => console.error("Firestore sync failed:", err));

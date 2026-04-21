@@ -28,13 +28,16 @@ export const loadUser = async (phone: string): Promise<Partial<UserData> | null>
   return null;
 };
 
-export const ensureUserOnServer = async (): Promise<void> => {
+export const ensureUserOnServer = async (name?: string, meter_number?: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) return;
   const token = await user.getIdToken();
+  const body: Record<string, string> = {};
+  if (name) body.name = name;
+  if (meter_number) body.meter_number = meter_number;
   await axios.post(
     `${BACKEND_URL}/api/user/ensure`,
-    {},
+    body,
     { headers: { Authorization: `Bearer ${token}` } }
   );
 };

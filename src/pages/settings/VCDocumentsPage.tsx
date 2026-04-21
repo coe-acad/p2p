@@ -42,7 +42,7 @@ const VCDocumentsPage = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept=".pdf,.json,.jpg,.jpeg,.png"
           onChange={handleUpload}
           className="hidden"
         />
@@ -56,7 +56,7 @@ const VCDocumentsPage = () => {
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">Tap to upload files</p>
-            <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG • Multiple files allowed</p>
+            <p className="text-xs text-muted-foreground mt-1">PDF, JSON, JPG, PNG • Multiple files allowed</p>
           </div>
         </button>
 

@@ -4,6 +4,8 @@ import { auth } from "@/lib/firebase";
 import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
+import { useUserData } from "@/hooks/useUserData";
+import { ensureUserOnServer } from "@/services/userService";
 
 interface VerificationScreenProps {
   onVerified: (phone?: string) => void;
@@ -28,12 +30,18 @@ const isValidGSTIN = (gstin: string): boolean => {
 };
 
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
-  const [step, setStep] = useState<"phone" | "otp" | "aadhaar" | "aadhaar-otp" | "fetching">("phone");
+  const { setUserData } = useUserData();
+  const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [consentChecked, setConsentChecked] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+
+  // Profile step state
+  const [profileName, setProfileName] = useState("");
+  const [profileMeterId, setProfileMeterId] = useState("");
+  const [profileError, setProfileError] = useState("");
   
   // Aadhaar manual entry state
   const [aadhaarMethod, setAadhaarMethod] = useState<"digilocker" | "manual" | "pan" | "gstin" | null>(null);
@@ -147,13 +155,32 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       if (isReturningUser) {
         onVerified(phoneNumber);
       } else {
-        setStep("aadhaar");
+        setStep("profile");
       }
     } catch {
       setOtpError("Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
       document.getElementById("otp-0")?.focus();
     }
+  };
+
+  const handleProfileSubmit = async () => {
+    if (!profileName.trim() || !profileMeterId.trim()) {
+      setProfileError("Name and Meter Number are required");
+      return;
+    }
+    const name = profileName.trim();
+    const meter_number = profileMeterId.trim();
+    setUserData({
+      name,
+      consumerId: meter_number,
+    });
+    try {
+      await ensureUserOnServer(name, meter_number);
+    } catch (err) {
+      console.error("Failed to sync user profile:", err);
+    }
+    setStep("aadhaar");
   };
 
   const handleResendOtp = async () => {
@@ -258,15 +285,17 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Verify your identity</h2>
         </div>
 
-        {/* Steps - Only 2 steps for returning users, 3 for new users */}
+        {/* Steps - 2 for returning users, 4 for new users (phone → otp → profile → aadhaar) */}
         <div className="flex items-center justify-center gap-1.5 animate-fade-in mb-3">
           <div className={`w-2 h-2 rounded-full ${step !== "phone" || step === "phone" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-5 h-0.5 ${step === "otp" || step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
-          <div className={`w-2 h-2 rounded-full ${step === "otp" || step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-5 h-0.5 ${["otp", "profile", "aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${["otp", "profile", "aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
           {!isReturningUser && (
             <>
-              <div className={`w-5 h-0.5 ${step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-2 h-2 rounded-full ${step === "aadhaar" || step === "aadhaar-otp" ? "bg-primary" : "bg-muted"}`} />
+              <div className={`w-5 h-0.5 ${["profile", "aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+              <div className={`w-2 h-2 rounded-full ${["profile", "aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+              <div className={`w-5 h-0.5 ${["aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+              <div className={`w-2 h-2 rounded-full ${["aadhaar", "aadhaar-otp", "fetching"].includes(step) ? "bg-primary" : "bg-muted"}`} />
             </>
           )}
         </div>
@@ -319,6 +348,57 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
               <button onClick={handleResendOtp} className="text-2xs text-muted-foreground hover:text-primary text-center">
                 Resend OTP
               </button>
+            </div>
+          )}
+
+          {/* Profile Step */}
+          {step === "profile" && (
+            <div className="flex flex-col gap-3 animate-slide-up">
+              <div className="flex items-center gap-2 p-2.5 bg-accent/8 rounded-lg">
+                <Check className="text-accent" size={14} />
+                <span className="text-xs text-foreground">Phone verified: +91 {phoneNumber}</span>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border p-3 shadow-card">
+                <h3 className="text-sm font-medium text-foreground mb-0.5">Complete Your Profile</h3>
+                <p className="text-2xs text-muted-foreground mb-3">This information will be used in your energy trades.</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Full Name</label>
+                    <input
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => {
+                        setProfileName(e.target.value);
+                        if (profileError) setProfileError("");
+                      }}
+                      placeholder="Enter your full name"
+                      className={`w-full px-3 py-2.5 rounded-lg border bg-card text-foreground text-sm focus:outline-none focus:ring-1 transition-all ${
+                        profileError ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Meter Number</label>
+                    <input
+                      type="text"
+                      value={profileMeterId}
+                      onChange={(e) => {
+                        setProfileMeterId(e.target.value);
+                        if (profileError) setProfileError("");
+                      }}
+                      placeholder="Enter your utility meter number"
+                      className={`w-full px-3 py-2.5 rounded-lg border bg-card text-foreground text-sm focus:outline-none focus:ring-1 transition-all ${
+                        profileError ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
+                      }`}
+                    />
+                  </div>
+
+                  {profileError && <p className="text-2xs text-destructive">{profileError}</p>}
+                </div>
+              </div>
             </div>
           )}
 
@@ -592,6 +672,15 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
               className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSendingOtp ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Send OTP"}
+            </button>
+          )}
+          {step === "profile" && (
+            <button
+              onClick={handleProfileSubmit}
+              disabled={!profileName.trim() || !profileMeterId.trim()}
+              className="btn-solar w-full text-sm !py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue
             </button>
           )}
           {step === "aadhaar" && aadhaarMethod === "digilocker" && (

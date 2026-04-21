@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, ExternalLink, Zap, Battery, Gauge, User, ChevronUp, Cpu, FileCheck, Sparkles } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
- import { parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
+ import { parseVCJson, parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
 
 interface LocationDeviceScreenProps {
   onContinue: (isVerified: boolean, locationData?: { address: string; city: string; discom: string }) => void;
@@ -346,14 +346,18 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
 
            setPreparingVC(false);
            setIsVerifying(true);
-           // Find PDF files and parse them
+           // Find VC files and parse the first supported document
            const pdfFiles = newFiles.filter(
              (f) => f.type === "application/pdf" || f.name.endsWith(".pdf"),
            );
+           const jsonFiles = newFiles.filter(
+             (f) => f.type === "application/json" || f.name.toLowerCase().endsWith(".json"),
+           );
 
-           if (pdfFiles.length > 0) {
-             // Parse the first PDF (or merge data from multiple)
-             const parsedData = await parseVCPdf(pdfFiles[0]);
+           if (pdfFiles.length > 0 || jsonFiles.length > 0) {
+             const parsedData = pdfFiles.length > 0
+               ? await parseVCPdf(pdfFiles[0])
+               : await parseVCJson(jsonFiles[0]);
              setVcData(parsedData);
 
              // Update user data with extracted info
@@ -380,8 +384,13 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
            console.error('Error parsing VC:', error);
            setParseError('Could not parse document. Please try again.');
            setIsVerifying(false);
-           // Still mark as verified for non-PDF files
-           if (!newFiles.some(f => f.type === 'application/pdf')) {
+           // Still mark as verified for non-parseable uploads such as images
+           if (!newFiles.some((f) =>
+             f.type === "application/pdf" ||
+             f.name.toLowerCase().endsWith(".pdf") ||
+             f.type === "application/json" ||
+             f.name.toLowerCase().endsWith(".json")
+           )) {
              setIsVerified(true);
              setUserData({ isVCVerified: true });
            }
@@ -545,7 +554,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
               <Upload className="text-primary mb-1" size={16} />
               <span className="text-2xs font-medium text-foreground">Tap to upload files</span>
               <span className="text-2xs text-muted-foreground">Connection, Consumer, or Generation VCs</span>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onChange={handleFileUpload} className="hidden" />
+              <input type="file" accept=".pdf,.json,.jpg,.jpeg,.png" multiple onChange={handleFileUpload} className="hidden" />
             </label>
 
             {uploadedFiles.length > 0 && (

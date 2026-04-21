@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 // Settings Pages
 import RoleSettingsPage from "./pages/settings/RoleSettingsPage";
 import MobileSettingsPage from "./pages/settings/MobileSettingsPage";
+import ProfileSettingsPage from "./pages/settings/ProfileSettingsPage";
 import DiscomSettingsPage from "./pages/settings/DiscomSettingsPage";
 import VCDocumentsPage from "./pages/settings/VCDocumentsPage";
 import DevicesSettingsPage from "./pages/settings/DevicesSettingsPage";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/order-history" element={<OrderHistoryPage />} />
             
             {/* Settings Pages */}
+            <Route path="/settings/profile" element={<ProfileSettingsPage />} />
             <Route path="/settings/role" element={<RoleSettingsPage />} />
             <Route path="/settings/mobile" element={<MobileSettingsPage />} />
             <Route path="/settings/discom" element={<DiscomSettingsPage />} />
