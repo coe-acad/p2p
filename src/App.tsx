@@ -22,6 +22,9 @@ import TodayTradesPage from "./pages/TodayTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ProfilePage from "./pages/ProfilePage";
 import BuyerProfilePage from "./pages/BuyerProfilePage";
+import BuyerPaymentsPage from "./pages/BuyerPaymentsPage";
+import BuyerAskSamaiPage from "./pages/BuyerAskSamaiPage";
+import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import AskSamaiPage from "./pages/AskSamaiPage";
 import NotFound from "./pages/NotFound";
@@ -79,6 +82,9 @@ const App = () => (
             {/* Buyer Main App */}
             <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
             <Route path="/buyer-profile" element={<RoleProtectedRoute requiredIntent="buy"><BuyerProfilePage /></RoleProtectedRoute>} />
+            <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-ask-samai" element={<RoleProtectedRoute requiredIntent="buy"><BuyerAskSamaiPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
 
             {/* Seller Settings Pages */}
             <Route path="/settings/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfileSettingsPage /></RoleProtectedRoute>} />

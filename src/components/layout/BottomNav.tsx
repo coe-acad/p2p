@@ -14,8 +14,8 @@ interface BottomNavProps {
 }
 
 const getRouteTab = (pathname: string): TabType => {
-  if (pathname.startsWith("/ask-samai")) return "chat";
-  if (pathname.startsWith("/payments")) return "statements";
+  if (pathname.startsWith("/ask-samai") || pathname.startsWith("/buyer-ask-samai")) return "chat";
+  if (pathname.startsWith("/payments") || pathname.startsWith("/buyer-payments")) return "statements";
   if (pathname.startsWith("/buyer-home")) return "home";
   if (pathname.startsWith("/home")) return "home";
   return "home";
@@ -30,9 +30,9 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
   const resolvedActiveTab = (activeTab as TabType | undefined) ?? getRouteTab(location.pathname);
 
   const navigateTo = (tab: TabType) => {
-    if (tab === "chat") navigate("/ask-samai");
+    if (tab === "chat") navigate(isBuyer ? "/buyer-ask-samai" : "/ask-samai");
     if (tab === "home") navigate(isBuyer ? "/buyer-home" : "/home");
-    if (tab === "statements") navigate("/payments");
+    if (tab === "statements") navigate(isBuyer ? "/buyer-payments" : "/payments");
     onTabChange?.(tab);
   };
 
@@ -60,17 +60,15 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
         </div>
       </button>
 
-      {!isBuyer && (
-        <button
-          onClick={() => navigateTo("statements")}
-          className={`flex min-w-[5.5rem] flex-col items-center gap-1 rounded-xl px-3 py-1.5 transition-colors ${
-            resolvedActiveTab === "statements" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Wallet size={20} />
-          <span className={`text-[10px] font-medium ${resolvedActiveTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
-        </button>
-      )}
+      <button
+        onClick={() => navigateTo("statements")}
+        className={`flex min-w-[5.5rem] flex-col items-center gap-1 rounded-xl px-3 py-1.5 transition-colors ${
+          resolvedActiveTab === "statements" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Wallet size={20} />
+        <span className={`text-[10px] font-medium ${resolvedActiveTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
+      </button>
       </div>
     </div>
   );
@@ -114,9 +112,6 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
 
       <div className="mt-8 space-y-2">
         {desktopItems.map((item) => {
-          if (isBuyer && (item.id === "chat" || item.id === "statements")) {
-            return null;
-          }
           const Icon = item.icon;
           const isActive = resolvedActiveTab === item.id;
 
