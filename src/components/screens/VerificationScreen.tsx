@@ -233,15 +233,12 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     if (!confirmationResultRef.current) return;
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
-      if (isReturningUser) {
-        onVerified(phoneNumber);
-      } else {
-        // Save phone number immediately so profile data can be saved to Firestore
-        setUserData({
-          phone: `+91${phoneNumber}`,
-        });
-        setStep("profile");
-      }
+      // Save phone number immediately so profile data can be saved to Firestore
+      setUserData({
+        phone: `+91${phoneNumber}`,
+      });
+      // ALL users (new and returning) must complete all 5 verification steps
+      setStep("profile");
     } catch {
       setOtpError("Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
@@ -480,17 +477,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
             <ArrowLeft size={16} />
             <span>Back</span>
           </button>
-          <div className="flex items-center gap-2">
-            {/* Dev skip button for testing */}
-            <button 
-              onClick={() => onVerified()}
-              className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground"
-              title="Skip verification (dev)"
-            >
-              [Skip]
-            </button>
-            <SamaiLogo size="sm" showText={false} />
-          </div>
+          <SamaiLogo size="sm" showText={false} />
         </div>
 
         {/* Title */}

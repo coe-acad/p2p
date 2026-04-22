@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute, PublicOnlyRoute } from "@/components/layout/ProtectedRoute";
 
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
@@ -46,42 +47,44 @@ const App = () => (
       <BrowserRouter>
         <div className="min-h-screen bg-background">
           <Routes>
-            {/* Initial Flow - Welcome is the common landing for all users */}
-            <Route path="/" element={<WelcomePage />} />
-            <Route path="/intent" element={<IntentPage />} />
-            <Route path="/verify" element={<VerifyPage />} />
-            <Route path="/success" element={<SuccessPage />} />
+            {/* Public routes - redirects to /home if already logged in */}
+            <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
+            <Route path="/intent" element={<PublicOnlyRoute><IntentPage /></PublicOnlyRoute>} />
+            <Route path="/verify" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
+
+            {/* Protected routes - redirects to / if not logged in */}
+            <Route path="/success" element={<ProtectedRoute><SuccessPage /></ProtectedRoute>} />
             
             {/* Onboarding Steps (Talk to Samai after verification) */}
-            <Route path="/onboarding" element={<OnboardingIntroPage />} />
-            <Route path="/onboarding/talk" element={<OnboardingTalkPage />} />
-            
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingIntroPage /></ProtectedRoute>} />
+            <Route path="/onboarding/talk" element={<ProtectedRoute><OnboardingTalkPage /></ProtectedRoute>} />
+
             {/* Post-Onboarding */}
-            <Route path="/calculating" element={<CalculatingPage />} />
-            <Route path="/earnings" element={<EarningsHookPage />} />
-            <Route path="/prepared" element={<PreparedPage />} />
-            <Route path="/published" element={<PublishedPage />} />
-            
+            <Route path="/calculating" element={<ProtectedRoute><CalculatingPage /></ProtectedRoute>} />
+            <Route path="/earnings" element={<ProtectedRoute><EarningsHookPage /></ProtectedRoute>} />
+            <Route path="/prepared" element={<ProtectedRoute><PreparedPage /></ProtectedRoute>} />
+            <Route path="/published" element={<ProtectedRoute><PublishedPage /></ProtectedRoute>} />
+
             {/* Main App */}
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/ask-samai" element={<AskSamaiPage />} />
-            <Route path="/today-trades" element={<TodayTradesPage />} />
-            <Route path="/payments" element={<PaymentsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/order-history" element={<OrderHistoryPage />} />
-            
+            <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/ask-samai" element={<ProtectedRoute><AskSamaiPage /></ProtectedRoute>} />
+            <Route path="/today-trades" element={<ProtectedRoute><TodayTradesPage /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/order-history" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+
             {/* Settings Pages */}
-            <Route path="/settings/profile" element={<ProfileSettingsPage />} />
-            <Route path="/settings/role" element={<RoleSettingsPage />} />
-            <Route path="/settings/mobile" element={<MobileSettingsPage />} />
-            <Route path="/settings/discom" element={<DiscomSettingsPage />} />
-            <Route path="/settings/vc-documents" element={<VCDocumentsPage />} />
-            <Route path="/settings/devices" element={<DevicesSettingsPage />} />
-            <Route path="/settings/context" element={<UserContextPage />} />
-            <Route path="/settings/automation" element={<AutomationSettingsPage />} />
-            <Route path="/settings/vacations" element={<VacationsSettingsPage />} />
-            <Route path="/settings/payment" element={<PaymentSettingsPage />} />
-            <Route path="/settings/trade-history" element={<TradeHistorySettingsPage />} />
+            <Route path="/settings/profile" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/role" element={<ProtectedRoute><RoleSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/mobile" element={<ProtectedRoute><MobileSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/discom" element={<ProtectedRoute><DiscomSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/vc-documents" element={<ProtectedRoute><VCDocumentsPage /></ProtectedRoute>} />
+            <Route path="/settings/devices" element={<ProtectedRoute><DevicesSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/context" element={<ProtectedRoute><UserContextPage /></ProtectedRoute>} />
+            <Route path="/settings/automation" element={<ProtectedRoute><AutomationSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/vacations" element={<ProtectedRoute><VacationsSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/payment" element={<ProtectedRoute><PaymentSettingsPage /></ProtectedRoute>} />
+            <Route path="/settings/trade-history" element={<ProtectedRoute><TradeHistorySettingsPage /></ProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

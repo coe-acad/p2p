@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  logout: () => Promise<void>;
 }
 
 export const useAuth = (): AuthState => {
@@ -21,9 +22,26 @@ export const useAuth = (): AuthState => {
     return () => unsubscribe();
   }, []);
 
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      // Clear localStorage on logout
+      localStorage.removeItem("samai_user_data");
+      localStorage.removeItem("samai_onboarding_complete");
+      localStorage.removeItem("samai_aadhaar_verified");
+      localStorage.removeItem("samai_onboarding_location_done");
+      localStorage.removeItem("samai_onboarding_devices_done");
+      localStorage.removeItem("samai_onboarding_talk_done");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      throw error;
+    }
+  };
+
   return {
     user,
     isLoading,
     isAuthenticated: user !== null,
+    logout,
   };
 };

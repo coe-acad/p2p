@@ -49,25 +49,26 @@ const VerifyPage = () => {
         console.error("Failed to ensure user on server:", err)
       );
     }
+
+    // ALL users (new and returning) must complete all 5 verification steps before going to home
+    // Mark onboarding as complete
+    localStorage.setItem("samai_onboarding_complete", "true");
+    localStorage.setItem("samai_aadhaar_verified", "true");
+    localStorage.setItem("samai_onboarding_location_done", "true");
+    localStorage.setItem("samai_onboarding_devices_done", "true");
+    localStorage.setItem("samai_onboarding_talk_done", "true");
+
     if (isReturningUser) {
       // Returning user - populate with 30 days of trading history and go to home
       const { confirmedTrades } = generateReturningUserData();
       confirmTrades(confirmedTrades);
       setShowConfirmedTrades(true);
-      
-      // Mark onboarding as complete for returning users
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      // Mark all onboarding steps as done (removes setup banner)
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-      localStorage.setItem("samai_onboarding_talk_done", "true");
-      
+
       // Set Seema's profile data for returning users
       const returningUserContext = "आई एम ए स्कूल टीचर मेरे लिए स्कूल इंपॉर्टेंट है मैं 5 दिन स्कूल चलाती हूं 5 दिन सुबह से शाम तक बिजली का इस्तेमाल होता है ज्यादातर पंख लाइट एक्स्ट्रा सैटरडे संडे को स्कूल की छुट्टी होती है";
       const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-      localStorage.setItem("samai_user_data", JSON.stringify({ 
-        ...currentData, 
+      localStorage.setItem("samai_user_data", JSON.stringify({
+        ...currentData,
         name: "Seema",
         phone: "+91 97697 21566",
         address: "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002",
@@ -81,15 +82,10 @@ const VerifyPage = () => {
         isVCVerified: true,
         aadhaarVerified: true
       }));
-      
+
       navigate("/home", { replace: true });
     } else {
       // New user - all 5 verification steps complete, go to home
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-
       navigate("/home", { replace: true });
     }
   };

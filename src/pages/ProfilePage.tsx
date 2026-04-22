@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package } from "lucide-react";
+import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package, LogOut } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { useAuth } from "@/hooks/useAuth";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 
@@ -9,8 +10,18 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { userData } = useUserData();
-  
+  const { logout } = useAuth();
+
   const locality = extractLocality(userData.address);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
 
   const sections = [
     {
@@ -114,12 +125,13 @@ const ProfilePage = () => {
           ))}
         </div>
 
-        {/* Demo Reset */}
+        {/* Logout Button */}
         <button
-          onClick={() => navigate("/")}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+          onClick={handleLogout}
+          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
         >
-          {t("profile.startDemoOver")}
+          <LogOut size={16} />
+          <span className="text-sm font-medium">Logout</span>
         </button>
         </PageContainer>
       </div>
