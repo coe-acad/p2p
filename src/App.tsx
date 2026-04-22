@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ProtectedRoute, PublicOnlyRoute } from "@/components/layout/ProtectedRoute";
+import { PublicOnlyRoute, RoleProtectedRoute } from "@/components/layout/ProtectedRoute";
 
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
@@ -17,9 +17,11 @@ import EarningsHookPage from "./pages/EarningsHookPage";
 import PreparedPage from "./pages/PreparedPage";
 import PublishedPage from "./pages/PublishedPage";
 import HomePage from "./pages/HomePage";
+import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ProfilePage from "./pages/ProfilePage";
+import BuyerProfilePage from "./pages/BuyerProfilePage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import AskSamaiPage from "./pages/AskSamaiPage";
 import NotFound from "./pages/NotFound";
@@ -50,41 +52,46 @@ const App = () => (
             {/* Public routes - redirects to /home if already logged in */}
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
             <Route path="/intent" element={<PublicOnlyRoute><IntentPage /></PublicOnlyRoute>} />
-            <Route path="/verify" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
+            {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
+            <Route path="/verify" element={<VerifyPage />} />
 
             {/* Protected routes - redirects to / if not logged in */}
-            <Route path="/success" element={<ProtectedRoute><SuccessPage /></ProtectedRoute>} />
-            
-            {/* Onboarding Steps (Talk to Samai after verification) */}
-            <Route path="/onboarding" element={<ProtectedRoute><OnboardingIntroPage /></ProtectedRoute>} />
-            <Route path="/onboarding/talk" element={<ProtectedRoute><OnboardingTalkPage /></ProtectedRoute>} />
+            <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
 
-            {/* Post-Onboarding */}
-            <Route path="/calculating" element={<ProtectedRoute><CalculatingPage /></ProtectedRoute>} />
-            <Route path="/earnings" element={<ProtectedRoute><EarningsHookPage /></ProtectedRoute>} />
-            <Route path="/prepared" element={<ProtectedRoute><PreparedPage /></ProtectedRoute>} />
-            <Route path="/published" element={<ProtectedRoute><PublishedPage /></ProtectedRoute>} />
+            {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
+            <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
 
-            {/* Main App */}
-            <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/ask-samai" element={<ProtectedRoute><AskSamaiPage /></ProtectedRoute>} />
-            <Route path="/today-trades" element={<ProtectedRoute><TodayTradesPage /></ProtectedRoute>} />
-            <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/order-history" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+            {/* Post-Onboarding - Seller only */}
+            <Route path="/calculating" element={<RoleProtectedRoute requiredIntent="sell"><CalculatingPage /></RoleProtectedRoute>} />
+            <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsHookPage /></RoleProtectedRoute>} />
+            <Route path="/prepared" element={<RoleProtectedRoute requiredIntent="sell"><PreparedPage /></RoleProtectedRoute>} />
+            <Route path="/published" element={<RoleProtectedRoute requiredIntent="sell"><PublishedPage /></RoleProtectedRoute>} />
 
-            {/* Settings Pages */}
-            <Route path="/settings/profile" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/role" element={<ProtectedRoute><RoleSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/mobile" element={<ProtectedRoute><MobileSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/discom" element={<ProtectedRoute><DiscomSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/vc-documents" element={<ProtectedRoute><VCDocumentsPage /></ProtectedRoute>} />
-            <Route path="/settings/devices" element={<ProtectedRoute><DevicesSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/context" element={<ProtectedRoute><UserContextPage /></ProtectedRoute>} />
-            <Route path="/settings/automation" element={<ProtectedRoute><AutomationSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/vacations" element={<ProtectedRoute><VacationsSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/payment" element={<ProtectedRoute><PaymentSettingsPage /></ProtectedRoute>} />
-            <Route path="/settings/trade-history" element={<ProtectedRoute><TradeHistorySettingsPage /></ProtectedRoute>} />
+            {/* Seller Main App */}
+            <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
+            <Route path="/ask-samai" element={<RoleProtectedRoute requiredIntent="sell"><AskSamaiPage /></RoleProtectedRoute>} />
+            <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
+            <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfilePage /></RoleProtectedRoute>} />
+            <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+
+            {/* Buyer Main App */}
+            <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
+            <Route path="/buyer-profile" element={<RoleProtectedRoute requiredIntent="buy"><BuyerProfilePage /></RoleProtectedRoute>} />
+
+            {/* Seller Settings Pages */}
+            <Route path="/settings/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfileSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/role" element={<RoleProtectedRoute requiredIntent="sell"><RoleSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/mobile" element={<RoleProtectedRoute requiredIntent="sell"><MobileSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/discom" element={<RoleProtectedRoute requiredIntent="sell"><DiscomSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/vc-documents" element={<RoleProtectedRoute requiredIntent="sell"><VCDocumentsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/devices" element={<RoleProtectedRoute requiredIntent="sell"><DevicesSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/context" element={<RoleProtectedRoute requiredIntent="sell"><UserContextPage /></RoleProtectedRoute>} />
+            <Route path="/settings/automation" element={<RoleProtectedRoute requiredIntent="sell"><AutomationSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/vacations" element={<RoleProtectedRoute requiredIntent="sell"><VacationsSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/trade-history" element={<RoleProtectedRoute requiredIntent="sell"><TradeHistorySettingsPage /></RoleProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

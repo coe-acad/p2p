@@ -39,9 +39,17 @@ const VerifyPage = () => {
 
   const handleVerified = (phone?: string) => {
     if (phone) {
+      // Ensure we preserve the name and other data that may have been saved by VerificationScreen
+      const existingData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
       setUserData({
         phone: `+91${phone}`,
         aadhaarVerified: true,
+        intent,
+        name: existingData.name, // Preserve name from VerificationScreen
+        consumerId: existingData.consumerId, // Preserve meter number
+        address: existingData.address,
+        city: existingData.city,
+        discom: existingData.discom,
       });
       // Note: Profile data (name, consumerId) should already be synced from profile step
       // This ensures the basic user record exists on backend
@@ -80,13 +88,16 @@ const VerifyPage = () => {
         automationLevel: "auto",
         isReturningUser: true,
         isVCVerified: true,
-        aadhaarVerified: true
+        aadhaarVerified: true,
+        intent,
       }));
 
-      navigate("/home", { replace: true });
+      const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
+      navigate(targetRoute, { replace: true });
     } else {
-      // New user - all 5 verification steps complete, go to home
-      navigate("/home", { replace: true });
+      // New user - all 5 verification steps complete, route based on intent
+      const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
+      navigate(targetRoute, { replace: true });
     }
   };
 

@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Wallet, MessageCircle, Home, User } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
 import chatbotIcon from "@/assets/chatbot-icon.png";
 import SamaiLogo from "@/components/SamaiLogo";
 
@@ -15,6 +16,8 @@ interface BottomNavProps {
 const getRouteTab = (pathname: string): TabType => {
   if (pathname.startsWith("/ask-samai")) return "chat";
   if (pathname.startsWith("/payments")) return "statements";
+  if (pathname.startsWith("/buyer-home")) return "home";
+  if (pathname.startsWith("/home")) return "home";
   return "home";
 };
 
@@ -22,11 +25,13 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { userData } = useUserData();
+  const isBuyer = userData.intent === "buy";
   const resolvedActiveTab = (activeTab as TabType | undefined) ?? getRouteTab(location.pathname);
 
   const navigateTo = (tab: TabType) => {
     if (tab === "chat") navigate("/ask-samai");
-    if (tab === "home") navigate("/home");
+    if (tab === "home") navigate(isBuyer ? "/buyer-home" : "/home");
     if (tab === "statements") navigate("/payments");
     onTabChange?.(tab);
   };
@@ -55,15 +60,17 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
         </div>
       </button>
 
-      <button
-        onClick={() => navigateTo("statements")}
-        className={`flex min-w-[5.5rem] flex-col items-center gap-1 rounded-xl px-3 py-1.5 transition-colors ${
-          resolvedActiveTab === "statements" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Wallet size={20} />
-        <span className={`text-[10px] font-medium ${resolvedActiveTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
-      </button>
+      {!isBuyer && (
+        <button
+          onClick={() => navigateTo("statements")}
+          className={`flex min-w-[5.5rem] flex-col items-center gap-1 rounded-xl px-3 py-1.5 transition-colors ${
+            resolvedActiveTab === "statements" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Wallet size={20} />
+          <span className={`text-[10px] font-medium ${resolvedActiveTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
+        </button>
+      )}
       </div>
     </div>
   );
@@ -93,20 +100,23 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
   const desktopNav = (
     <div className="hidden h-full flex-col border-r border-border/40 bg-card/70 px-5 py-6 backdrop-blur-md lg:flex">
       <button
-        onClick={() => navigate("/home")}
+        onClick={() => navigate(isBuyer ? "/buyer-home" : "/home")}
         className="flex items-center gap-3 rounded-2xl border border-border/50 bg-white/70 px-4 py-3 text-left shadow-sm transition-colors hover:bg-white/90"
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-amber-50">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${isBuyer ? "from-teal-100 to-green-50" : "from-orange-100 to-amber-50"}`}>
           <SamaiLogo size="sm" showText={false} />
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">Samai</p>
-          <p className="text-xs text-muted-foreground">Solar trading workspace</p>
+          <p className="text-xs text-muted-foreground">{isBuyer ? "Clean energy marketplace" : "Solar trading workspace"}</p>
         </div>
       </button>
 
       <div className="mt-8 space-y-2">
         {desktopItems.map((item) => {
+          if (isBuyer && (item.id === "chat" || item.id === "statements")) {
+            return null;
+          }
           const Icon = item.icon;
           const isActive = resolvedActiveTab === item.id;
 
@@ -144,7 +154,7 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
 
       <div className="mt-auto">
         <button
-          onClick={() => navigate("/profile")}
+          onClick={() => navigate(isBuyer ? "/buyer-profile" : "/profile")}
           className="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-white/60 px-4 py-3 text-left text-muted-foreground transition-colors hover:bg-white/80 hover:text-foreground"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-muted/70">

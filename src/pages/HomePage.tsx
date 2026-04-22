@@ -17,6 +17,7 @@ import tecLogo from "@/assets/TEC-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
+import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "@/components/LanguageToggle";
 import MainAppShell from "@/components/layout/MainAppShell";
 
@@ -52,6 +53,16 @@ const HomePage = () => {
   const { toast } = useToast();
   const { userData, setUserData } = useUserData();
   const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
   
   // Get verification status from router state or userData (persisted)
   const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
@@ -559,10 +570,10 @@ const HomePage = () => {
             </div>
           </div>
           
-          {/* Profile dropdown */}
+          {/* Profile dropdown - mobile/tablet only */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
+              <button className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
                 <User size={16} className="text-primary" />
               </button>
             </DropdownMenuTrigger>
@@ -575,7 +586,7 @@ const HomePage = () => {
                 <FileText size={14} className="mr-2" />
                 {t("home.todaysTrades")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/")} className="text-destructive">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut size={14} className="mr-2" />
                 {t("home.logout")}
               </DropdownMenuItem>

@@ -8,19 +8,11 @@ interface IntentSelectionScreenProps {
 }
 
 const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps) => {
-  const [selectedIntents, setSelectedIntents] = useState<("sell" | "buy")[]>([]);
-
-  const toggleIntent = (intent: "sell" | "buy") => {
-    setSelectedIntents(prev => 
-      prev.includes(intent) 
-        ? prev.filter(i => i !== intent)
-        : [...prev, intent]
-    );
-  };
+  const [selectedIntent, setSelectedIntent] = useState<"sell" | "buy" | null>(null);
 
   const handleContinue = () => {
-    if (selectedIntents.length > 0) {
-      onSelect(selectedIntents);
+    if (selectedIntent) {
+      onSelect([selectedIntent]);
     }
   };
 
@@ -84,20 +76,20 @@ const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps)
 
           {/* Cards */}
           <div className="space-y-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <button 
-              onClick={() => toggleIntent("sell")} 
+            <button
+              onClick={() => setSelectedIntent("sell")}
               className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
-                selectedIntents.includes("sell") 
-                  ? "border-primary bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg shadow-orange-200/30" 
+                selectedIntent === "sell"
+                  ? "border-primary bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg shadow-orange-200/30"
                   : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
               }`}
             >
               <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
-                selectedIntents.includes("sell") 
-                  ? "scale-105 bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/40" 
+                selectedIntent === "sell"
+                  ? "scale-105 bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/40"
                   : "bg-gradient-to-br from-orange-400/15 to-amber-400/10 group-hover:scale-105"
               }`}>
-                <Zap className={selectedIntents.includes("sell") ? "text-white" : "text-primary"} size={22} />
+                <Zap className={selectedIntent === "sell" ? "text-white" : "text-primary"} size={22} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
@@ -107,7 +99,7 @@ const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps)
                       Share surplus generation when your home is producing more than it needs.
                     </p>
                   </div>
-                  {selectedIntents.includes("sell") && (
+                  {selectedIntent === "sell" && (
                     <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/30">
                       <Check size={14} className="text-white" strokeWidth={3} />
                     </div>
@@ -117,31 +109,45 @@ const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps)
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             </button>
 
-            <div className="relative flex items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 border-border bg-card/75 p-4 text-left opacity-75 shadow-sm backdrop-blur-sm sm:p-5">
-              <div className="mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400/10 to-green-400/5">
-                <Leaf className="text-muted-foreground" size={22} />
+            <button
+              onClick={() => setSelectedIntent("buy")}
+              className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
+                selectedIntent === "buy"
+                  ? "border-primary bg-gradient-to-r from-teal-50 to-green-50 shadow-lg shadow-teal-200/30"
+                  : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
+              }`}
+            >
+              <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
+                selectedIntent === "buy"
+                  ? "scale-105 bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/40"
+                  : "bg-gradient-to-br from-teal-400/15 to-green-400/10 group-hover:scale-105"
+              }`}>
+                <Leaf className={selectedIntent === "buy" ? "text-white" : "text-teal-600"} size={22} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-base font-medium text-muted-foreground">Buy clean energy</p>
+                    <p className="text-base font-semibold text-foreground">Buy clean energy</p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      This path is planned next and will let homes source energy from local producers.
+                      Source clean energy from local solar producers in your community.
                     </p>
                   </div>
-                  <span className="rounded-full bg-gradient-to-r from-teal-500 to-green-500 px-2.5 py-1 text-2xs font-bold uppercase tracking-wide text-white shadow-md">
-                    Coming soon
-                  </span>
+                  {selectedIntent === "buy" && (
+                    <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/30">
+                      <Check size={14} className="text-white" strokeWidth={3} />
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </button>
           </div>
 
           {/* Continue button */}
           <div className="space-y-3 pt-2">
-            <button 
+            <button
               onClick={handleContinue}
-              disabled={selectedIntents.length === 0}
+              disabled={!selectedIntent}
               className="btn-solar w-full text-sm !py-4 disabled:opacity-50"
             >
               Continue

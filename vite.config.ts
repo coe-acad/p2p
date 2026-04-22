@@ -29,6 +29,19 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
         runtimeCaching: [
           {
+            urlPattern: /\/api\/create$/i,
+            handler: "NetworkOnly",
+            method: "POST",
+            options: {
+              backgroundSync: {
+                name: "trade-sync-queue",
+                options: {
+                  maxRetentionTime: 24 * 60,
+                },
+              },
+            },
+          },
+          {
             urlPattern: /^https:\/\/api\./i,
             handler: "NetworkFirst",
             options: {

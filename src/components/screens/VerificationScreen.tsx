@@ -55,6 +55,7 @@ const isValidGSTIN = (gstin: string): boolean => {
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
+
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
