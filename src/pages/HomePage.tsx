@@ -17,6 +17,7 @@ import tecLogo from "@/assets/TEC-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
+import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "@/components/LanguageToggle";
 import MainAppShell from "@/components/layout/MainAppShell";
 
@@ -52,6 +53,16 @@ const HomePage = () => {
   const { toast } = useToast();
   const { userData, setUserData } = useUserData();
   const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
   
   // Get verification status from router state or userData (persisted)
   const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
@@ -574,7 +585,7 @@ const HomePage = () => {
                 <FileText size={14} className="mr-2" />
                 {t("home.todaysTrades")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/")} className="text-destructive">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut size={14} className="mr-2" />
                 {t("home.logout")}
               </DropdownMenuItem>

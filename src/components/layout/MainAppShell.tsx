@@ -25,14 +25,14 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
         </div>
       )}
 
-      <div className="mx-auto flex flex-1 w-full max-w-[1680px] min-w-0">
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:overflow-y-auto">
+      <div className="mx-auto flex flex-1 w-full max-w-[1680px] min-w-0 overflow-hidden">
+        {/* Desktop Sidebar - Sticky at top, scrolls internally */}
+        <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-0 lg:h-full lg:overflow-y-auto">
           <BottomNav mode="desktop" />
         </aside>
 
-        {/* Main Content Area */}
-        <div className="flex flex-1 min-w-0 flex-col">
+        {/* Main Content Area - Scrollable */}
+        <div className="flex flex-1 min-w-0 flex-col overflow-hidden">
           <main className="flex-1 overflow-y-auto">
             <div className={`mx-auto w-full px-4 pt-4 sm:px-6 lg:px-8 lg:pb-8 ${contentClassName}`}>
               {children}
