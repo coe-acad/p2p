@@ -558,10 +558,10 @@ const HomePage = () => {
             </div>
           </div>
           
-          {/* Profile dropdown */}
+          {/* Profile dropdown - mobile/tablet only */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
+              <button className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
                 <User size={16} className="text-primary" />
               </button>
             </DropdownMenuTrigger>

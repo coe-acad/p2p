@@ -42,6 +42,8 @@ export interface UserData {
   userContext?: string;
   // Demo mode: returning user with 30 days of trading history
   isReturningUser?: boolean;
+  // User role: seller or buyer
+  intent?: "sell" | "buy";
 }
 
 const normalizeName = (name?: string) => {
@@ -75,6 +77,7 @@ const DEFAULT_USER_DATA: UserData = {
   generationProfile: undefined,
   userContext: "",
   isReturningUser: false,
+  intent: "sell",
 };
 
 const STORAGE_KEY = "samai_user_data";
