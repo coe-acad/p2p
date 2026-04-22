@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import BottomNav from "./BottomNav";
 
 interface MainAppShellProps {
@@ -7,8 +9,22 @@ interface MainAppShellProps {
 }
 
 const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) => {
+  const { isOnline } = useNetworkStatus();
+
   return (
     <div className="min-h-[100dvh] bg-background">
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="sticky top-0 z-50 bg-amber-50 border-b border-amber-200 px-4 py-2 sm:px-6">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-900">
+              You're offline — trades will sync when connection returns
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1680px]">
         <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0">
           <div className="sticky top-0 h-[100dvh]">
