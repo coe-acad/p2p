@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { saveUser, loadUser } from "@/services/userService";
 
 export interface UserData {
   name: string;
@@ -9,37 +10,54 @@ export interface UserData {
   consumerId: string;
   automationLevel: "recommend" | "auto";
   // Vacation/holiday preferences for personalized nudges
-  schoolHolidays?: string; // e.g., "March 15-30, 2026"
-  summerVacationStart?: string; // e.g., "2026-05-01"
-  summerVacationEnd?: string; // e.g., "2026-06-15"
-  upcomingEvents?: string; // Free-form text for other events
+  schoolHolidays?: string;
+  summerVacationStart?: string;
+  summerVacationEnd?: string;
+  upcomingEvents?: string;
   // Payment settings
-  email?: string; // Required for billing
-  upiId?: string; // e.g., "archana@upi"
+  email?: string;
+  upiId?: string;
   // Verification status
-  isVCVerified?: boolean; // DISCOM VC verification status
+  isVCVerified?: boolean;
+  aadhaarVerified?: boolean;
+  vcVerifiedAt?: string;
+  // Utility Customer VC fields
+  utilityCustomer?: {
+    fullName?: string;
+    address?: string;
+    consumerNumber?: string;
+    meterNumber?: string;
+    serviceConnectionDate?: string;
+    issuerName?: string;
+  };
+  // Generation Profile VC fields
+  generationProfile?: {
+    generationType?: string;
+    generationCapacity?: string;
+    commissioningDate?: string;
+    manufacturer?: string;
+    modelNumber?: string;
+  };
   // User context from "Talk to Samai"
-  userContext?: string; // Transcribed/typed context about usage patterns
+  userContext?: string;
   // Demo mode: returning user with 30 days of trading history
-  isReturningUser?: boolean; // If true, shows full transaction history and earnings
+  isReturningUser?: boolean;
 }
 
-const DEFAULT_ADDRESS =
-  "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002";
-
 const normalizeName = (name?: string) => {
-  if (!name) return "Seema";
-  const trimmed = name.trim();
-  if (/^jyot(h)?irmayee$/i.test(trimmed)) return "Seema";
-  return trimmed;
+  if (!name) return "";
+  return name.trim();
 };
 
-const normalizeAddress = () => DEFAULT_ADDRESS;
+const normalizeAddress = (address?: string) => {
+  if (!address) return "";
+  return address.trim();
+};
 
 const DEFAULT_USER_DATA: UserData = {
-  name: "Seema", // Default name
+  name: "",
   phone: "",
-  address: DEFAULT_ADDRESS,
+  address: "",
   city: "",
   discom: "",
   consumerId: "",
@@ -50,9 +68,13 @@ const DEFAULT_USER_DATA: UserData = {
   upcomingEvents: "",
   email: "",
   upiId: "",
-  isVCVerified: false, // New users need to verify
+  isVCVerified: false,
+  aadhaarVerified: false,
+  vcVerifiedAt: undefined,
+  utilityCustomer: undefined,
+  generationProfile: undefined,
   userContext: "",
-  isReturningUser: false, // Default to new user
+  isReturningUser: false,
 };
 
 const STORAGE_KEY = "samai_user_data";
@@ -67,7 +89,7 @@ export const useUserData = () => {
           ...DEFAULT_USER_DATA,
           ...parsed,
           name: normalizeName(parsed?.name),
-          address: normalizeAddress(),
+          address: normalizeAddress(parsed?.address),
         };
       } catch {
         return DEFAULT_USER_DATA;
@@ -81,12 +103,17 @@ export const useUserData = () => {
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
-    setUserDataState(prev => ({
-      ...prev,
-      ...updates,
-      name: updates.name ? normalizeName(updates.name) : prev.name,
-      address: normalizeAddress(),
-    }));
+    setUserDataState(prev => {
+      const next: UserData = {
+        ...prev,
+        ...updates,
+        name: updates.name ? normalizeName(updates.name) : prev.name,
+        address: updates.address ? normalizeAddress(updates.address) : prev.address,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      saveUser(next).catch(err => console.error("Firestore sync failed:", err));
+      return next;
+    });
   };
 
   return { userData, setUserData };
@@ -96,9 +123,7 @@ export const useUserData = () => {
 export const extractLocality = (fullAddress: string): string => {
   if (!fullAddress) return "";
   const parts = fullAddress.split(",").map(p => p.trim());
-  // Return first 2-3 meaningful parts (skip house number if present)
   if (parts.length >= 2) {
-    // If first part looks like a house number, skip it
     const startsWithNumber = /^\d/.test(parts[0]);
     if (startsWithNumber && parts.length >= 3) {
       return parts.slice(1, 3).join(", ");
@@ -107,3 +132,6 @@ export const extractLocality = (fullAddress: string): string => {
   }
   return fullAddress;
 };
+
+// Re-export loadUser for components that need to fetch by phone (e.g. login flow)
+export { loadUser as loadUserFromFirestore };

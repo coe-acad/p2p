@@ -1,20 +1,33 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package } from "lucide-react";
+import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package, LogOut } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { useAuth } from "@/hooks/useAuth";
+import { PageContainer } from "@/components/layout/PageContainer";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { userData } = useUserData();
-  
+  const { logout } = useAuth();
+
   const locality = extractLocality(userData.address);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
 
   const sections = [
     {
       title: t("profile.account"),
       items: [
-        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name, route: "/settings/mobile" },
+        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/settings/profile" },
         { icon: ShoppingCart, label: t("profile.yourRole"), sublabel: t("profile.seller"), route: "/settings/role" },
         { icon: Settings, label: t("profile.homeProfile"), sublabel: "3 BHK • Residential", route: "/settings/devices?type=profile" },
         { icon: Building2, label: t("profile.location"), sublabel: locality, route: "/settings/discom" },
@@ -45,6 +58,7 @@ const ProfilePage = () => {
     {
       title: t("profile.preferences"),
       items: [
+        { icon: Package, label: "Trade History", sublabel: "Track published and live trades", route: "/settings/trade-history" },
         { icon: Sparkles, label: t("profile.howSamaiHelps"), sublabel: userData.automationLevel === "auto" ? t("profile.autoPlaceOrders") : t("profile.showRecommendations"), route: "/settings/automation" },
         { icon: MessageSquare, label: t("profile.yourContext"), sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : t("profile.notSet"), route: "/settings/context" },
         { icon: CalendarClock, label: t("profile.vacationsHolidays"), sublabel: userData.schoolHolidays || userData.summerVacationStart ? t("profile.datesSaved") : t("profile.notSet"), route: "/settings/vacations" },
@@ -54,8 +68,9 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4 !pb-6">
+        <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -110,15 +125,17 @@ const ProfilePage = () => {
           ))}
         </div>
 
-        {/* Demo Reset */}
+        {/* Logout Button */}
         <button
-          onClick={() => navigate("/")}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+          onClick={handleLogout}
+          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
         >
-          {t("profile.startDemoOver")}
+          <LogOut size={16} />
+          <span className="text-sm font-medium">Logout</span>
         </button>
+        </PageContainer>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 

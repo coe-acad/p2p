@@ -18,17 +18,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import LanguageToggle from "@/components/LanguageToggle";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 // Session storage keys
 const NOTIFICATION_SHOWN_KEY = "samai_confirmed_notification_shown";
-const ONBOARDING_LOCATION_KEY = "samai_onboarding_location_done";
 const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
 const HIDE_SETUP_BANNER_KEY = "samai_hide_setup_banner";
 const HAS_COMPLETED_FIRST_TRADE_KEY = "samai_has_completed_first_trade";
 const SESSION_APPROVED_KEY = "samai_session_approved";
 
-type TabType = "chat" | "home" | "statements";
 type TomorrowStatus = "not_published" | "published_confirmed" | "published_pending";
 
 const getGreeting = (t: (key: string) => string) => {
@@ -61,7 +60,6 @@ const HomePage = () => {
   // Determine if user is new (based on userData flag)
   const isNewUser = !userData.isReturningUser;
   
-  const [activeTab, setActiveTab] = useState<TabType>("home");
   const displayName = (userData.name || "").trim();
   const firstName = displayName.split(" ")[0] || "User";
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
@@ -232,12 +230,9 @@ const HomePage = () => {
 
   const nudges = buildNudges();
 
-  // Check for incomplete onboarding steps
+  // Check for incomplete onboarding steps (location is now part of verification)
   const getIncompleteSteps = () => {
     const steps = [];
-    if (localStorage.getItem(ONBOARDING_LOCATION_KEY) !== "true") {
-      steps.push({ id: "location", title: "Verify electricity connection", route: "/onboarding/location" });
-    }
     if (localStorage.getItem(ONBOARDING_DEVICES_KEY) !== "true") {
       steps.push({ id: "devices", title: "Confirm your solar setup", route: "/onboarding/devices" });
     }
@@ -548,9 +543,10 @@ const HomePage = () => {
   );
 
   return (
-    <div className="h-[100dvh] w-full max-w-md mx-auto flex flex-col bg-background">
+    <MainAppShell contentClassName="lg:py-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-6.5rem)] w-full max-w-5xl flex-col overflow-hidden bg-background lg:min-h-[calc(100dvh-3rem)] lg:rounded-[2rem] lg:border lg:border-border/50 lg:bg-white/55 lg:shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)] lg:backdrop-blur-sm">
       {/* Scrollable Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden px-3 pt-3">
+      <div className="flex-1 flex flex-col overflow-hidden px-3 pt-3 sm:px-5 sm:pt-5 lg:px-8 lg:pt-6">
         {/* Header */}
         <div className="flex items-center justify-between pb-1 animate-fade-in flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -603,7 +599,7 @@ const HomePage = () => {
       </div>
       
       {/* Powered by AU x TEC */}
-      <div className="flex items-center justify-center gap-2 pb-2">
+      <div className="flex items-center justify-center gap-2 px-3 pb-3 pt-1 sm:px-5 lg:px-8 lg:pb-5">
         <span className="text-[10px] text-muted-foreground">Powered by</span>
         <div className="flex items-center gap-1.5">
           <img src={auLogo} alt="AU" className="h-4 w-auto" />
@@ -611,12 +607,8 @@ const HomePage = () => {
           <img src={tecLogo} alt="TEC" className="h-4 w-auto" />
         </div>
       </div>
-
-      {/* Bottom Navigation - Fixed at bottom, outside scroll area */}
-      <div className="flex-shrink-0">
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 
@@ -679,62 +671,6 @@ const ChatInputBar = () => {
         ))}
       </div>
     </button>
-  );
-};
-
-// Bottom Navigation Component - Clean 3-tab structure with Home at center
-const BottomNav = ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: TabType) => void }) => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  // Navigate to Ask Samai page
-  const handleAskSamaiClick = () => {
-    navigate("/ask-samai");
-    onTabChange("chat");
-  };
-
-  return (
-    <div className="flex items-center justify-around py-2 bg-card/90 backdrop-blur-sm border-t border-border/30">
-      {/* Ask Samai - Left - scrolls to QuickSpeak */}
-      <button
-        onClick={handleAskSamaiClick}
-        className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${
-          activeTab === "chat" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <img src={chatbotIcon} alt="Samai" className="w-6 h-6" />
-        <span className={`text-[10px] font-medium ${activeTab === "chat" ? "text-primary" : ""}`}>{t("nav.askSamai")}</span>
-      </button>
-      
-      {/* Home - Center with bigger rotating Logo (no caption) - 20% bigger */}
-      <button
-        onClick={() => {
-          navigate("/home");
-          onTabChange("home");
-        }}
-        className={`flex items-center justify-center px-4 py-1 transition-colors ${
-          activeTab === "home" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <div className="w-12 h-12 animate-spin-slow flex items-center justify-center">
-          <SamaiLogo size="sm" showText={false} />
-        </div>
-      </button>
-      
-      {/* Payments - Right */}
-      <button
-        onClick={() => {
-          navigate("/payments");
-          onTabChange("statements");
-        }}
-        className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${
-          activeTab === "statements" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Wallet size={20} />
-        <span className={`text-[10px] font-medium ${activeTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
-      </button>
-    </div>
   );
 };
 

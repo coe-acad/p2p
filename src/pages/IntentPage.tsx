@@ -6,7 +6,7 @@ const IntentPage = () => {
 
   return (
     <IntentSelectionScreen
-      onSelect={(intents) => navigate("/verify", { state: { intents } })}
+      onSelect={(intents) => navigate("/verify", { state: { intents, intent: intents[0] } })}
       onBack={() => navigate("/")}
     />
   );

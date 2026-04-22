@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, CheckCircle2, AlertCircle, Timer, Zap, Search } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 type TradeStatus = "searching" | "confirmed" | "completed" | "expired";
 
@@ -158,8 +159,9 @@ const TodayTradesPage = () => {
   };
 
   return (
-    <div className="screen-container !justify-start !pt-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4">
+        <div className="w-full max-w-xl flex flex-col h-full px-4 lg:max-w-4xl lg:px-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 animate-fade-in">
           <div className="flex items-center gap-2">
@@ -204,8 +206,9 @@ const TodayTradesPage = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 

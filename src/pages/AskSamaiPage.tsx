@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Mic, Send, Wallet } from "lucide-react";
-import SamaiLogo from "@/components/SamaiLogo";
-import chatbotIcon from "@/assets/chatbot-icon.png";
+import { Mic, Send } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
-
-type TabType = "chat" | "home" | "statements";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 const AskSamaiPage = () => {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { userData } = useUserData();
-  const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [inputValue, setInputValue] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -46,9 +40,10 @@ const AskSamaiPage = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full max-w-md mx-auto flex flex-col bg-background">
+    <MainAppShell contentClassName="lg:py-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-6.5rem)] w-full max-w-5xl flex-col overflow-hidden bg-background lg:min-h-[calc(100dvh-3rem)] lg:rounded-[2rem] lg:border lg:border-border/50 lg:bg-white/55 lg:shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)] lg:backdrop-blur-sm">
       {/* Chat Content Area */}
-      <div className="flex-1 flex flex-col px-4 pt-6 pb-4 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden px-4 pb-4 pt-6 sm:px-5 lg:px-8 lg:pb-6 lg:pt-8">
         {/* Messages area */}
         <div className="flex-1 overflow-auto">
           {messages.length === 0 ? (
@@ -149,68 +144,8 @@ const AskSamaiPage = () => {
           </div>
         </div>
       </div>
-      
-      {/* Bottom Navigation */}
-      <div className="flex-shrink-0">
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
-    </div>
-  );
-};
-
-// Bottom Navigation Component
-const BottomNav = ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: TabType) => void }) => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex items-center justify-around py-2 bg-card/90 backdrop-blur-sm border-t border-border/30">
-      {/* Ask Samai - Left - Active with border */}
-      <button
-        onClick={() => onTabChange("chat")}
-        className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${
-          activeTab === "chat" 
-            ? "bg-primary/10 border-2 border-primary text-primary" 
-            : "text-muted-foreground hover:text-foreground border-2 border-transparent"
-        }`}
-      >
-        <img src={chatbotIcon} alt="Samai" className="w-6 h-6" />
-        <span className={`text-[10px] font-medium ${activeTab === "chat" ? "text-primary" : ""}`}>
-          {t("nav.askSamai")}
-        </span>
-      </button>
-      
-      {/* Home - Center with bigger rotating Logo (no caption) - 20% bigger */}
-      <button
-        onClick={() => {
-          navigate("/home");
-          onTabChange("home");
-        }}
-        className={`flex items-center justify-center px-4 py-1 transition-colors ${
-          activeTab === "home" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <div className="w-12 h-12 animate-spin-slow flex items-center justify-center">
-          <SamaiLogo size="sm" showText={false} />
-        </div>
-      </button>
-      
-      {/* Payments - Right */}
-      <button
-        onClick={() => {
-          navigate("/payments");
-          onTabChange("statements");
-        }}
-        className={`flex flex-col items-center gap-1 px-4 py-1 transition-colors ${
-          activeTab === "statements" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Wallet size={20} />
-        <span className={`text-[10px] font-medium ${activeTab === "statements" ? "text-primary" : ""}`}>
-          {t("nav.payments")}
-        </span>
-      </button>
-    </div>
+    </MainAppShell>
   );
 };
 

@@ -152,7 +152,7 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
   return undefined;
 }
  
- export async function parseVCPdf(file: File): Promise<VCExtractedData> {
+export async function parseVCPdf(file: File): Promise<VCExtractedData> {
    try {
      const pdfjsLib = await getPdfjs();
      const arrayBuffer = await file.arrayBuffer();
@@ -179,8 +179,8 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
       const value = extractField(fullText, patterns);
       if (value) {
         (extractedData as any)[key] = value;
-       }
-     }
+      }
+    }
      
      // Derive device information from extracted data
      if (extractedData.generationCapacity) {
@@ -215,6 +215,76 @@ function extractField(text: string, patterns: RegExp[]): string | undefined {
      throw new Error("Failed to parse VC document");
    }
  }
+
+function normalizeJsonValue(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return undefined;
+}
+
+function getJsonField(source: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = normalizeJsonValue(source[key]);
+    if (value) return value;
+  }
+  return undefined;
+}
+
+export async function parseVCJson(file: File): Promise<VCExtractedData> {
+  try {
+    const raw = await file.text();
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    const credentialSubject =
+      (parsed.credentialSubject as Record<string, unknown> | undefined) ??
+      (parsed.vc as Record<string, unknown> | undefined) ??
+      parsed;
+
+    const extractedData: VCExtractedData = {
+      fullName: getJsonField(credentialSubject, ["fullName", "name"]),
+      address: getJsonField(credentialSubject, ["fullAddress", "address"]),
+      consumerNumber: getJsonField(credentialSubject, ["consumerNumber", "utilityCustomerId"]),
+      meterNumber: getJsonField(credentialSubject, ["meterNumber", "meterId"]),
+      serviceConnectionDate: getJsonField(credentialSubject, ["serviceConnectionDate"]),
+      issuerName: getJsonField(parsed, ["issuerName", "issuer"]),
+      premisesType: getJsonField(credentialSubject, ["premisesType"]),
+      connectionType: getJsonField(credentialSubject, ["connectionType"]),
+      sanctionedLoad: getJsonField(credentialSubject, ["sanctionedLoadKW", "sanctionedLoad"]),
+      tariffCategory: getJsonField(credentialSubject, ["tariffCategoryCode", "tariffCategory"]),
+      generationType: getJsonField(credentialSubject, ["generationType"]),
+      generationCapacity: getJsonField(credentialSubject, ["generationCapacity", "capacityKW"]),
+      commissioningDate: getJsonField(credentialSubject, ["commissioningDate"]),
+      manufacturer: getJsonField(credentialSubject, ["manufacturer"]),
+      modelNumber: getJsonField(credentialSubject, ["modelNumber"]),
+    };
+
+    if (extractedData.generationCapacity) {
+      extractedData.inverterCapacity = `${extractedData.generationCapacity} kW`;
+    } else if (extractedData.sanctionedLoad) {
+      extractedData.inverterCapacity = `${extractedData.sanctionedLoad} kW`;
+    }
+
+    if (extractedData.generationCapacity) {
+      const capacity = parseInt(extractedData.generationCapacity, 10);
+      if (!Number.isNaN(capacity)) {
+        extractedData.batteryCapacity = `${Math.min(capacity * 2, 100)} kWh`;
+      }
+    }
+
+    extractedData.meterType = extractedData.generationType ? "Bi-directional" : "Standard";
+
+    return extractedData;
+  } catch (error) {
+    console.error("Error parsing VC JSON:", error);
+    throw new Error("Failed to parse VC JSON");
+  }
+}
  
  // Helper to format device display data from extracted VC
  export function formatDevicesFromVC(vcData: VCExtractedData, locality: string) {

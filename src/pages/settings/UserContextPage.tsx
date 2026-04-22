@@ -3,6 +3,7 @@ import { ChevronLeft, MessageSquare, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useUserData } from "@/hooks/useUserData";
 import { useToast } from "@/hooks/use-toast";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const UserContextPage = () => {
   const navigate = useNavigate();

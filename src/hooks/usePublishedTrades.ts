@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { convertTradesToSchema, type TradeSubmission } from "@/utils/tradeSchemaConverter";
+import { submitTrades } from "@/services/tradeService";
 export interface PlannedTrade {
   id: string;
   time: string;
@@ -89,21 +88,9 @@ export const usePublishedTrades = () => {
 
     // Submit to backend (non-blocking for UI)
     if (trades && trades.length > 0) {
-      const tradeSubmissions = convertTradesToSchema(trades);
-
-      try {
-        const { data, error } = await supabase.functions.invoke("submit-trades", {
-          body: { trades: tradeSubmissions },
-        });
-
-        if (error) {
-          console.error("Failed to submit trades to backend:", error);
-        } else {
-          console.log("Trades submitted successfully:", data);
-        }
-      } catch (err) {
-        console.error("Error calling submit-trades:", err);
-      }
+      submitTrades(trades)
+        .then(() => console.log("Trades submitted successfully"))
+        .catch(err => console.error("Failed to submit trades to backend:", err));
     } else {
       console.log("No trades to submit, skipping backend call");
     }

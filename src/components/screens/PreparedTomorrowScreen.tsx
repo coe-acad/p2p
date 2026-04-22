@@ -248,6 +248,12 @@ const PreparedTomorrowScreen = ({
   
   // Handler for publishing trades (persists to localStorage)
   const handlePublish = async () => {
+  if (!userData.name || !userData.consumerId) {
+    alert("Please complete your profile (Name and Meter Number) before publishing trades.");
+    navigate("/settings/profile");
+    return;
+  }
+
   if (activeTimeSlots.length === 0) {
     console.log("No active trades to approve — skipping publish");
     return;
@@ -680,8 +686,9 @@ const PreparedTomorrowScreen = ({
               <>
                 <button
                   onClick={handleLooksGood}
-                  disabled={activeTimeSlots.length === 0}
-                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId}
+                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : ""}
                 >
                   {t("trades.approveNow")}
                 </button>

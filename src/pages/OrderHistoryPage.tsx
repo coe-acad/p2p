@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Package, CheckCircle2, Clock, XCircle, ChevronRight, Calendar } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 type OrderStatus = "completed" | "active" | "cancelled" | "partial";
 
@@ -80,8 +81,9 @@ const OrderHistoryPage = () => {
   const totalEarned = orders.filter(o => o.status !== "cancelled").reduce((sum, o) => sum + o.totalEarnings, 0);
 
   return (
-    <div className="screen-container !justify-start !pt-4">
-      <div className="w-full max-w-md flex flex-col h-full px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4">
+        <div className="w-full max-w-xl flex flex-col h-full px-4 lg:max-w-4xl lg:px-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 animate-fade-in">
           <div className="flex items-center gap-2">
@@ -196,8 +198,9 @@ const OrderHistoryPage = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 
