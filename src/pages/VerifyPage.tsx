@@ -6,9 +6,14 @@ import { ensureUserOnServer, loadUser } from "@/services/userService";
 const VerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const intent = location.state?.intent || "sell";
+  const intent = location.state?.intent || localStorage.getItem("samai_selected_intent") || "sell";
   const isReturningUser = location.state?.isReturningUser || false;
   const { setUserData } = useUserData();
+
+  // Save intent to localStorage so it persists on refresh
+  if (intent) {
+    localStorage.setItem("samai_selected_intent", intent);
+  }
 
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
@@ -21,10 +26,14 @@ const VerifyPage = () => {
 
     if (isReturning && existingUser) {
       // Returning user - load their existing data and go to home
+      // Use the intent from current session (user's current choice), not the original user's intent
+      const userIntent = intent || existingUser.intent || "sell";
+
       setUserData({
         ...existingUser,
         phone: phoneWithCountry,
         aadhaarVerified: true,
+        intent: userIntent, // Preserve the user's selected intent
       });
 
       // Mark all onboarding steps as complete
@@ -34,7 +43,7 @@ const VerifyPage = () => {
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = existingUser.intent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute = userIntent === "buy" ? "/buyer-home" : "/home";
       navigate(targetRoute, { replace: true });
     } else {
       // New user - continue with 5-step verification
