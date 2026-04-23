@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck, MapPin } from "lucide-react";
+import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck, MapPin, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer } from "@/services/userService";
+import { ensureUserOnServer, loadUser } from "@/services/userService";
 
 const discomByState: Record<string, string> = {
   "karnataka": "BESCOM",
@@ -61,6 +61,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [consentChecked, setConsentChecked] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showAlreadyRegisteredModal, setShowAlreadyRegisteredModal] = useState(false);
 
   // Profile step state
   const [profileName, setProfileName] = useState("");
@@ -94,6 +95,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
   const [fetchingStep, setFetchingStep] = useState(0);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
+  const [isUserReturning, setIsUserReturning] = useState(isReturningUser);
 
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
@@ -197,6 +199,17 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     setIsSendingOtp(true);
     setPhoneError("");
     try {
+      let shouldShowModal = false;
+
+      // For new users, check if phone number already exists in database
+      if (!isUserReturning) {
+        const existingUser = await loadUser(`+91${phoneNumber}`);
+        if (existingUser) {
+          // User already registered - we'll show popup after sending OTP
+          shouldShowModal = true;
+        }
+      }
+
       if (!recaptchaVerifierRef.current) {
         recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
           size: "invisible",
@@ -207,7 +220,13 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         `+91${phoneNumber}`,
         recaptchaVerifierRef.current
       );
-      setStep("otp");
+
+      // Show modal AFTER OTP is sent, not before
+      if (shouldShowModal) {
+        setShowAlreadyRegisteredModal(true);
+      } else {
+        setStep("otp");
+      }
     } catch (err: any) {
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
       recaptchaVerifierRef.current?.clear();
@@ -234,12 +253,19 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     if (!confirmationResultRef.current) return;
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
-      // Save phone number immediately so profile data can be saved to Firestore
-      setUserData({
-        phone: `+91${phoneNumber}`,
-      });
-      // ALL users (new and returning) must complete all 5 verification steps
-      setStep("profile");
+
+      // For new users, save phone number so profile data can be saved to Firestore
+      if (!isUserReturning) {
+        setUserData({
+          phone: `+91${phoneNumber}`,
+        });
+        // New users proceed with verification steps
+        setStep("profile");
+      } else {
+        // Returning users skip verification steps and go directly to home
+        // Don't save here - let VerifyPage load the complete data from database
+        onVerified(phoneNumber);
+      }
     } catch {
       setOtpError("Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
@@ -488,27 +514,21 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight sm:text-xl">Verify your identity</h2>
           <p className="mt-2 text-xs leading-5 text-muted-foreground sm:text-sm">
-            {isReturningUser
-              ? "Sign back in and continue with your existing Samai account."
-              : "Complete a few steps so Samai can prepare your first trading setup."}
+            Complete a few steps so Samai can prepare your first trading setup.
           </p>
         </div>
 
-        {/* Steps - 2 for returning users, 5 for new users (phone → otp → profile → aadhaar → location) */}
+        {/* Steps - 5 steps (phone → otp → profile → aadhaar → location) */}
         <div className="flex flex-wrap items-center justify-center gap-1.5 animate-fade-in mb-4">
           <div className={`w-2 h-2 rounded-full ${step !== "phone" || step === "phone" ? "bg-primary" : "bg-muted"}`} />
           <div className={`w-5 h-0.5 ${["otp", "profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
           <div className={`w-2 h-2 rounded-full ${["otp", "profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-          {!isReturningUser && (
-            <>
-              <div className={`w-5 h-0.5 ${["profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-2 h-2 rounded-full ${["profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-5 h-0.5 ${["aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-2 h-2 rounded-full ${["aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-5 h-0.5 ${["location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-              <div className={`w-2 h-2 rounded-full ${["location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
-            </>
-          )}
+          <div className={`w-5 h-0.5 ${["profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${["profile", "aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-5 h-0.5 ${["aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${["aadhaar", "aadhaar-otp", "fetching", "location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-5 h-0.5 ${["location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${["location"].includes(step) ? "bg-primary" : "bg-muted"}`} />
         </div>
 
         {/* Content area */}
@@ -1120,6 +1140,54 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
               >
                 I understand
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Already Registered Modal - for new users who enter existing phone number */}
+      {showAlreadyRegisteredModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full animate-fade-in">
+            <div className="p-6">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
+                <AlertTriangle size={24} className="text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground text-center mb-2">
+                Number Already Registered
+              </h3>
+              <p className="text-sm text-muted-foreground text-center mb-6">
+                This phone number is already registered with Samai. You can continue as a returning user with just OTP verification.
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setShowAlreadyRegisteredModal(false);
+                    setIsUserReturning(true);
+                    setOtp(["", "", "", "", "", ""]);
+                    setPhoneError("");
+                    setOtpError("");
+                    setStep("otp");
+                  }}
+                  className="w-full btn-solar !py-2.5 text-sm"
+                >
+                  Continue as Returning User
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAlreadyRegisteredModal(false);
+                    setPhoneNumber("");
+                    setPhoneError("");
+                    setOtpError("");
+                    setOtp(["", "", "", "", "", ""]);
+                    setStep("phone");
+                  }}
+                  className="w-full border border-border rounded-lg px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  Try Different Number
+                </button>
+              </div>
             </div>
           </div>
         </div>
