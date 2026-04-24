@@ -48,7 +48,7 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+  const BAP_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8001';
   const PAGE_SIZE = 10;
 
   const fetchListings = async (pageNumber: number = 0, searchFilters: SearchFilters = {}) => {
@@ -83,7 +83,7 @@ export const useDiscoverListings = () => {
       }
 
       const response = await axios.get<ListingsResponse>(
-        `${BACKEND_URL}/listings?${params.toString()}`
+        `${BAP_URL}/search?${params.toString()}`
       );
 
       setListings(response.data.listings);
