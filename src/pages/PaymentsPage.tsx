@@ -1,29 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Check, Zap, ChevronDown } from "lucide-react";
+import { ArrowLeft, CreditCard, Check, Zap, ChevronDown, AlertCircle } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import MainAppShell from "@/components/layout/MainAppShell";
-
-interface Trade {
-  id: string;
-  seller: string;
-  amount: number;
-  units: number;
-  date: string;
-}
+import { getPayments, Payment } from "@/services/paymentService";
 
 const PaymentsPage = () => {
   const navigate = useNavigate();
-  const [expandedTrades, setExpandedTrades] = useState(false);
+  const [expandedPayments, setExpandedPayments] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock trade data - replace with actual data from backend
-  const activeTrades: Trade[] = [
-    { id: "1", seller: "Solar Farm A", amount: 450, units: 50, date: "2026-04-20" },
-    { id: "2", seller: "Rooftop Solar B", amount: 320, units: 40, date: "2026-04-19" },
-    { id: "3", seller: "Grid Clean C", amount: 280, units: 35, date: "2026-04-18" },
-  ];
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const data = await getPayments();
+        setPayments(data);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to load payments:", err);
+        setError("Failed to load payment history");
+        setPayments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalAmount = activeTrades.reduce((sum, trade) => sum + trade.amount, 0);
+    loadPayments();
+  }, []);
+
+  const pendingPayments = payments.filter(p => p.status === "pending");
+  const totalAmount = pendingPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <MainAppShell>
@@ -70,43 +78,63 @@ const PaymentsPage = () => {
             <p className="text-xl font-bold text-foreground">₹{totalAmount.toLocaleString()}</p>
           </div>
 
-          {/* Active Trades Card */}
+          {/* Error State */}
+          {error && !loading && (
+            <div className="bg-destructive/10 rounded-xl p-3 flex gap-3 animate-slide-up mx-auto w-full max-w-2xl">
+              <AlertCircle size={18} className="text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-destructive">{error}</p>
+            </div>
+          )}
+
+          {/* Pending Payments Card */}
           <div className="bg-card rounded-xl shadow-card animate-slide-up overflow-hidden flex flex-col flex-shrink-0 max-h-40 mx-auto w-full max-w-2xl">
             <button
-              onClick={() => setExpandedTrades(!expandedTrades)}
+              onClick={() => setExpandedPayments(!expandedPayments)}
               className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors flex-shrink-0"
             >
               <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold text-foreground">Active Trades</h3>
+                <h3 className="text-sm font-semibold text-foreground">Pending Payments</h3>
                 <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-medium">
-                  {activeTrades.length}
+                  {loading ? "..." : pendingPayments.length}
                 </span>
               </div>
               <ChevronDown
                 size={18}
-                className={`text-muted-foreground transition-transform ${expandedTrades ? 'rotate-180' : ''}`}
+                className={`text-muted-foreground transition-transform ${expandedPayments ? 'rotate-180' : ''}`}
               />
             </button>
 
-            {expandedTrades && (
+            {expandedPayments && (
               <div className="border-t border-border px-4 space-y-2 overflow-y-auto flex-1">
-                {activeTrades.map((trade) => (
-                  <div key={trade.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                        <Zap size={16} className="text-primary" />
+                {loading ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+                ) : pendingPayments.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">No pending payments</div>
+                ) : (
+                  pendingPayments.map((payment) => (
+                    <div key={payment.payment_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                          <Zap size={16} className="text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {payment.counterparty_phone ? `To ${payment.counterparty_phone}` : payment.description || "Energy Payment"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {payment.currency} • Status: {payment.status}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{trade.seller}</p>
-                        <p className="text-xs text-muted-foreground">{trade.units} kWh</p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-foreground">₹{payment.amount.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ""}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-foreground">₹{trade.amount}</p>
-                      <p className="text-xs text-muted-foreground">{trade.date}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
           </div>

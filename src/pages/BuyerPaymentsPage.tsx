@@ -1,12 +1,45 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Wallet, CreditCard, History } from "lucide-react";
+import { ChevronLeft, Wallet, CreditCard, History, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
+import { getPayments, Payment } from "@/services/paymentService";
 
 const BuyerPaymentsPage = () => {
   const navigate = useNavigate();
   const { userData } = useUserData();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const data = await getPayments();
+        setPayments(data);
+      } catch (error) {
+        console.error("Failed to load payments:", error);
+        setPayments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPayments();
+  }, []);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle size={16} className="text-accent" />;
+      case "pending":
+        return <Clock size={16} className="text-amber-600" />;
+      case "failed":
+        return <AlertCircle size={16} className="text-destructive" />;
+      default:
+        return <History size={16} className="text-muted-foreground" />;
+    }
+  };
 
   return (
     <MainAppShell>
@@ -50,10 +83,38 @@ const BuyerPaymentsPage = () => {
             <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Recent Transactions</p>
             <div className="bg-card rounded-xl shadow-card">
               <div className="divide-y divide-border">
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  <History size={16} className="mx-auto mb-2 opacity-50" />
-                  No transactions yet
-                </div>
+                {loading ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+                ) : payments.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <History size={16} className="mx-auto mb-2 opacity-50" />
+                    No transactions yet
+                  </div>
+                ) : (
+                  payments.map((payment) => (
+                    <div key={payment.payment_id} className="p-4 hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            {getStatusIcon(payment.status)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {payment.counterparty_phone ? `To ${payment.counterparty_phone}` : payment.description || "Energy Purchase"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-foreground">₹{payment.amount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{payment.status}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
