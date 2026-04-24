@@ -41,7 +41,7 @@ const AskSamaiPage = () => {
 
   return (
     <MainAppShell contentClassName="lg:py-6">
-      <div className="mx-auto flex min-h-[calc(100dvh-6.5rem)] w-full max-w-5xl flex-col overflow-hidden bg-background lg:min-h-[calc(100dvh-3rem)] lg:rounded-[2rem] lg:border lg:border-border/50 lg:bg-white/55 lg:shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)] lg:backdrop-blur-sm">
+      <div className="mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden bg-background lg:rounded-[2rem] lg:border lg:border-border/50 lg:bg-white/55 lg:shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)] lg:backdrop-blur-sm">
       {/* Chat Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden px-4 pb-4 pt-6 sm:px-5 lg:px-8 lg:pb-6 lg:pt-8">
         {/* Messages area */}
