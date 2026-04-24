@@ -129,6 +129,16 @@ const BuyerPaymentsPage = () => {
               <Wallet size={32} className="text-teal-500 opacity-20" />
             </div>
           </div>
+
+          {/* Make Payment Button */}
+          <button
+            onClick={() => navigate("/buyer-payment")}
+            className="w-full btn-solar !py-4 text-lg font-semibold flex items-center justify-center gap-3 animate-slide-up"
+            style={{ animationDelay: "0.3s" }}
+          >
+            <CreditCard size={24} />
+            Make Payment
+          </button>
         </PageContainer>
       </div>
     </MainAppShell>

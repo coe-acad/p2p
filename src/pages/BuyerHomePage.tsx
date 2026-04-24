@@ -125,15 +125,6 @@ const BuyerHomePage = () => {
             </div>
           )}
 
-          {/* Your Details */}
-          <div className="bg-white rounded-xl shadow-card p-4 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Your Details</p>
-            <div className="space-y-2 text-sm">
-              {userData.name && <p><span className="text-muted-foreground">Name:</span> {userData.name}</p>}
-              <p><span className="text-muted-foreground">Phone:</span> {userData.phone}</p>
-              <p><span className="text-muted-foreground">Role:</span> Buyer</p>
-            </div>
-          </div>
         </PageContainer>
       </div>
     </MainAppShell>
