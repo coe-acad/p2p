@@ -1,101 +1,75 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
-import { usePublishedTrades, type ConfirmedTrade } from "@/hooks/usePublishedTrades";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer } from "@/services/userService";
-
-// Generate mock 30-day trading history for returning users
-const generateReturningUserData = () => {
-  const confirmedTrades: ConfirmedTrade[] = [];
-  
-  // Generate trades for past 30 days
-  for (let day = 0; day < 30; day++) {
-    // 2-4 trades per day
-    const tradesPerDay = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < tradesPerDay; i++) {
-      const hour = 6 + Math.floor(Math.random() * 12); // 6 AM to 6 PM
-      const kWh = 2 + Math.floor(Math.random() * 6); // 2-7 kWh
-      const rate = 6 + Math.random(); // ₹6-7 per unit
-      confirmedTrades.push({
-        time: `${hour.toString().padStart(2, '0')}:00`,
-        kWh,
-        rate: Math.round(rate * 10) / 10,
-        earnings: Math.round(kWh * rate),
-        buyer: ["BESCOM Grid", "Neighbour - Flat 3B", "Community Pool"][Math.floor(Math.random() * 3)],
-      });
-    }
-  }
-  
-  return { confirmedTrades };
-};
+import { ensureUserOnServer, loadUser } from "@/services/userService";
 
 const VerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const intent = location.state?.intent || "sell";
+  const intent = location.state?.intent || localStorage.getItem("samai_selected_intent") || "sell";
   const isReturningUser = location.state?.isReturningUser || false;
-  const { confirmTrades, setShowConfirmedTrades } = usePublishedTrades();
   const { setUserData } = useUserData();
 
-  const handleVerified = (phone?: string) => {
-    if (phone) {
-      // Ensure we preserve the name and other data that may have been saved by VerificationScreen
+  // Save intent to localStorage so it persists on refresh
+  if (intent) {
+    localStorage.setItem("samai_selected_intent", intent);
+  }
+
+  const handleVerified = async (phone?: string) => {
+    if (!phone) return;
+
+    const phoneWithCountry = `+91${phone}`;
+
+    // Check if user already exists in database
+    const existingUser = await loadUser(phoneWithCountry);
+    const isReturning = !!existingUser;
+
+    if (isReturning && existingUser) {
+      // Returning user - load their existing data and go to home
+      // Use the intent from current session (user's current choice), not the original user's intent
+      const userIntent = intent || existingUser.intent || "sell";
+
+      setUserData({
+        ...existingUser,
+        phone: phoneWithCountry,
+        aadhaarVerified: true,
+        intent: userIntent, // Preserve the user's selected intent
+      });
+
+      // Mark all onboarding steps as complete
+      localStorage.setItem("samai_onboarding_complete", "true");
+      localStorage.setItem("samai_aadhaar_verified", "true");
+      localStorage.setItem("samai_onboarding_location_done", "true");
+      localStorage.setItem("samai_onboarding_devices_done", "true");
+      localStorage.setItem("samai_onboarding_talk_done", "true");
+
+      const targetRoute = userIntent === "buy" ? "/buyer-home" : "/home";
+      navigate(targetRoute, { replace: true });
+    } else {
+      // New user - continue with 5-step verification
       const existingData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
       setUserData({
-        phone: `+91${phone}`,
+        phone: phoneWithCountry,
         aadhaarVerified: true,
         intent,
-        name: existingData.name, // Preserve name from VerificationScreen
-        consumerId: existingData.consumerId, // Preserve meter number
+        name: existingData.name,
+        consumerId: existingData.consumerId,
         address: existingData.address,
         city: existingData.city,
         discom: existingData.discom,
       });
-      // Note: Profile data (name, consumerId) should already be synced from profile step
-      // This ensures the basic user record exists on backend
+
       ensureUserOnServer().catch((err) =>
         console.error("Failed to ensure user on server:", err)
       );
-    }
 
-    // ALL users (new and returning) must complete all 5 verification steps before going to home
-    // Mark onboarding as complete
-    localStorage.setItem("samai_onboarding_complete", "true");
-    localStorage.setItem("samai_aadhaar_verified", "true");
-    localStorage.setItem("samai_onboarding_location_done", "true");
-    localStorage.setItem("samai_onboarding_devices_done", "true");
-    localStorage.setItem("samai_onboarding_talk_done", "true");
+      // Mark onboarding as complete for new users too
+      localStorage.setItem("samai_onboarding_complete", "true");
+      localStorage.setItem("samai_aadhaar_verified", "true");
+      localStorage.setItem("samai_onboarding_location_done", "true");
+      localStorage.setItem("samai_onboarding_devices_done", "true");
+      localStorage.setItem("samai_onboarding_talk_done", "true");
 
-    if (isReturningUser) {
-      // Returning user - populate with 30 days of trading history and go to home
-      const { confirmedTrades } = generateReturningUserData();
-      confirmTrades(confirmedTrades);
-      setShowConfirmedTrades(true);
-
-      // Set Seema's profile data for returning users
-      const returningUserContext = "आई एम ए स्कूल टीचर मेरे लिए स्कूल इंपॉर्टेंट है मैं 5 दिन स्कूल चलाती हूं 5 दिन सुबह से शाम तक बिजली का इस्तेमाल होता है ज्यादातर पंख लाइट एक्स्ट्रा सैटरडे संडे को स्कूल की छुट्टी होती है";
-      const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-      localStorage.setItem("samai_user_data", JSON.stringify({
-        ...currentData,
-        name: "Seema",
-        phone: "+91 97697 21566",
-        address: "488, Shyam Nagar Rd, Tarapuri, Meerut, Uttar Pradesh 250002",
-        city: "Delhi, India",
-        discom: "TPDDL",
-        consumerId: "80000190017",
-        upiId: "seema@upi",
-        userContext: returningUserContext,
-        automationLevel: "auto",
-        isReturningUser: true,
-        isVCVerified: true,
-        aadhaarVerified: true,
-        intent,
-      }));
-
-      const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
-      navigate(targetRoute, { replace: true });
-    } else {
-      // New user - all 5 verification steps complete, route based on intent
       const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
       navigate(targetRoute, { replace: true });
     }
@@ -104,7 +78,7 @@ const VerifyPage = () => {
   return (
     <VerificationScreen
       onVerified={handleVerified}
-      onBack={() => navigate(isReturningUser ? "/" : "/intent")}
+      onBack={() => navigate("/")}
       isReturningUser={isReturningUser}
     />
   );

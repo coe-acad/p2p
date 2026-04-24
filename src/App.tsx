@@ -20,9 +20,14 @@ import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
+import PaymentPage from "./pages/PaymentPage";
 import ProfilePage from "./pages/ProfilePage";
 import BuyerProfilePage from "./pages/BuyerProfilePage";
+import BuyerPaymentsPage from "./pages/BuyerPaymentsPage";
+import BuyerAskSamaiPage from "./pages/BuyerAskSamaiPage";
+import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import LoginHistoryPage from "./pages/LoginHistoryPage";
 import AskSamaiPage from "./pages/AskSamaiPage";
 import NotFound from "./pages/NotFound";
 
@@ -73,12 +78,18 @@ const App = () => (
             <Route path="/ask-samai" element={<RoleProtectedRoute requiredIntent="sell"><AskSamaiPage /></RoleProtectedRoute>} />
             <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
             <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
             <Route path="/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfilePage /></RoleProtectedRoute>} />
             <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+            <Route path="/login-history" element={<RoleProtectedRoute requiredIntent="sell"><LoginHistoryPage /></RoleProtectedRoute>} />
 
             {/* Buyer Main App */}
             <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
             <Route path="/buyer-profile" element={<RoleProtectedRoute requiredIntent="buy"><BuyerProfilePage /></RoleProtectedRoute>} />
+            <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-payment" element={<RoleProtectedRoute requiredIntent="buy"><PaymentPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-ask-samai" element={<RoleProtectedRoute requiredIntent="buy"><BuyerAskSamaiPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
 
             {/* Seller Settings Pages */}
             <Route path="/settings/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfileSettingsPage /></RoleProtectedRoute>} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { recordLogin } from "@/services/loginHistoryService";
 
 interface AuthState {
   user: User | null;
@@ -17,6 +18,12 @@ export const useAuth = (): AuthState => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsLoading(false);
+
+      if (firebaseUser) {
+        recordLogin().catch(error => {
+          console.error("Failed to record login:", error);
+        });
+      }
     });
 
     return () => unsubscribe();

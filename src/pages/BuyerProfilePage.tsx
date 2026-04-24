@@ -27,14 +27,14 @@ const BuyerProfilePage = () => {
     {
       title: t("profile.account"),
       items: [
-        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/buyer-settings/profile" },
-        { icon: Wallet, label: t("payments.title"), sublabel: userData.upiId || t("profile.setUpPayment"), route: "/buyer-settings/payment" },
+        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/buyer-profile" },
+        { icon: Wallet, label: t("payments.title"), sublabel: userData.upiId || t("profile.setUpPayment"), route: "/buyer-payments" },
       ]
     },
     {
       title: t("profile.yourOrders"),
       items: [
-        { icon: Package, label: "Purchase History", sublabel: "View all your energy purchases", route: "/buyer-history" },
+        { icon: Package, label: "Purchase History", sublabel: "View all your energy purchases", route: "/buyer-order-history" },
       ]
     },
   ];
