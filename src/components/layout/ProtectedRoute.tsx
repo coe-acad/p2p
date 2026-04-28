@@ -46,7 +46,7 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
     return <Navigate to="/" replace />;
   }
 
-  const userIntent = userData.intent || "sell";
+  const userIntent = userData.intent || localStorage.getItem("samai_selected_intent") || "sell";
   if (userIntent !== requiredIntent) {
     const redirectTo = userIntent === "sell" ? "/home" : "/buyer-home";
     return <Navigate to={redirectTo} replace />;

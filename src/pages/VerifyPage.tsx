@@ -1,7 +1,7 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { ensureUserOnServer, loadUser, saveUser } from "@/services/userService";
 
 const VerifyPage = () => {
   const navigate = useNavigate();
@@ -36,6 +36,22 @@ const VerifyPage = () => {
         intent: userIntent, // Preserve the user's selected intent
       });
 
+      // Save intent to localStorage to ensure it persists
+      localStorage.setItem("samai_selected_intent", userIntent);
+
+      // Explicitly save intent to Firestore
+      saveUser({
+        phone: phoneWithCountry,
+        intent: userIntent,
+        name: existingUser.name || "",
+        address: existingUser.address || "",
+        city: existingUser.city || "",
+        discom: existingUser.discom || "",
+        consumerId: existingUser.consumerId || "",
+        automationLevel: existingUser.automationLevel || "recommend",
+        aadhaarVerified: true,
+      } as any).catch(err => console.error("Failed to save intent to Firestore:", err));
+
       // Mark all onboarding steps as complete
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");
@@ -48,16 +64,27 @@ const VerifyPage = () => {
     } else {
       // New user - continue with 5-step verification
       const existingData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-      setUserData({
+      const userData = {
         phone: phoneWithCountry,
         aadhaarVerified: true,
         intent,
-        name: existingData.name,
-        consumerId: existingData.consumerId,
-        address: existingData.address,
-        city: existingData.city,
-        discom: existingData.discom,
-      });
+        name: existingData.name || "",
+        consumerId: existingData.consumerId || "",
+        address: existingData.address || "",
+        city: existingData.city || "",
+        discom: existingData.discom || "",
+        automationLevel: "recommend" as const,
+      };
+
+      setUserData(userData);
+
+      // Save intent to localStorage
+      localStorage.setItem("samai_selected_intent", intent);
+
+      // Explicitly save intent to Firestore for new users
+      saveUser(userData as any).catch((err) =>
+        console.error("Failed to save user intent to Firestore:", err)
+      );
 
       ensureUserOnServer().catch((err) =>
         console.error("Failed to ensure user on server:", err)

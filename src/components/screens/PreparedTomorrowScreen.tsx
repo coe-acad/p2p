@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Leaf, Clock, TrendingUp, Zap, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ArrowLeft, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format, addDays, parse } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { auth } from "@/lib/firebase";
 import {
   Dialog,
   DialogContent,
@@ -223,12 +224,21 @@ const PreparedTomorrowScreen = ({
   };
 
   try {
-    const API_URL = "https://atria-bbp.atriauniversity.ai/api/create";
+    // Get Firebase token for authentication
+    let authHeader = {};
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      authHeader = { Authorization: `Bearer ${token}` };
+    }
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+    const API_URL = `${BACKEND_URL}/api/create`;
 
     const res = await fetch(API_URL, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
+    ...authHeader,
   },
   body: JSON.stringify(payload),
 });
