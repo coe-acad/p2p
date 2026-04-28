@@ -19,15 +19,26 @@ export interface LoginRecord {
 }
 
 export const recordLogin = async (): Promise<void> => {
-  const headers = await getAuthHeaders();
   try {
-    await axios.post(
-      `${BACKEND_URL}/api/login`,
-      {},
-      { headers }
-    );
+    const headers = await getAuthHeaders();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    try {
+      await axios.post(
+        `${BACKEND_URL}/api/login`,
+        {},
+        { headers, signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch (error) {
-    console.error("Failed to record login:", error);
+    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+      console.debug("Login recording timed out, this is non-critical");
+    } else {
+      console.debug("Failed to record login (non-critical):", error instanceof Error ? error.message : error);
+    }
   }
 };
 

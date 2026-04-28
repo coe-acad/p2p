@@ -15,18 +15,35 @@ export const useAuth = (): AuthState => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setIsLoading(false);
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
-      if (firebaseUser) {
-        recordLogin().catch(error => {
-          console.error("Failed to record login:", error);
-        });
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (mounted) {
+        setUser(firebaseUser);
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+
+        if (firebaseUser) {
+          recordLogin().catch(error => {
+            console.error("Failed to record login:", error);
+          });
+        }
       }
     });
 
-    return () => unsubscribe();
+    timeoutId = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("Auth initialization timed out, proceeding without user");
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   const logout = async () => {

@@ -210,16 +210,41 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         }
       }
 
+      // Initialize RecaptchaVerifier if not already done
       if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-          size: "invisible",
-        });
+        try {
+          const container = document.getElementById("recaptcha-container");
+          if (!container) {
+            throw new Error("reCAPTCHA container not found in DOM");
+          }
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+            size: "invisible",
+          });
+          console.log("RecaptchaVerifier initialized successfully");
+        } catch (err: any) {
+          console.error("Failed to initialize RecaptchaVerifier:", err);
+          setPhoneError("Verification initialization failed. Please try again.");
+          throw err;
+        }
       }
-      confirmationResultRef.current = await signInWithPhoneNumber(
-        auth,
-        `+91${phoneNumber}`,
-        recaptchaVerifierRef.current
+
+      console.log("Sending OTP to +91" + phoneNumber);
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("OTP request timed out. Please try again.")), 15000)
       );
+
+      confirmationResultRef.current = await Promise.race([
+        signInWithPhoneNumber(
+          auth,
+          `+91${phoneNumber}`,
+          recaptchaVerifierRef.current
+        ),
+        timeoutPromise
+      ]) as ConfirmationResult;
+
+      console.log("OTP sent successfully");
 
       // Show modal AFTER OTP is sent, not before
       if (shouldShowModal) {
@@ -228,6 +253,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         setStep("otp");
       }
     } catch (err: any) {
+      console.error("Phone submission error:", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
       recaptchaVerifierRef.current?.clear();
       recaptchaVerifierRef.current = null;

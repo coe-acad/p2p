@@ -14,4 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+// Disable App Check for development to avoid reCAPTCHA Enterprise issues
+auth.settings.appVerificationDisabledForTesting = true;
 export const db = getFirestore(app);
