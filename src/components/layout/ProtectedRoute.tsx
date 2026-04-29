@@ -57,13 +57,32 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
 
 export const PublicOnlyRoute = ({ children }: RouteProps) => {
   const { user, isLoading } = useAuth();
+  const { userData } = useUserData();
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
   if (user) {
-    return <Navigate to="/home" replace />;
+    const redirectTo = userData.intent === "buy" ? "/buyer-home" : "/home";
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+export const VerificationRoute = ({ children }: RouteProps) => {
+  const { user, isLoading } = useAuth();
+  const { userData } = useUserData();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Verification should only be accessible pre-auth.
+  if (user) {
+    const redirectTo = userData.intent === "buy" ? "/buyer-home" : "/home";
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;

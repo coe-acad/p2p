@@ -110,7 +110,7 @@ const VerifyPage = () => {
   return (
     <VerificationScreen
       onVerified={handleVerified}
-      onBack={() => navigate("/")}
+      onBack={() => navigate(isReturningUser ? "/" : "/intent")}
       isReturningUser={isReturningUser}
       selectedIntent={selectedIntent}
     />

@@ -83,7 +83,7 @@ export const useDiscoverListings = () => {
       }
 
       const response = await axios.get<ListingsResponse>(
-        `${BAP_URL}/search?${params.toString()}`
+        `${BAP_URL}/discover?${params.toString()}`
       );
 
       setListings(response.data.listings);

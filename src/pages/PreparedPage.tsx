@@ -16,7 +16,7 @@ const PreparedPage = () => {
     <PreparedTomorrowScreen
       hasConfirmedTrades={hasConfirmedTrades}
       onLooksGood={() => navigate("/published", { state: { isVCVerified } })}
-      onViewAdjust={() => navigate("/dashboard")}
+      onViewAdjust={() => navigate("/home")}
       onTalkToSamai={() => navigate("/onboarding/talk", { state: { isVCVerified } })}
       onBack={() => navigate("/home")}
     />

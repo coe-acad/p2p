@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PublicOnlyRoute, RoleProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { PublicOnlyRoute, RoleProtectedRoute, VerificationRoute } from "@/components/layout/ProtectedRoute";
 
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
@@ -58,7 +58,7 @@ const App = () => (
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
             <Route path="/intent" element={<PublicOnlyRoute><IntentPage /></PublicOnlyRoute>} />
             {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
-            <Route path="/verify" element={<VerifyPage />} />
+            <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
 
             {/* Protected routes - redirects to / if not logged in */}
             <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
