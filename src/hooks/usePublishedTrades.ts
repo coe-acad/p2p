@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { submitTrades } from "@/services/tradeService";
 export interface PlannedTrade {
   id: string;
   time: string;
@@ -74,6 +73,7 @@ export const usePublishedTrades = () => {
 
   const publishTrades = async (trades: PlannedTrade[]) => {
     // Persist immediately (prevents race conditions when navigating)
+    // Backend submission is handled by the caller (e.g. PreparedTomorrowScreen)
     const publishedAt = new Date().toISOString();
     setTradesDataState(prev => {
       const newData: PublishedTradesData = {
@@ -85,15 +85,6 @@ export const usePublishedTrades = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
-
-    // Submit to backend (non-blocking for UI)
-    if (trades && trades.length > 0) {
-      submitTrades(trades)
-        .then(() => console.log("Trades submitted successfully"))
-        .catch(err => console.error("Failed to submit trades to backend:", err));
-    } else {
-      console.log("No trades to submit, skipping backend call");
-    }
   };
 
   const confirmTrades = (trades: ConfirmedTrade[]) => {

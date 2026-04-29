@@ -3,17 +3,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer, loadUser, saveUser } from "@/services/userService";
 
+const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "sell" || value === "buy";
+
 const VerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const intent = location.state?.intent || localStorage.getItem("samai_selected_intent") || "sell";
+  // Intent from IntentPage selection (only present for new-user flow)
+  const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
   const isReturningUser = location.state?.isReturningUser || false;
   const { setUserData } = useUserData();
-
-  // Save intent to localStorage so it persists on refresh
-  if (intent) {
-    localStorage.setItem("samai_selected_intent", intent);
-  }
 
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
@@ -25,24 +23,28 @@ const VerifyPage = () => {
     const isReturning = !!existingUser;
 
     if (isReturning && existingUser) {
-      // Returning user - load their existing data and go to home
-      // Use the intent from current session (user's current choice), not the original user's intent
-      const userIntent = intent || existingUser.intent || "sell";
+      // Returning user - intent comes from Firestore, NOT from localStorage or selection.
+      // Returning users skip IntentPage, so their stored role is the source of truth.
+      const storedIntent = localStorage.getItem("samai_selected_intent");
+      const resolvedIntent =
+        (isIntentValue(existingUser.intent) ? existingUser.intent : undefined) ||
+        (isIntentValue(storedIntent) ? storedIntent : undefined);
 
       setUserData({
         ...existingUser,
         phone: phoneWithCountry,
         aadhaarVerified: true,
-        intent: userIntent, // Preserve the user's selected intent
+        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
       });
 
-      // Save intent to localStorage to ensure it persists
-      localStorage.setItem("samai_selected_intent", userIntent);
+      if (resolvedIntent) {
+        localStorage.setItem("samai_selected_intent", resolvedIntent);
+      }
 
       // Explicitly save intent to Firestore
       saveUser({
         phone: phoneWithCountry,
-        intent: userIntent,
+        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
         name: existingUser.name || "",
         address: existingUser.address || "",
         city: existingUser.city || "",
@@ -59,15 +61,21 @@ const VerifyPage = () => {
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = userIntent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute = resolvedIntent === "buy" ? "/buyer-home" : "/home";
       navigate(targetRoute, { replace: true });
     } else {
-      // New user - continue with 5-step verification
+      // New user - intent comes from IntentPage selection
+      const intentFromStorage = localStorage.getItem("samai_selected_intent");
+      const intentFromUserData = JSON.parse(localStorage.getItem("samai_user_data") || "{}")?.intent;
+      const newUserIntent: "sell" | "buy" =
+        selectedIntent ||
+        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined) ||
+        (isIntentValue(intentFromUserData) ? intentFromUserData : "sell");
       const existingData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
       const userData = {
         phone: phoneWithCountry,
         aadhaarVerified: true,
-        intent,
+        intent: newUserIntent,
         name: existingData.name || "",
         consumerId: existingData.consumerId || "",
         address: existingData.address || "",
@@ -78,10 +86,8 @@ const VerifyPage = () => {
 
       setUserData(userData);
 
-      // Save intent to localStorage
-      localStorage.setItem("samai_selected_intent", intent);
+      localStorage.setItem("samai_selected_intent", newUserIntent);
 
-      // Explicitly save intent to Firestore for new users
       saveUser(userData as any).catch((err) =>
         console.error("Failed to save user intent to Firestore:", err)
       );
@@ -90,14 +96,13 @@ const VerifyPage = () => {
         console.error("Failed to ensure user on server:", err)
       );
 
-      // Mark onboarding as complete for new users too
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");
       localStorage.setItem("samai_onboarding_location_done", "true");
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/home";
       navigate(targetRoute, { replace: true });
     }
   };
@@ -107,6 +112,7 @@ const VerifyPage = () => {
       onVerified={handleVerified}
       onBack={() => navigate("/")}
       isReturningUser={isReturningUser}
+      selectedIntent={selectedIntent}
     />
   );
 };

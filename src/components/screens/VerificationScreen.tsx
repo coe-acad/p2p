@@ -34,6 +34,7 @@ interface VerificationScreenProps {
   onVerified: (phone?: string) => void;
   onBack: () => void;
   isReturningUser?: boolean;
+  selectedIntent?: "sell" | "buy";
 }
 
 const isValidIndianMobile = (phone: string): boolean => {
@@ -52,7 +53,7 @@ const isValidGSTIN = (gstin: string): boolean => {
   return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin.toUpperCase());
 };
 
-const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
+const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selectedIntent }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
 
@@ -280,10 +281,33 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
 
+      // Bootstrap Firebase auth by setting custom claims with phone number
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        try {
+          await fetch(`${BACKEND_URL}/api/auth/setup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
+          });
+          console.log("✅ Auth bootstrap complete");
+        } catch (err) {
+          console.debug("Auth bootstrap failed (non-critical):", err);
+        }
+      }
+
       // For new users, save phone number so profile data can be saved to Firestore
       if (!isUserReturning) {
+        const intentFromStorage = localStorage.getItem("samai_selected_intent");
+        const effectiveIntent: "sell" | "buy" =
+          selectedIntent || (intentFromStorage === "buy" || intentFromStorage === "sell" ? intentFromStorage : "sell");
         setUserData({
           phone: `+91${phoneNumber}`,
+          intent: effectiveIntent,
         });
         // New users proceed with verification steps
         setStep("profile");

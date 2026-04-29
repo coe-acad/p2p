@@ -225,27 +225,37 @@ const PreparedTomorrowScreen = ({
 
   try {
     // Get Firebase token for authentication
-    let authHeader = {};
-    if (auth.currentUser) {
-      const token = await auth.currentUser.getIdToken();
-      authHeader = { Authorization: `Bearer ${token}` };
+    if (!auth.currentUser) {
+      console.error("❌ NOT AUTHENTICATED: auth.currentUser is null");
+      throw new Error("Not authenticated. Please log in again.");
     }
+
+    console.log("✅ User authenticated:", auth.currentUser.email || auth.currentUser.uid);
+    const token = await auth.currentUser.getIdToken();
+    console.log("✅ Token obtained:", token ? `${token.substring(0, 50)}...` : "EMPTY");
+    const authHeader = { Authorization: `Bearer ${token}` };
 
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
     const API_URL = `${BACKEND_URL}/api/create`;
 
-    const res = await fetch(API_URL, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    ...authHeader,
-  },
-  body: JSON.stringify(payload),
-});
+    console.log("Publishing trades:", payload);
+    console.log("Authorization header:", authHeader.Authorization ? "✅ Present" : "❌ Missing");
 
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader,
+      },
+      body: JSON.stringify(payload),
+    });
 
     if (!res.ok) {
-      throw new Error(`API error: ${res.status}`);
+      const errorText = await res.text();
+      console.error("❌ Backend error status:", res.status);
+      console.error("❌ Backend error body:", errorText);
+      console.error("❌ Request payload was:", JSON.stringify(payload, null, 2));
+      throw new Error(`API error: ${res.status} - ${errorText}`);
     }
 
     return await res.json();
@@ -258,6 +268,8 @@ const PreparedTomorrowScreen = ({
   
   // Handler for publishing trades (persists to localStorage)
   const handlePublish = async () => {
+  if (isPublishing) return;
+
   if (!userData.name || !userData.consumerId) {
     alert("Please complete your profile (Name and Meter Number) before publishing trades.");
     navigate("/settings/profile");
@@ -269,6 +281,7 @@ const PreparedTomorrowScreen = ({
     return;
   }
 
+  setIsPublishing(true);
   try {
     // 1. Send to backend
     await postTradesToBackend(activeTimeSlots);
@@ -293,6 +306,8 @@ const PreparedTomorrowScreen = ({
   } catch (err) {
     // Optional: show UI error toast here
     alert("Failed to publish trades. Please try again.");
+  } finally {
+    setIsPublishing(false);
   }
 };
 
@@ -348,6 +363,7 @@ const PreparedTomorrowScreen = ({
   const [tempExcludedHours, setTempExcludedHours] = useState<string[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatResponse, setChatResponse] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleOpenControl = () => {
     setModalStep('main');
@@ -696,11 +712,11 @@ const PreparedTomorrowScreen = ({
               <>
                 <button
                   onClick={handleLooksGood}
-                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId}
-                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : ""}
+                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing}
+                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : isPublishing ? "Publishing..." : ""}
                 >
-                  {t("trades.approveNow")}
+                  {isPublishing ? "Publishing..." : t("trades.approveNow")}
                 </button>
                 <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
                   <span>{t("common.change")}</span>

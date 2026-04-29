@@ -6,7 +6,13 @@ const IntentPage = () => {
 
   return (
     <IntentSelectionScreen
-      onSelect={(intents) => navigate("/verify", { state: { intents, intent: intents[0] } })}
+      onSelect={(intents) => {
+        const intent = intents[0];
+        if (intent) {
+          localStorage.setItem("samai_selected_intent", intent);
+        }
+        navigate("/verify", { state: { intents, intent } });
+      }}
       onBack={() => navigate("/")}
     />
   );
