@@ -69,6 +69,7 @@ export const BottomNav = ({ activeTab, onTabChange, mode }: BottomNavProps) => {
         <Wallet size={20} />
         <span className={`text-[10px] font-medium ${resolvedActiveTab === "statements" ? "text-primary" : ""}`}>{t("nav.payments")}</span>
       </button>
+
       </div>
     </div>
   );
