@@ -4,6 +4,7 @@ import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
 import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
 import { getAuthHeaders } from "@/services/authHeaders";
+import { EnsureUserResponseSchema } from "@/services/apiSchemas";
 
 const COLLECTION = "users";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
@@ -47,11 +48,12 @@ export const ensureUserOnServer = async (
 
   try {
     const headers = await getAuthHeaders();
-    await requestWithRetry(
+    const data = await requestWithRetry(
       backendClient,
       { url: "/api/user/ensure", method: "POST", data: body, headers },
       { ...options, retries: 1 }
     );
+    EnsureUserResponseSchema.parse(data);
   } catch (error) {
     throw toApiError(error, "Failed to ensure user on server");
   }

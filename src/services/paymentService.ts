@@ -1,5 +1,6 @@
 import { getAuthHeaders } from "@/services/authHeaders";
 import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { PaymentEnvelopeSchema, PaymentsEnvelopeSchema } from "@/services/apiSchemas";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
 const backendClient = createApiClient(BACKEND_URL);
@@ -36,7 +37,7 @@ export const createPayment = async (request: CreatePaymentRequest, options?: Req
       { url: "/api/payment", method: "POST", data: request, headers },
       { ...options, retries: 1 }
     );
-    return data.data;
+    return PaymentEnvelopeSchema.parse(data).data;
   } catch (error) {
     throw toApiError(error, "Failed to create payment");
   }
@@ -50,7 +51,7 @@ export const getPayments = async (options?: RequestOptions): Promise<Payment[]> 
       { url: "/api/payments", method: "GET", headers },
       options
     );
-    return data.payments || [];
+    return PaymentsEnvelopeSchema.parse(data).payments;
   } catch (error) {
     throw toApiError(error, "Failed to fetch payments");
   }
@@ -64,7 +65,7 @@ export const getPayment = async (paymentId: string, options?: RequestOptions): P
       { url: `/api/payment/${paymentId}`, method: "GET", headers },
       options
     );
-    return data.data;
+    return PaymentEnvelopeSchema.parse(data).data;
   } catch (error) {
     throw toApiError(error, "Failed to fetch payment details");
   }
@@ -88,7 +89,7 @@ export const updatePaymentStatus = async (
       },
       { ...options, retries: 1 }
     );
-    return data.data;
+    return PaymentEnvelopeSchema.parse(data).data;
   } catch (error) {
     throw toApiError(error, "Failed to update payment status");
   }
