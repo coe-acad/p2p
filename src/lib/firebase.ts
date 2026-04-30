@@ -14,6 +14,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-// Disable App Check for development to avoid reCAPTCHA Enterprise issues
-auth.settings.appVerificationDisabledForTesting = true;
+const isDevPhoneAuthBypassEnabled =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
+
+// Fail-safe default is secure: only allow bypass in explicit local development.
+auth.settings.appVerificationDisabledForTesting = isDevPhoneAuthBypassEnabled;
 export const db = getFirestore(app);
