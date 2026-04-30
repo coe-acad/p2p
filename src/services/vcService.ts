@@ -1,7 +1,8 @@
-import axios from "axios";
-import { auth } from "@/lib/firebase";
+import { getAuthHeaders } from "@/services/authHeaders";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
+const backendClient = createApiClient(BACKEND_URL);
 
 export interface VCVerificationResult {
   verified: boolean;
@@ -10,36 +11,28 @@ export interface VCVerificationResult {
   error?: string;
 }
 
-const getAuthHeaders = async (): Promise<Record<string, string>> => {
-  const user = auth.currentUser;
-  if (!user) return {};
-  const token = await user.getIdToken();
-  return { Authorization: `Bearer ${token}` };
-};
-
 // Parse JSON file and verify with backend
 export const verifyVC = async (
-  jsonContent: string
+  jsonContent: string,
+  options?: RequestOptions
 ): Promise<VCVerificationResult> => {
   try {
     const credential = JSON.parse(jsonContent);
 
     // Verify with backend
     const headers = await getAuthHeaders();
-    const { data } = await axios.post(
-      `${BACKEND_URL}/api/vc/verify`,
-      { credential },
-      { headers }
+    const data = await requestWithRetry<VCVerificationResult>(
+      backendClient,
+      { url: "/api/vc/verify", method: "POST", data: { credential }, headers },
+      { ...options, retries: 1 }
     );
 
     return data;
-  } catch (err: any) {
-    if (err.response?.data?.error) {
-      return { verified: false, error: err.response.data.error };
-    }
+  } catch (error: unknown) {
+    const apiError = toApiError(error, "Failed to verify VC");
     return {
       verified: false,
-      error: err.message || "Failed to verify VC",
+      error: apiError.message,
     };
   }
 };

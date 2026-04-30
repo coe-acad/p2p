@@ -1,11 +1,13 @@
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import axios from "axios";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { getAuthHeaders } from "@/services/authHeaders";
 
 const COLLECTION = "users";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
+const backendClient = createApiClient(BACKEND_URL);
 
 // Save (merge) user data to Firestore, keyed by phone number
 export const saveUser = async (data: UserData): Promise<void> => {
@@ -32,16 +34,25 @@ export const loadUser = async (phone: string): Promise<Partial<UserData> | null>
   return null;
 };
 
-export const ensureUserOnServer = async (name?: string, meter_number?: string): Promise<void> => {
+export const ensureUserOnServer = async (
+  name?: string,
+  meter_number?: string,
+  options?: RequestOptions
+): Promise<void> => {
   const user = auth.currentUser;
   if (!user) return;
-  const token = await user.getIdToken();
   const body: Record<string, string> = {};
   if (name) body.name = name;
   if (meter_number) body.meter_number = meter_number;
-  await axios.post(
-    `${BACKEND_URL}/api/user/ensure`,
-    body,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+
+  try {
+    const headers = await getAuthHeaders();
+    await requestWithRetry(
+      backendClient,
+      { url: "/api/user/ensure", method: "POST", data: body, headers },
+      { ...options, retries: 1 }
+    );
+  } catch (error) {
+    throw toApiError(error, "Failed to ensure user on server");
+  }
 };
