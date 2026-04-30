@@ -11,9 +11,15 @@ i18n
     resources: translations,
     lng: savedLanguage,
     fallbackLng: 'en',
+    debug: false,
     interpolation: {
       escapeValue: false, // React already escapes values
     },
   });
+
+// Silence i18next informational logs in dev console while keeping warnings/errors.
+if (i18n.services?.logger) {
+  i18n.services.logger.log = () => {};
+}
 
 export default i18n;
