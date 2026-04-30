@@ -4,6 +4,7 @@ import { Leaf, Clock, TrendingUp, Zap, RefreshCw, Check, Pause, Sliders, Message
 import { format, addDays, parse } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { auth } from "@/lib/firebase";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -226,20 +227,20 @@ const PreparedTomorrowScreen = ({
   try {
     // Get Firebase token for authentication
     if (!auth.currentUser) {
-      console.error("❌ NOT AUTHENTICATED: auth.currentUser is null");
+      logger.error("Trade publish: not authenticated");
       throw new Error("Not authenticated. Please log in again.");
     }
 
-    console.log("✅ User authenticated:", auth.currentUser.email || auth.currentUser.uid);
+    logger.devLog("User authenticated for trade publish");
     const token = await auth.currentUser.getIdToken();
-    console.log("✅ Token obtained:", token ? `${token.substring(0, 50)}...` : "EMPTY");
+    logger.devLog("ID token obtained:", Boolean(token));
     const authHeader = { Authorization: `Bearer ${token}` };
 
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
     const API_URL = `${BACKEND_URL}/api/create`;
 
-    console.log("Publishing trades:", payload);
-    console.log("Authorization header:", authHeader.Authorization ? "✅ Present" : "❌ Missing");
+    logger.devLog("Publishing trades:", payload);
+    logger.devLog("Authorization header present:", Boolean(authHeader.Authorization));
 
     const res = await fetch(API_URL, {
       method: "POST",
@@ -252,15 +253,14 @@ const PreparedTomorrowScreen = ({
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error("❌ Backend error status:", res.status);
-      console.error("❌ Backend error body:", errorText);
-      console.error("❌ Request payload was:", JSON.stringify(payload, null, 2));
+      logger.devError("Publish trades API error:", res.status, errorText, payload);
+      logger.error(`Publish trades failed (HTTP ${res.status})`);
       throw new Error(`API error: ${res.status} - ${errorText}`);
     }
 
     return await res.json();
   } catch (err) {
-    console.error("Trade post failed:", err);
+    logger.error("Trade post failed", err);
     throw err;
   }
 };
@@ -277,7 +277,7 @@ const PreparedTomorrowScreen = ({
   }
 
   if (activeTimeSlots.length === 0) {
-    console.log("No active trades to approve — skipping publish");
+    logger.devLog("No active trades to approve — skipping publish");
     return;
   }
 

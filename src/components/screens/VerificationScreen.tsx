@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { logger } from "@/lib/logger";
 
 const discomByState: Record<string, string> = {
   "karnataka": "BESCOM",
@@ -170,14 +171,14 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           setDiscom(selectedDiscom);
           setLocationError("");
         } catch (err) {
-          console.error("Geocoding error:", err);
+          logger.error("Geocoding failed", err);
           setLocationError("Could not detect location. Please enter manually.");
         } finally {
           setDetectingLocation(false);
         }
       },
       (error) => {
-        console.error("Geolocation error:", error);
+        logger.error("Geolocation failed", error);
         setLocationError("Location access denied. Please enter manually.");
         setDetectingLocation(false);
       }
@@ -221,15 +222,15 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
             size: "invisible",
           });
-          console.log("RecaptchaVerifier initialized successfully");
+          logger.devLog("RecaptchaVerifier initialized successfully");
         } catch (err: any) {
-          console.error("Failed to initialize RecaptchaVerifier:", err);
+          logger.error("Recaptcha initialization failed", err);
           setPhoneError("Verification initialization failed. Please try again.");
           throw err;
         }
       }
 
-      console.log("Sending OTP to +91" + phoneNumber);
+      logger.devLog("Sending OTP (dev only; number not logged in production)");
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) =>
@@ -245,7 +246,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
         timeoutPromise
       ]) as ConfirmationResult;
 
-      console.log("OTP sent successfully");
+      logger.devLog("OTP sent successfully");
 
       // Show modal AFTER OTP is sent, not before
       if (shouldShowModal) {
@@ -254,7 +255,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
         setStep("otp");
       }
     } catch (err: any) {
-      console.error("Phone submission error:", err);
+      logger.error("Phone OTP send failed", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
       recaptchaVerifierRef.current?.clear();
       recaptchaVerifierRef.current = null;
@@ -294,9 +295,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
             },
             body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
           });
-          console.log("✅ Auth bootstrap complete");
+          logger.devLog("Auth bootstrap complete");
         } catch (err) {
-          console.debug("Auth bootstrap failed (non-critical):", err);
+          logger.devDebug("Auth bootstrap failed (non-critical):", err);
         }
       }
 
@@ -337,7 +338,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     try {
       await ensureUserOnServer(name, meter_number);
     } catch (err) {
-      console.error("Failed to sync user profile:", err);
+      logger.error("Failed to sync user profile", err);
     }
     setStep("aadhaar");
   };
