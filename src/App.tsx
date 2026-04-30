@@ -11,6 +11,7 @@ import VerifyPage from "./pages/VerifyPage";
 import SuccessPage from "./pages/SuccessPage";
 
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
+import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import CalculatingPage from "./pages/CalculatingPage";
 import EarningsHookPage from "./pages/EarningsHookPage";
@@ -65,6 +66,7 @@ const App = () => (
 
             {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
             <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
             <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
 
             {/* Post-Onboarding - Seller only */}
