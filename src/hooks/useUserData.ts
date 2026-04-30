@@ -80,29 +80,61 @@ const DEFAULT_USER_DATA: UserData = {
   intent: "sell",
 };
 
-const STORAGE_KEY = "samai_user_data";
+const LEGACY_STORAGE_KEY = "samai_user_data";
+const SESSION_STORAGE_KEY = "samai_user_data_session";
+const PREFS_STORAGE_KEY = "samai_user_prefs";
+
+type UserPrefs = Pick<UserData, "intent" | "automationLevel" | "isReturningUser">;
+
+const getUserPrefs = (data: UserData): UserPrefs => ({
+  intent: data.intent,
+  automationLevel: data.automationLevel,
+  isReturningUser: data.isReturningUser,
+});
 
 export const useUserData = () => {
   const [userData, setUserDataState] = useState<UserData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return {
-          ...DEFAULT_USER_DATA,
-          ...parsed,
-          name: normalizeName(parsed?.name),
-          address: normalizeAddress(parsed?.address),
-        };
-      } catch {
-        return DEFAULT_USER_DATA;
-      }
+    const sessionStored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const prefsStored = localStorage.getItem(PREFS_STORAGE_KEY);
+
+    let parsedSession = {};
+    let parsedLegacy = {};
+    let parsedPrefs = {};
+
+    try {
+      parsedSession = sessionStored ? JSON.parse(sessionStored) : {};
+    } catch {
+      parsedSession = {};
     }
-    return DEFAULT_USER_DATA;
+
+    try {
+      parsedLegacy = legacyStored ? JSON.parse(legacyStored) : {};
+    } catch {
+      parsedLegacy = {};
+    }
+
+    try {
+      parsedPrefs = prefsStored ? JSON.parse(prefsStored) : {};
+    } catch {
+      parsedPrefs = {};
+    }
+
+    const parsed = { ...parsedLegacy, ...parsedSession, ...parsedPrefs };
+
+    return {
+      ...DEFAULT_USER_DATA,
+      ...parsed,
+      name: normalizeName((parsed as UserData)?.name),
+      address: normalizeAddress((parsed as UserData)?.address),
+    };
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userData));
+    localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(getUserPrefs(userData)));
+    // Remove legacy long-lived storage of sensitive profile fields.
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
@@ -113,7 +145,6 @@ export const useUserData = () => {
         name: updates.name ? normalizeName(updates.name) : prev.name,
         address: updates.address ? normalizeAddress(updates.address) : prev.address,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });

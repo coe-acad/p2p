@@ -23,7 +23,7 @@ export interface PublishedTradesData {
   showConfirmedTrades: boolean; // Explicit flag for showing confirmed trades
 }
 
-const STORAGE_KEY = "samai_published_trades";
+const STORAGE_KEY = "samai_published_trades_session";
 
 const DEFAULT_DATA: PublishedTradesData = {
   plannedTrades: [],
@@ -34,7 +34,7 @@ const DEFAULT_DATA: PublishedTradesData = {
 
 export const usePublishedTrades = () => {
   const [tradesData, setTradesDataState] = useState<PublishedTradesData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         return { ...DEFAULT_DATA, ...JSON.parse(stored) };
@@ -46,14 +46,14 @@ export const usePublishedTrades = () => {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tradesData));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tradesData));
   }, [tradesData]);
 
   const setTradesData = (updates: Partial<PublishedTradesData>) => {
     setTradesDataState(prev => {
       const newData = { ...prev, ...updates };
-      // Sync to localStorage immediately
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      // Sync to session storage immediately
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
   };
@@ -66,7 +66,7 @@ export const usePublishedTrades = () => {
         ...prev,
         plannedTrades: trades,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
   }, []);
@@ -82,7 +82,7 @@ export const usePublishedTrades = () => {
         isPublished: true,
         publishedAt,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
   };
