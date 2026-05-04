@@ -15,18 +15,35 @@ export const useAuth = (): AuthState => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setIsLoading(false);
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
-      if (firebaseUser) {
-        recordLogin().catch(error => {
-          console.error("Failed to record login:", error);
-        });
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (mounted) {
+        setUser(firebaseUser);
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+
+        if (firebaseUser) {
+          recordLogin().catch(error => {
+            console.error("Failed to record login:", error);
+          });
+        }
       }
     });
 
-    return () => unsubscribe();
+    timeoutId = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("Auth initialization timed out, proceeding without user");
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   const logout = async () => {
@@ -34,6 +51,9 @@ export const useAuth = (): AuthState => {
       await signOut(auth);
       // Clear localStorage on logout
       localStorage.removeItem("samai_user_data");
+      localStorage.removeItem("samai_user_prefs");
+      localStorage.removeItem("samai_selected_intent");
+      sessionStorage.removeItem("samai_user_data_session");
       localStorage.removeItem("samai_onboarding_complete");
       localStorage.removeItem("samai_aadhaar_verified");
       localStorage.removeItem("samai_onboarding_location_done");

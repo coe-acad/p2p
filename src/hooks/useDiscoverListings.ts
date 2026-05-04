@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useRef } from "react";
+import { createApiClient, requestWithRetry, toApiError } from "@/services/apiClient";
 
 export interface EnergyListing {
   id: string;
@@ -48,56 +48,100 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const BAP_URL = import.meta.env.VITE_BAP_URL || 'http://localhost:8001';
+  const BAP_URL = import.meta.env.VITE_BAP_URL || "http://localhost:8001";
   const PAGE_SIZE = 10;
+  const discoverClientRef = useRef(createApiClient(BAP_URL));
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   const fetchListings = async (pageNumber: number = 0, searchFilters: SearchFilters = {}) => {
     try {
+      activeRequestRef.current?.abort();
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
+
       setLoading(true);
       setError(null);
+
+      // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
+      if (pageNumber === 0) {
+        await requestWithRetry<unknown>(
+          discoverClientRef.current,
+          {
+            url: "/discover",
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            data: {},
+          },
+          {
+            signal: controller.signal,
+            timeoutMs: 120000,
+            retries: 1,
+            retryDelayMs: 2000,
+          }
+        );
+      }
 
       const params = new URLSearchParams();
 
       // Add pagination
-      params.append('limit', PAGE_SIZE.toString());
-      params.append('offset', (pageNumber * PAGE_SIZE).toString());
+      params.append("limit", PAGE_SIZE.toString());
+      params.append("offset", (pageNumber * PAGE_SIZE).toString());
 
       // Add filters
       if (searchFilters.seller_name) {
-        params.append('seller_name', searchFilters.seller_name);
+        params.append("seller_name", searchFilters.seller_name);
       }
       if (searchFilters.min_price !== undefined) {
-        params.append('min_price', searchFilters.min_price.toString());
+        params.append("min_price", searchFilters.min_price.toString());
       }
       if (searchFilters.max_price !== undefined) {
-        params.append('max_price', searchFilters.max_price.toString());
+        params.append("max_price", searchFilters.max_price.toString());
       }
       if (searchFilters.min_quantity !== undefined) {
-        params.append('min_quantity', searchFilters.min_quantity.toString());
+        params.append("min_quantity", searchFilters.min_quantity.toString());
       }
       if (searchFilters.max_quantity !== undefined) {
-        params.append('max_quantity', searchFilters.max_quantity.toString());
+        params.append("max_quantity", searchFilters.max_quantity.toString());
       }
       if (searchFilters.source_type) {
-        params.append('source_type', searchFilters.source_type);
+        params.append("source_type", searchFilters.source_type);
       }
 
-      const response = await axios.get<ListingsResponse>(
-        `${BAP_URL}/search?${params.toString()}`
+      const data = await requestWithRetry<ListingsResponse>(
+        discoverClientRef.current,
+        {
+          url: `/discover?${params.toString()}`,
+          method: "GET",
+        },
+        {
+          signal: controller.signal,
+          timeoutMs: 10000,
+          retries: 2,
+        }
       );
 
-      setListings(response.data.listings);
-      setTotal(response.data.total);
+      setListings(data.listings);
+      setTotal(data.total);
       setCurrentPage(pageNumber);
       setFilters(searchFilters);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch listings';
+      const apiError = toApiError(err, "Failed to fetch listings");
+      if (apiError.code === "ERR_CANCELED") {
+        return;
+      }
+      const message = apiError.message;
       setError(message);
-      console.error('Error fetching listings:', err);
+      console.error("Error fetching listings:", apiError);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      activeRequestRef.current?.abort();
+    };
+  }, []);
 
   const searchBySellerName = (sellerName: string) => {
     fetchListings(0, { ...filters, seller_name: sellerName });

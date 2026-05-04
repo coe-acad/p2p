@@ -1,14 +1,9 @@
-import axios from "axios";
-import { auth } from "@/lib/firebase";
+import { getAuthHeaders } from "@/services/authHeaders";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { PaymentEnvelopeSchema, PaymentsEnvelopeSchema } from "@/services/apiSchemas";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
-
-const getAuthHeaders = async (): Promise<Record<string, string>> => {
-  const user = auth.currentUser;
-  if (!user) return {};
-  const token = await user.getIdToken();
-  return { Authorization: `Bearer ${token}` };
-};
+const backendClient = createApiClient(BACKEND_URL);
 
 export interface Payment {
   payment_id: string;
@@ -34,44 +29,68 @@ export interface CreatePaymentRequest {
   description?: string;
 }
 
-export const createPayment = async (request: CreatePaymentRequest): Promise<Payment> => {
-  const headers = await getAuthHeaders();
-  const { data } = await axios.post(
-    `${BACKEND_URL}/api/payment`,
-    request,
-    { headers }
-  );
-  return data.data;
+export const createPayment = async (request: CreatePaymentRequest, options?: RequestOptions): Promise<Payment> => {
+  try {
+    const headers = await getAuthHeaders();
+    const data = await requestWithRetry<{ data: Payment }>(
+      backendClient,
+      { url: "/api/payment", method: "POST", data: request, headers },
+      { ...options, retries: 1 }
+    );
+    return PaymentEnvelopeSchema.parse(data).data;
+  } catch (error) {
+    throw toApiError(error, "Failed to create payment");
+  }
 };
 
-export const getPayments = async (): Promise<Payment[]> => {
-  const headers = await getAuthHeaders();
-  const { data } = await axios.get(
-    `${BACKEND_URL}/api/payments`,
-    { headers }
-  );
-  return data.payments || [];
+export const getPayments = async (options?: RequestOptions): Promise<Payment[]> => {
+  try {
+    const headers = await getAuthHeaders();
+    const data = await requestWithRetry<{ payments?: Payment[] }>(
+      backendClient,
+      { url: "/api/payments", method: "GET", headers },
+      options
+    );
+    return PaymentsEnvelopeSchema.parse(data).payments;
+  } catch (error) {
+    throw toApiError(error, "Failed to fetch payments");
+  }
 };
 
-export const getPayment = async (paymentId: string): Promise<Payment> => {
-  const headers = await getAuthHeaders();
-  const { data } = await axios.get(
-    `${BACKEND_URL}/api/payment/${paymentId}`,
-    { headers }
-  );
-  return data.data;
+export const getPayment = async (paymentId: string, options?: RequestOptions): Promise<Payment> => {
+  try {
+    const headers = await getAuthHeaders();
+    const data = await requestWithRetry<{ data: Payment }>(
+      backendClient,
+      { url: `/api/payment/${paymentId}`, method: "GET", headers },
+      options
+    );
+    return PaymentEnvelopeSchema.parse(data).data;
+  } catch (error) {
+    throw toApiError(error, "Failed to fetch payment details");
+  }
 };
 
 export const updatePaymentStatus = async (
   paymentId: string,
   status: "pending" | "completed" | "failed",
-  razorpayPaymentId?: string
+  razorpayPaymentId?: string,
+  options?: RequestOptions
 ): Promise<Payment> => {
-  const headers = await getAuthHeaders();
-  const { data } = await axios.put(
-    `${BACKEND_URL}/api/payment/${paymentId}`,
-    { status, razorpay_payment_id: razorpayPaymentId },
-    { headers }
-  );
-  return data.data;
+  try {
+    const headers = await getAuthHeaders();
+    const data = await requestWithRetry<{ data: Payment }>(
+      backendClient,
+      {
+        url: `/api/payment/${paymentId}`,
+        method: "PUT",
+        data: { status, razorpay_payment_id: razorpayPaymentId },
+        headers,
+      },
+      { ...options, retries: 1 }
+    );
+    return PaymentEnvelopeSchema.parse(data).data;
+  } catch (error) {
+    throw toApiError(error, "Failed to update payment status");
+  }
 };

@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { logger } from "@/lib/logger";
 
 const discomByState: Record<string, string> = {
   "karnataka": "BESCOM",
@@ -34,6 +35,7 @@ interface VerificationScreenProps {
   onVerified: (phone?: string) => void;
   onBack: () => void;
   isReturningUser?: boolean;
+  selectedIntent?: "sell" | "buy";
 }
 
 const isValidIndianMobile = (phone: string): boolean => {
@@ -52,7 +54,7 @@ const isValidGSTIN = (gstin: string): boolean => {
   return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin.toUpperCase());
 };
 
-const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: VerificationScreenProps) => {
+const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selectedIntent }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
 
@@ -169,14 +171,14 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
           setDiscom(selectedDiscom);
           setLocationError("");
         } catch (err) {
-          console.error("Geocoding error:", err);
+          logger.error("Geocoding failed", err);
           setLocationError("Could not detect location. Please enter manually.");
         } finally {
           setDetectingLocation(false);
         }
       },
       (error) => {
-        console.error("Geolocation error:", error);
+        logger.error("Geolocation failed", error);
         setLocationError("Location access denied. Please enter manually.");
         setDetectingLocation(false);
       }
@@ -210,16 +212,41 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         }
       }
 
+      // Initialize RecaptchaVerifier if not already done
       if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-          size: "invisible",
-        });
+        try {
+          const container = document.getElementById("recaptcha-container");
+          if (!container) {
+            throw new Error("reCAPTCHA container not found in DOM");
+          }
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+            size: "invisible",
+          });
+          logger.devLog("RecaptchaVerifier initialized successfully");
+        } catch (err: any) {
+          logger.error("Recaptcha initialization failed", err);
+          setPhoneError("Verification initialization failed. Please try again.");
+          throw err;
+        }
       }
-      confirmationResultRef.current = await signInWithPhoneNumber(
-        auth,
-        `+91${phoneNumber}`,
-        recaptchaVerifierRef.current
+
+      logger.devLog("Sending OTP (dev only; number not logged in production)");
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("OTP request timed out. Please try again.")), 15000)
       );
+
+      confirmationResultRef.current = await Promise.race([
+        signInWithPhoneNumber(
+          auth,
+          `+91${phoneNumber}`,
+          recaptchaVerifierRef.current
+        ),
+        timeoutPromise
+      ]) as ConfirmationResult;
+
+      logger.devLog("OTP sent successfully");
 
       // Show modal AFTER OTP is sent, not before
       if (shouldShowModal) {
@@ -228,6 +255,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
         setStep("otp");
       }
     } catch (err: any) {
+      logger.error("Phone OTP send failed", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
       recaptchaVerifierRef.current?.clear();
       recaptchaVerifierRef.current = null;
@@ -254,10 +282,32 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
 
+      // Bootstrap Firebase auth by setting custom claims with phone number
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        try {
+          await fetch(`${BACKEND_URL}/api/auth/setup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
+          });
+          logger.devLog("Auth bootstrap complete");
+        } catch (err) {
+          logger.devDebug("Auth bootstrap failed (non-critical):", err);
+        }
+      }
+
       // For new users, save phone number so profile data can be saved to Firestore
       if (!isUserReturning) {
+        // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
+        const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
         setUserData({
           phone: `+91${phoneNumber}`,
+          ...(flowIntent ? { intent: flowIntent } : {}),
         });
         // New users proceed with verification steps
         setStep("profile");
@@ -285,9 +335,13 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false }: Ver
       consumerId: meter_number,
     });
     try {
-      await ensureUserOnServer(name, meter_number);
+      await ensureUserOnServer({
+        name,
+        meter_number,
+        consumerId: meter_number,
+      });
     } catch (err) {
-      console.error("Failed to sync user profile:", err);
+      logger.error("Failed to sync user profile", err);
     }
     setStep("aadhaar");
   };

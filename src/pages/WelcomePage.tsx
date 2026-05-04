@@ -7,6 +7,7 @@ const WelcomePage = () => {
   const handleNewUser = () => {
     // Clear any existing user data for a fresh start
     localStorage.removeItem("samai_user_data");
+    localStorage.removeItem("samai_selected_intent");
     localStorage.removeItem("samai_onboarding_complete");
     localStorage.removeItem("samai_aadhaar_verified");
     localStorage.removeItem("samai_onboarding_location_done");

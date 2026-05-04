@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { submitTrades } from "@/services/tradeService";
 export interface PlannedTrade {
   id: string;
   time: string;
@@ -24,7 +23,7 @@ export interface PublishedTradesData {
   showConfirmedTrades: boolean; // Explicit flag for showing confirmed trades
 }
 
-const STORAGE_KEY = "samai_published_trades";
+const STORAGE_KEY = "samai_published_trades_session";
 
 const DEFAULT_DATA: PublishedTradesData = {
   plannedTrades: [],
@@ -35,7 +34,7 @@ const DEFAULT_DATA: PublishedTradesData = {
 
 export const usePublishedTrades = () => {
   const [tradesData, setTradesDataState] = useState<PublishedTradesData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         return { ...DEFAULT_DATA, ...JSON.parse(stored) };
@@ -47,14 +46,14 @@ export const usePublishedTrades = () => {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tradesData));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tradesData));
   }, [tradesData]);
 
   const setTradesData = (updates: Partial<PublishedTradesData>) => {
     setTradesDataState(prev => {
       const newData = { ...prev, ...updates };
-      // Sync to localStorage immediately
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      // Sync to session storage immediately
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
   };
@@ -67,13 +66,14 @@ export const usePublishedTrades = () => {
         ...prev,
         plannedTrades: trades,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
   }, []);
 
   const publishTrades = async (trades: PlannedTrade[]) => {
     // Persist immediately (prevents race conditions when navigating)
+    // Backend submission is handled by the caller (e.g. PreparedTomorrowScreen)
     const publishedAt = new Date().toISOString();
     setTradesDataState(prev => {
       const newData: PublishedTradesData = {
@@ -82,18 +82,9 @@ export const usePublishedTrades = () => {
         isPublished: true,
         publishedAt,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
-
-    // Submit to backend (non-blocking for UI)
-    if (trades && trades.length > 0) {
-      submitTrades(trades)
-        .then(() => console.log("Trades submitted successfully"))
-        .catch(err => console.error("Failed to submit trades to backend:", err));
-    } else {
-      console.log("No trades to submit, skipping backend call");
-    }
   };
 
   const confirmTrades = (trades: ConfirmedTrade[]) => {

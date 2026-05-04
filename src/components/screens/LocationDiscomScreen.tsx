@@ -476,23 +476,6 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
                 <AlertTriangle size={10} />
                 Skip for now
               </button>
-              
-              {/* TODO: Remove this dummy button before production */}
-              <span className="text-muted-foreground/30">|</span>
-              <button
-                onClick={() => {
-                  setIsVerified(true);
-                  setUserData({ 
-                    address: location, 
-                    city: city,
-                    discom: selectedDiscom?.name || "" 
-                  });
-                  onContinue(true, { address: location, city, discom: selectedDiscom?.name || "" });
-                }}
-                className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-1.5"
-              >
-                [Dev] Mark as Verified
-              </button>
             </div>
           )}
         </div>

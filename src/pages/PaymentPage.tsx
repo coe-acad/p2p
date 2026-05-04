@@ -18,6 +18,30 @@ declare global {
   }
 }
 
+const RAZORPAY_SCRIPT_ID = "razorpay-checkout-js";
+
+const loadRazorpayScript = async () => {
+  if (window.Razorpay) return true;
+
+  const existingScript = document.getElementById(RAZORPAY_SCRIPT_ID) as HTMLScriptElement | null;
+  if (existingScript) {
+    return new Promise<boolean>((resolve) => {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+    });
+  }
+
+  return new Promise<boolean>((resolve) => {
+    const script = document.createElement("script");
+    script.id = RAZORPAY_SCRIPT_ID;
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const PaymentPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -57,10 +81,17 @@ const PaymentPage = () => {
     createOrder();
   }, [paymentUrl]);
 
-  const handlePayNow = () => {
-    if (!order || !window.Razorpay) {
+  const handlePayNow = async () => {
+    if (!order) {
       setStatus("error");
       setErrorMessage("Payment system not ready");
+      return;
+    }
+
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded || !window.Razorpay) {
+      setStatus("error");
+      setErrorMessage("Failed to load payment gateway. Please try again.");
       return;
     }
 

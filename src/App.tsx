@@ -3,7 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PublicOnlyRoute, RoleProtectedRoute } from "@/components/layout/ProtectedRoute";
+import {
+  PublicOnlyRoute,
+  RoleProtectedRoute,
+  VerificationRoute,
+  IntentAccessRoute,
+} from "@/components/layout/ProtectedRoute";
 
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
@@ -11,6 +16,7 @@ import VerifyPage from "./pages/VerifyPage";
 import SuccessPage from "./pages/SuccessPage";
 
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
+import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import CalculatingPage from "./pages/CalculatingPage";
 import EarningsHookPage from "./pages/EarningsHookPage";
@@ -51,20 +57,21 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="min-h-screen bg-background">
           <Routes>
             {/* Public routes - redirects to /home if already logged in */}
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
-            <Route path="/intent" element={<PublicOnlyRoute><IntentPage /></PublicOnlyRoute>} />
+            <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
             {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
-            <Route path="/verify" element={<VerifyPage />} />
+            <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
 
             {/* Protected routes - redirects to / if not logged in */}
             <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
 
             {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
             <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
             <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
 
             {/* Post-Onboarding - Seller only */}

@@ -1,50 +1,56 @@
-import axios from "axios";
-import { auth } from "@/lib/firebase";
+import { getAuthHeaders } from "@/services/authHeaders";
 import { convertTradesToSchema } from "@/utils/tradeSchemaConverter";
 import type { PlannedTrade } from "@/hooks/usePublishedTrades";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { TradeHistoryEnvelopeSchema, TradeHistoryItemSchema, TradeStatusSchema } from "@/services/apiSchemas";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
-
-const getAuthHeaders = async (): Promise<Record<string, string>> => {
-  const user = auth.currentUser;
-  if (!user) return {};
-  const token = await user.getIdToken();
-  return { Authorization: `Bearer ${token}` };
-};
+const backendClient = createApiClient(BACKEND_URL);
 
 // Submit planned trades to the backend for Beckn catalog publish
-export const submitTrades = async (trades: PlannedTrade[]): Promise<void> => {
-  const tradeSubmissions = convertTradesToSchema(trades);
-  const headers = await getAuthHeaders();
-  await axios.post(
-    `${BACKEND_URL}/api/create`,
-    { trades: tradeSubmissions },
-    { headers }
-  );
+export const submitTrades = async (trades: PlannedTrade[], options?: RequestOptions): Promise<void> => {
+  try {
+    const tradeSubmissions = convertTradesToSchema(trades);
+    const headers = await getAuthHeaders();
+    await requestWithRetry(
+      backendClient,
+      { url: "/api/create", method: "POST", data: { trades: tradeSubmissions }, headers },
+      { ...options, retries: 1 }
+    );
+  } catch (error) {
+    throw toApiError(error, "Failed to submit trades");
+  }
 };
 
 // Poll trade confirmation status by transaction_id
 export const getTradeStatus = async (
-  transactionId: string
+  transactionId: string,
+  options?: RequestOptions
 ): Promise<{ status: boolean; price: number | null }> => {
-  const { data } = await axios.get(`${BACKEND_URL}/api/trade-status`, {
-    params: { transaction_id: transactionId },
-  });
-  return data;
+  try {
+    const data = await requestWithRetry<{ status: boolean; price: number | null }>(
+      backendClient,
+      { url: "/api/trade-status", method: "GET", params: { transaction_id: transactionId } },
+      options
+    );
+    return TradeStatusSchema.parse(data);
+  } catch (error) {
+    throw toApiError(error, "Failed to fetch trade status");
+  }
 };
 
-export interface TradeHistoryItem {
-  type: "trade" | "catalog";
-  transaction_id?: string;
-  catalog_id?: string;
-  offer_ids?: string[];
-  status: string;
-  updated_at?: string;
-  created_at?: string;
-}
+export type TradeHistoryItem = ReturnType<typeof TradeHistoryItemSchema.parse>;
 
-export const getTradeHistory = async (): Promise<TradeHistoryItem[]> => {
-  const headers = await getAuthHeaders();
-  const { data } = await axios.get(`${BACKEND_URL}/api/trades`, { headers });
-  return data.items || [];
+export const getTradeHistory = async (options?: RequestOptions): Promise<TradeHistoryItem[]> => {
+  try {
+    const headers = await getAuthHeaders();
+    const data = await requestWithRetry<{ items?: TradeHistoryItem[] }>(
+      backendClient,
+      { url: "/api/trades", method: "GET", headers },
+      options
+    );
+    return TradeHistoryEnvelopeSchema.parse(data).items;
+  } catch (error) {
+    throw toApiError(error, "Failed to fetch trade history");
+  }
 };

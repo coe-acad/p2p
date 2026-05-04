@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Leaf, Clock, TrendingUp, Zap, RefreshCw, Check, Pause, Sliders, MessageCircle, X, ArrowLeft, Battery, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format, addDays, parse } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { auth } from "@/lib/firebase";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -223,24 +225,42 @@ const PreparedTomorrowScreen = ({
   };
 
   try {
-    const API_URL = "https://atria-bbp.atriauniversity.ai/api/create";
+    // Get Firebase token for authentication
+    if (!auth.currentUser) {
+      logger.error("Trade publish: not authenticated");
+      throw new Error("Not authenticated. Please log in again.");
+    }
+
+    logger.devLog("User authenticated for trade publish");
+    const token = await auth.currentUser.getIdToken();
+    logger.devLog("ID token obtained:", Boolean(token));
+    const authHeader = { Authorization: `Bearer ${token}` };
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+    const API_URL = `${BACKEND_URL}/api/create`;
+
+    logger.devLog("Publishing trades:", payload);
+    logger.devLog("Authorization header present:", Boolean(authHeader.Authorization));
 
     const res = await fetch(API_URL, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(payload),
-});
-
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader,
+      },
+      body: JSON.stringify(payload),
+    });
 
     if (!res.ok) {
-      throw new Error(`API error: ${res.status}`);
+      const errorText = await res.text();
+      logger.devError("Publish trades API error:", res.status, errorText, payload);
+      logger.error(`Publish trades failed (HTTP ${res.status})`);
+      throw new Error(`API error: ${res.status} - ${errorText}`);
     }
 
     return await res.json();
   } catch (err) {
-    console.error("Trade post failed:", err);
+    logger.error("Trade post failed", err);
     throw err;
   }
 };
@@ -248,6 +268,8 @@ const PreparedTomorrowScreen = ({
   
   // Handler for publishing trades (persists to localStorage)
   const handlePublish = async () => {
+  if (isPublishing) return;
+
   if (!userData.name || !userData.consumerId) {
     alert("Please complete your profile (Name and Meter Number) before publishing trades.");
     navigate("/settings/profile");
@@ -255,10 +277,11 @@ const PreparedTomorrowScreen = ({
   }
 
   if (activeTimeSlots.length === 0) {
-    console.log("No active trades to approve — skipping publish");
+    logger.devLog("No active trades to approve — skipping publish");
     return;
   }
 
+  setIsPublishing(true);
   try {
     // 1. Send to backend
     await postTradesToBackend(activeTimeSlots);
@@ -283,6 +306,8 @@ const PreparedTomorrowScreen = ({
   } catch (err) {
     // Optional: show UI error toast here
     alert("Failed to publish trades. Please try again.");
+  } finally {
+    setIsPublishing(false);
   }
 };
 
@@ -338,6 +363,7 @@ const PreparedTomorrowScreen = ({
   const [tempExcludedHours, setTempExcludedHours] = useState<string[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatResponse, setChatResponse] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleOpenControl = () => {
     setModalStep('main');
@@ -686,11 +712,11 @@ const PreparedTomorrowScreen = ({
               <>
                 <button
                   onClick={handleLooksGood}
-                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId}
-                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : ""}
+                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing}
+                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : isPublishing ? "Publishing..." : ""}
                 >
-                  {t("trades.approveNow")}
+                  {isPublishing ? "Publishing..." : t("trades.approveNow")}
                 </button>
                 <button onClick={() => { resetApprovalState(); handleOpenControl(); }} className="btn-outline-calm flex-1 flex items-center justify-center gap-1.5 !py-2.5 text-sm">
                   <span>{t("common.change")}</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -6,9 +7,10 @@ import { useDiscoverListings } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
-import { ShoppingCart, Zap } from "lucide-react";
+import { ShoppingCart, Zap, User } from "lucide-react";
 
 const BuyerHomePage = () => {
+  const navigate = useNavigate();
   const { userData } = useUserData();
   const {
     listings,
@@ -38,10 +40,17 @@ const BuyerHomePage = () => {
       <div className="screen-container !justify-start !pt-4 !pb-6">
         <PageContainer gap={4}>
           {/* Header */}
-          <div className="animate-fade-in">
+          <div className="flex items-center justify-between animate-fade-in">
             <h1 className="text-lg font-bold text-foreground">
               {getGreeting()} {userData.name || "Buyer"}!
             </h1>
+            <button
+              onClick={() => navigate("/buyer-profile")}
+              className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+              aria-label="Go to profile"
+            >
+              <User size={16} className="text-primary" />
+            </button>
           </div>
 
           {/* Buyer Welcome Card */}

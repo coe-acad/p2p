@@ -1,5 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { saveUser, loadUser } from "@/services/userService";
+
+const isIntentValue = (value: unknown): value is "sell" | "buy" =>
+  value === "sell" || value === "buy";
 
 export interface UserData {
   name: string;
@@ -77,32 +82,112 @@ const DEFAULT_USER_DATA: UserData = {
   generationProfile: undefined,
   userContext: "",
   isReturningUser: false,
-  intent: "sell",
 };
 
-const STORAGE_KEY = "samai_user_data";
+const LEGACY_STORAGE_KEY = "samai_user_data";
+const SESSION_STORAGE_KEY = "samai_user_data_session";
+const PREFS_STORAGE_KEY = "samai_user_prefs";
+
+/** Persisted to localStorage — intent is intentionally omitted (Firestore is the source of truth when signed in). */
+type UserPrefs = Pick<UserData, "automationLevel" | "isReturningUser">;
+
+const getUserPrefs = (data: UserData): UserPrefs => ({
+  automationLevel: data.automationLevel,
+  isReturningUser: data.isReturningUser,
+});
 
 export const useUserData = () => {
+  /** False until Firebase auth has been resolved and Firestore user doc (if any) has been merged in. */
+  const [profileHydrated, setProfileHydrated] = useState(false);
+  const hadFirebaseUserRef = useRef(false);
+
   const [userData, setUserDataState] = useState<UserData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return {
-          ...DEFAULT_USER_DATA,
-          ...parsed,
-          name: normalizeName(parsed?.name),
-          address: normalizeAddress(parsed?.address),
-        };
-      } catch {
-        return DEFAULT_USER_DATA;
-      }
+    const sessionStored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const prefsStored = localStorage.getItem(PREFS_STORAGE_KEY);
+
+    let parsedSession = {};
+    let parsedLegacy = {};
+    let parsedPrefs = {};
+
+    try {
+      parsedSession = sessionStored ? JSON.parse(sessionStored) : {};
+    } catch {
+      parsedSession = {};
     }
-    return DEFAULT_USER_DATA;
+
+    try {
+      parsedLegacy = legacyStored ? JSON.parse(legacyStored) : {};
+    } catch {
+      parsedLegacy = {};
+    }
+
+    try {
+      parsedPrefs = prefsStored ? JSON.parse(prefsStored) : {};
+    } catch {
+      parsedPrefs = {};
+    }
+
+    const parsed = { ...parsedLegacy, ...parsedSession, ...parsedPrefs } as Record<string, unknown>;
+    const { intent: _staleIntent, ...parsedWithoutIntent } = parsed;
+
+    return {
+      ...DEFAULT_USER_DATA,
+      ...(parsedWithoutIntent as Partial<UserData>),
+      name: normalizeName((parsedWithoutIntent as UserData)?.name),
+      address: normalizeAddress((parsedWithoutIntent as UserData)?.address),
+    };
   });
 
+  // After login, intent and profile must come from Firestore when available (never infer "sell" by default).
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        if (hadFirebaseUserRef.current) {
+          setUserDataState({ ...DEFAULT_USER_DATA });
+          sessionStorage.removeItem(SESSION_STORAGE_KEY);
+          localStorage.removeItem(PREFS_STORAGE_KEY);
+          localStorage.removeItem("samai_selected_intent");
+        }
+        hadFirebaseUserRef.current = false;
+        setProfileHydrated(true);
+        return;
+      }
+
+      hadFirebaseUserRef.current = true;
+
+      if (!firebaseUser.phoneNumber) {
+        setProfileHydrated(true);
+        return;
+      }
+      const phone = firebaseUser.phoneNumber;
+      try {
+        const remote = await loadUser(phone);
+        if (remote && Object.keys(remote).length > 0) {
+          const { intent: _remoteIntentField, ...remoteRest } = remote as Record<string, unknown>;
+          setUserDataState((prev) => ({
+            ...prev,
+            ...(remoteRest as Partial<UserData>),
+            intent: isIntentValue(remote.intent) ? remote.intent : undefined,
+            name: normalizeName(remote.name ?? prev.name),
+            address: normalizeAddress(remote.address ?? prev.address),
+            phone: remote.phone || phone || prev.phone,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to hydrate user profile from Firestore:", err);
+      } finally {
+        setProfileHydrated(true);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const { intent: _omitIntent, ...persistWithoutIntent } = userData;
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persistWithoutIntent));
+    localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(getUserPrefs(userData)));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, [userData]);
 
   const setUserData = (updates: Partial<UserData>) => {
@@ -113,13 +198,12 @@ export const useUserData = () => {
         name: updates.name ? normalizeName(updates.name) : prev.name,
         address: updates.address ? normalizeAddress(updates.address) : prev.address,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });
   };
 
-  return { userData, setUserData };
+  return { userData, setUserData, profileHydrated };
 };
 
 // Helper to extract locality from full address

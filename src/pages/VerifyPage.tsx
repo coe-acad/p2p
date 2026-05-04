@@ -1,19 +1,17 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { ensureUserOnServer, loadUser, saveUser } from "@/services/userService";
+
+const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "sell" || value === "buy";
 
 const VerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const intent = location.state?.intent || localStorage.getItem("samai_selected_intent") || "sell";
+  // Intent from IntentPage selection (only present for new-user flow)
+  const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
   const isReturningUser = location.state?.isReturningUser || false;
-  const { setUserData } = useUserData();
-
-  // Save intent to localStorage so it persists on refresh
-  if (intent) {
-    localStorage.setItem("samai_selected_intent", intent);
-  }
+  const { userData: currentUserData, setUserData } = useUserData();
 
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
@@ -25,16 +23,35 @@ const VerifyPage = () => {
     const isReturning = !!existingUser;
 
     if (isReturning && existingUser) {
-      // Returning user - load their existing data and go to home
-      // Use the intent from current session (user's current choice), not the original user's intent
-      const userIntent = intent || existingUser.intent || "sell";
+      // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
+      const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
 
+      const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
       setUserData({
-        ...existingUser,
+        ...existingWithoutIntent,
         phone: phoneWithCountry,
         aadhaarVerified: true,
-        intent: userIntent, // Preserve the user's selected intent
+        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
       });
+
+      saveUser({
+        phone: phoneWithCountry,
+        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+        name: existingUser.name || "",
+        address: existingUser.address || "",
+        city: existingUser.city || "",
+        discom: existingUser.discom || "",
+        consumerId: existingUser.consumerId || "",
+        automationLevel: existingUser.automationLevel || "recommend",
+        aadhaarVerified: true,
+      } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
+
+      ensureUserOnServer({
+        name: existingUser.name || "",
+        meter_number: existingUser.consumerId || "",
+        discom: existingUser.discom || "",
+        consumerId: existingUser.consumerId || "",
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
 
       // Mark all onboarding steps as complete
       localStorage.setItem("samai_onboarding_complete", "true");
@@ -43,34 +60,53 @@ const VerifyPage = () => {
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = userIntent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute =
+        resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
       navigate(targetRoute, { replace: true });
     } else {
-      // New user - continue with 5-step verification
-      const existingData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-      setUserData({
+      // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
+      const intentFromStorage = localStorage.getItem("samai_selected_intent");
+      const newUserIntent: "sell" | "buy" | undefined =
+        (isIntentValue(selectedIntent) ? selectedIntent : undefined) ||
+        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined);
+      if (!newUserIntent) {
+        navigate("/intent", { replace: true });
+        return;
+      }
+      const newUserData = {
         phone: phoneWithCountry,
         aadhaarVerified: true,
-        intent,
-        name: existingData.name,
-        consumerId: existingData.consumerId,
-        address: existingData.address,
-        city: existingData.city,
-        discom: existingData.discom,
-      });
+        intent: newUserIntent,
+        name: currentUserData.name || "",
+        consumerId: currentUserData.consumerId || "",
+        address: currentUserData.address || "",
+        city: currentUserData.city || "",
+        discom: currentUserData.discom || "",
+        automationLevel: "recommend" as const,
+      };
 
-      ensureUserOnServer().catch((err) =>
-        console.error("Failed to ensure user on server:", err)
+      setUserData(newUserData);
+
+      localStorage.removeItem("samai_selected_intent");
+
+      saveUser(newUserData as any).catch((err) =>
+        console.error("Failed to save user intent to Firestore:", err)
       );
 
-      // Mark onboarding as complete for new users too
+      ensureUserOnServer({
+        name: newUserData.name,
+        meter_number: newUserData.consumerId,
+        discom: newUserData.discom,
+        consumerId: newUserData.consumerId,
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
+
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");
       localStorage.setItem("samai_onboarding_location_done", "true");
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = intent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/home";
       navigate(targetRoute, { replace: true });
     }
   };
@@ -78,8 +114,9 @@ const VerifyPage = () => {
   return (
     <VerificationScreen
       onVerified={handleVerified}
-      onBack={() => navigate("/")}
+      onBack={() => navigate(isReturningUser ? "/" : "/intent")}
       isReturningUser={isReturningUser}
+      selectedIntent={selectedIntent}
     />
   );
 };
