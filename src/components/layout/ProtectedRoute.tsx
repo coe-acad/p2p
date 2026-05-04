@@ -20,6 +20,13 @@ const LoadingSpinner = () => (
   </div>
 );
 
+/** Logged-in home: never default to seller — missing intent goes to intent picker. */
+const homePathForIntent = (intent: "sell" | "buy" | undefined): string => {
+  if (intent === "buy") return "/buyer-home";
+  if (intent === "sell") return "/home";
+  return "/intent";
+};
+
 export const ProtectedRoute = ({ children }: RouteProps) => {
   const { user, isLoading } = useAuth();
 
@@ -36,9 +43,9 @@ export const ProtectedRoute = ({ children }: RouteProps) => {
 
 export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
-  const { userData } = useUserData();
+  const { userData, profileHydrated } = useUserData();
 
-  if (isLoading) {
+  if (isLoading || !profileHydrated) {
     return <LoadingSpinner />;
   }
 
@@ -46,10 +53,13 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
     return <Navigate to="/" replace />;
   }
 
-  const userIntent = userData.intent || "sell";
+  const userIntent = userData.intent;
+  if (userIntent !== "sell" && userIntent !== "buy") {
+    return <Navigate to="/intent" replace />;
+  }
+
   if (userIntent !== requiredIntent) {
-    const redirectTo = userIntent === "sell" ? "/home" : "/buyer-home";
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={homePathForIntent(userIntent)} replace />;
   }
 
   return <>{children}</>;
@@ -57,15 +67,30 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
 
 export const PublicOnlyRoute = ({ children }: RouteProps) => {
   const { user, isLoading } = useAuth();
-  const { userData } = useUserData();
+  const { userData, profileHydrated } = useUserData();
 
-  if (isLoading) {
+  if (isLoading || (user && !profileHydrated)) {
     return <LoadingSpinner />;
   }
 
   if (user) {
-    const redirectTo = userData.intent === "buy" ? "/buyer-home" : "/home";
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={homePathForIntent(userData.intent)} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+/** Intent page: show picker unless user already has a stored role (then send to the right app). */
+export const IntentAccessRoute = ({ children }: RouteProps) => {
+  const { user, isLoading } = useAuth();
+  const { userData, profileHydrated } = useUserData();
+
+  if (isLoading || (user && !profileHydrated)) {
+    return <LoadingSpinner />;
+  }
+
+  if (user && (userData.intent === "buy" || userData.intent === "sell")) {
+    return <Navigate to={homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;
@@ -73,16 +98,17 @@ export const PublicOnlyRoute = ({ children }: RouteProps) => {
 
 export const VerificationRoute = ({ children }: RouteProps) => {
   const { user, isLoading } = useAuth();
-  const { userData } = useUserData();
+  const { userData, profileHydrated } = useUserData();
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  // Verification should only be accessible pre-auth.
   if (user) {
-    const redirectTo = userData.intent === "buy" ? "/buyer-home" : "/home";
-    return <Navigate to={redirectTo} replace />;
+    if (!profileHydrated) {
+      return <LoadingSpinner />;
+    }
+    return <Navigate to={homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;

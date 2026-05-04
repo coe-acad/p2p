@@ -51,6 +51,9 @@ export const useAuth = (): AuthState => {
       await signOut(auth);
       // Clear localStorage on logout
       localStorage.removeItem("samai_user_data");
+      localStorage.removeItem("samai_user_prefs");
+      localStorage.removeItem("samai_selected_intent");
+      sessionStorage.removeItem("samai_user_data_session");
       localStorage.removeItem("samai_onboarding_complete");
       localStorage.removeItem("samai_aadhaar_verified");
       localStorage.removeItem("samai_onboarding_location_done");

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useUserData } from "@/hooks/useUserData";
 
@@ -14,18 +14,23 @@ const ROLES: { id: IntentValue; label: string; description: string }[] = [
 const RoleSettingsPage = () => {
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
-  const currentIntent: IntentValue = (userData.intent as IntentValue) || "sell";
-  const [selected, setSelected] = useState<IntentValue>(currentIntent);
+  const currentIntent = userData.intent === "buy" || userData.intent === "sell" ? userData.intent : undefined;
+  const [selected, setSelected] = useState<IntentValue | undefined>(currentIntent);
+
+  useEffect(() => {
+    if (userData.intent === "buy" || userData.intent === "sell") {
+      setSelected(userData.intent);
+    }
+  }, [userData.intent]);
   const [saving, setSaving] = useState(false);
 
   const handleSave = () => {
-    if (saving || selected === currentIntent) {
+    if (!selected || saving || selected === currentIntent) {
       navigate("/profile");
       return;
     }
     setSaving(true);
     setUserData({ intent: selected });
-    localStorage.setItem("samai_selected_intent", selected);
     navigate(selected === "buy" ? "/buyer-home" : "/home", { replace: true });
   };
 
@@ -75,10 +80,10 @@ const RoleSettingsPage = () => {
 
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !selected}
           className="btn-solar w-full text-sm !py-3 mt-2 disabled:opacity-50"
         >
-          {selected === currentIntent ? "Done" : "Save & Switch"}
+          {!selected ? "Choose a role" : selected === currentIntent ? "Done" : "Save & Switch"}
         </button>
       </PageContainer>
     </div>

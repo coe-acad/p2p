@@ -23,25 +23,17 @@ const VerifyPage = () => {
     const isReturning = !!existingUser;
 
     if (isReturning && existingUser) {
-      // Returning user - intent comes from Firestore, NOT from localStorage or selection.
-      // Returning users skip IntentPage, so their stored role is the source of truth.
-      const storedIntent = localStorage.getItem("samai_selected_intent");
-      const resolvedIntent =
-        (isIntentValue(existingUser.intent) ? existingUser.intent : undefined) ||
-        (isIntentValue(storedIntent) ? storedIntent : undefined);
+      // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
+      const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
 
+      const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
       setUserData({
-        ...existingUser,
+        ...existingWithoutIntent,
         phone: phoneWithCountry,
         aadhaarVerified: true,
         ...(resolvedIntent ? { intent: resolvedIntent } : {}),
       });
 
-      if (resolvedIntent) {
-        localStorage.setItem("samai_selected_intent", resolvedIntent);
-      }
-
-      // Explicitly save intent to Firestore
       saveUser({
         phone: phoneWithCountry,
         ...(resolvedIntent ? { intent: resolvedIntent } : {}),
@@ -52,7 +44,14 @@ const VerifyPage = () => {
         consumerId: existingUser.consumerId || "",
         automationLevel: existingUser.automationLevel || "recommend",
         aadhaarVerified: true,
-      } as any).catch(err => console.error("Failed to save intent to Firestore:", err));
+      } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
+
+      ensureUserOnServer({
+        name: existingUser.name || "",
+        meter_number: existingUser.consumerId || "",
+        discom: existingUser.discom || "",
+        consumerId: existingUser.consumerId || "",
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
 
       // Mark all onboarding steps as complete
       localStorage.setItem("samai_onboarding_complete", "true");
@@ -61,16 +60,19 @@ const VerifyPage = () => {
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
 
-      const targetRoute = resolvedIntent === "buy" ? "/buyer-home" : "/home";
+      const targetRoute =
+        resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
       navigate(targetRoute, { replace: true });
     } else {
-      // New user - intent comes from IntentPage selection
+      // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
       const intentFromStorage = localStorage.getItem("samai_selected_intent");
-      const intentFromUserData = currentUserData.intent;
-      const newUserIntent: "sell" | "buy" =
-        selectedIntent ||
-        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined) ||
-        (isIntentValue(intentFromUserData) ? intentFromUserData : "sell");
+      const newUserIntent: "sell" | "buy" | undefined =
+        (isIntentValue(selectedIntent) ? selectedIntent : undefined) ||
+        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined);
+      if (!newUserIntent) {
+        navigate("/intent", { replace: true });
+        return;
+      }
       const newUserData = {
         phone: phoneWithCountry,
         aadhaarVerified: true,
@@ -85,15 +87,18 @@ const VerifyPage = () => {
 
       setUserData(newUserData);
 
-      localStorage.setItem("samai_selected_intent", newUserIntent);
+      localStorage.removeItem("samai_selected_intent");
 
       saveUser(newUserData as any).catch((err) =>
         console.error("Failed to save user intent to Firestore:", err)
       );
 
-      ensureUserOnServer().catch((err) =>
-        console.error("Failed to ensure user on server:", err)
-      );
+      ensureUserOnServer({
+        name: newUserData.name,
+        meter_number: newUserData.consumerId,
+        discom: newUserData.discom,
+        consumerId: newUserData.consumerId,
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
 
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");

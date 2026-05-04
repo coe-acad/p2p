@@ -35,16 +35,25 @@ export const loadUser = async (phone: string): Promise<Partial<UserData> | null>
   return null;
 };
 
+export type EnsureUserPayload = {
+  name?: string;
+  meter_number?: string;
+  discom?: string;
+  consumerId?: string;
+};
+
+/** Syncs profile fields to the BPP Firestore-backed user doc (used at publish time). */
 export const ensureUserOnServer = async (
-  name?: string,
-  meter_number?: string,
+  payload?: EnsureUserPayload,
   options?: RequestOptions
 ): Promise<void> => {
   const user = auth.currentUser;
   if (!user) return;
   const body: Record<string, string> = {};
-  if (name) body.name = name;
-  if (meter_number) body.meter_number = meter_number;
+  if (payload?.name) body.name = payload.name;
+  if (payload?.meter_number) body.meter_number = payload.meter_number;
+  if (payload?.discom) body.discom = payload.discom;
+  if (payload?.consumerId) body.consumerId = payload.consumerId;
 
   try {
     const headers = await getAuthHeaders();

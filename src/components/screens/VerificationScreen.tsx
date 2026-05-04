@@ -303,12 +303,11 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
 
       // For new users, save phone number so profile data can be saved to Firestore
       if (!isUserReturning) {
-        const intentFromStorage = localStorage.getItem("samai_selected_intent");
-        const effectiveIntent: "sell" | "buy" =
-          selectedIntent || (intentFromStorage === "buy" || intentFromStorage === "sell" ? intentFromStorage : "sell");
+        // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
+        const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
         setUserData({
           phone: `+91${phoneNumber}`,
-          intent: effectiveIntent,
+          ...(flowIntent ? { intent: flowIntent } : {}),
         });
         // New users proceed with verification steps
         setStep("profile");
@@ -336,7 +335,11 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       consumerId: meter_number,
     });
     try {
-      await ensureUserOnServer(name, meter_number);
+      await ensureUserOnServer({
+        name,
+        meter_number,
+        consumerId: meter_number,
+      });
     } catch (err) {
       logger.error("Failed to sync user profile", err);
     }

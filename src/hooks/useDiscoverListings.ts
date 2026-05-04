@@ -62,6 +62,25 @@ export const useDiscoverListings = () => {
       setLoading(true);
       setError(null);
 
+      // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
+      if (pageNumber === 0) {
+        await requestWithRetry<unknown>(
+          discoverClientRef.current,
+          {
+            url: "/discover",
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            data: {},
+          },
+          {
+            signal: controller.signal,
+            timeoutMs: 120000,
+            retries: 1,
+            retryDelayMs: 2000,
+          }
+        );
+      }
+
       const params = new URLSearchParams();
 
       // Add pagination
