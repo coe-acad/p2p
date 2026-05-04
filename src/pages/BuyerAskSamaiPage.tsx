@@ -30,7 +30,7 @@ const BuyerAskSamaiPage = () => {
               <div>
                 <p className="text-base font-bold text-foreground">Samai Assistant</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Get personalized recommendations for your energy purchases and usage patterns
+                  Get personalized recommendations for your energy purchases and usage patterns that you have.
                 </p>
               </div>
             </div>

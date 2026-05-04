@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB to accommodate PDF worker
         runtimeCaching: [
           {
             urlPattern: /\/api\/create$/i,
