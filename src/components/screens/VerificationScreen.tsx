@@ -296,6 +296,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
             body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
           });
           logger.devLog("Auth bootstrap complete");
+          // Force token refresh to include the newly set phone_number custom claim
+          await auth.currentUser?.getIdToken(true);
+          logger.devLog("Token refreshed with phone_number claim");
         } catch (err) {
           logger.devDebug("Auth bootstrap failed (non-critical):", err);
         }
