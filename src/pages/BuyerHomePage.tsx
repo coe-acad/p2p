@@ -7,7 +7,7 @@ import { useDiscoverListings } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
-import { ShoppingCart, Zap, User } from "lucide-react";
+import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
 const BuyerHomePage = () => {
   const navigate = useNavigate();
@@ -23,10 +23,17 @@ const BuyerHomePage = () => {
     goToPage,
   } = useDiscoverListings();
   const [selectedListing, setSelectedListing] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchListings();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchListings();
+    setIsRefreshing(false);
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -44,13 +51,24 @@ const BuyerHomePage = () => {
             <h1 className="text-lg font-bold text-foreground">
               {getGreeting()} {userData.name || "Buyer"}!
             </h1>
-            <button
-              onClick={() => navigate("/buyer-profile")}
-              className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-              aria-label="Go to profile"
-            >
-              <User size={16} className="text-primary" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors disabled:opacity-50"
+                aria-label="Refresh listings"
+                title="Sync latest listings from CDS"
+              >
+                <RefreshCw size={16} className={`text-blue-600 ${isRefreshing ? "animate-spin" : ""}`} />
+              </button>
+              <button
+                onClick={() => navigate("/buyer-profile")}
+                className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                aria-label="Go to profile"
+              >
+                <User size={16} className="text-primary" />
+              </button>
+            </div>
           </div>
 
           {/* Buyer Welcome Card */}
