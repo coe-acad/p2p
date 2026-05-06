@@ -58,15 +58,17 @@ interface PreparedTomorrowScreenProps {
 
 // Base time slots - will be filtered based on user choices
 // isBatteryPowered indicates if battery discharge is providing the energy (for evening/night)
-// Base time slots configured for ₹185 total: 5+6+5+5+4+4 = 29 kWh @ ~₹6.38 avg
+// Placeholder rates; randomized on each publish to test discovery
 const BASE_TIME_SLOTS = [
-  { id: "10AM", time: "10:00 AM – 11:00 AM", kWh: 5, rate: 6.30, isBatteryPowered: false },
-  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 6, rate: 6.35, isBatteryPowered: false },
-  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 5, rate: 6.40, isBatteryPowered: false },
-  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 5, rate: 6.45, isBatteryPowered: false },
-  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 4, rate: 6.50, isBatteryPowered: false },
-  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 4, rate: 6.55, isBatteryPowered: true },
+  { id: "10AM", time: "10:00 AM – 11:00 AM", kWh: 5, rate: 1.0, isBatteryPowered: false },
+  { id: "11AM", time: "11:00 AM – 12:00 PM", kWh: 6, rate: 1.0, isBatteryPowered: false },
+  { id: "12PM", time: "12:00 PM – 1:00 PM", kWh: 5, rate: 1.0, isBatteryPowered: false },
+  { id: "1PM", time: "1:00 PM – 2:00 PM", kWh: 5, rate: 1.0, isBatteryPowered: false },
+  { id: "2PM", time: "2:00 PM – 3:00 PM", kWh: 4, rate: 1.0, isBatteryPowered: false },
+  { id: "5PM", time: "5:00 PM – 6:00 PM", kWh: 4, rate: 1.0, isBatteryPowered: true },
 ];
+
+const generateRandomRate = () => Number((Math.random() * 1.95 + 0.05).toFixed(2));
 
 // Helper to calculate earnings from kWh and rate
 const calculateEarnings = (kWh: number, rate: number) => Math.round(kWh * rate);
@@ -213,7 +215,7 @@ const PreparedTomorrowScreen = ({
     return {
       startTime,
       endTime,
-      price: slot.rate,
+      price: generateRandomRate(),
       kWh: slot.kWh,
     };
   });

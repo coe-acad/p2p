@@ -32,9 +32,11 @@ const VerifyPage = () => {
         phone: phoneWithCountry,
         aadhaarVerified: true,
         ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+        onboardingComplete: true, // Lock all user details for returning users
       });
 
-      saveUser({
+      // Save to Firestore BEFORE navigating to ensure intent is persisted
+      await saveUser({
         phone: phoneWithCountry,
         ...(resolvedIntent ? { intent: resolvedIntent } : {}),
         name: existingUser.name || "",
@@ -83,13 +85,15 @@ const VerifyPage = () => {
         city: currentUserData.city || "",
         discom: currentUserData.discom || "",
         automationLevel: "recommend" as const,
+        onboardingComplete: true, // Lock all user details after signup
       };
 
       setUserData(newUserData);
 
       localStorage.removeItem("samai_selected_intent");
 
-      saveUser(newUserData as any).catch((err) =>
+      // Save to Firestore BEFORE navigating to ensure intent is persisted
+      await saveUser(newUserData as any).catch((err) =>
         console.error("Failed to save user intent to Firestore:", err)
       );
 

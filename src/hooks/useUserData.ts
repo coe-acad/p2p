@@ -49,6 +49,8 @@ export interface UserData {
   isReturningUser?: boolean;
   // User role: seller or buyer
   intent?: "sell" | "buy";
+  // Onboarding completion flag - locks all user details except automationLevel
+  onboardingComplete?: boolean;
 }
 
 const normalizeName = (name?: string) => {
@@ -190,8 +192,41 @@ export const useUserData = () => {
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, [userData]);
 
+  // Fields that are locked after onboarding (read-only)
+  const LOCKED_FIELDS = [
+    "name", "phone", "address", "city", "discom", "consumerId",
+    "aadhaarVerified", "intent", "vcVerifiedAt", "utilityCustomer",
+    "generationProfile", "userContext", "isReturningUser", "email", "upiId", "isVCVerified"
+  ] as const;
+
+  // Only these fields can be updated after onboarding
+  const EDITABLE_AFTER_ONBOARDING = ["automationLevel", "schoolHolidays", "summerVacationStart", "summerVacationEnd", "upcomingEvents"] as const;
+
   const setUserData = (updates: Partial<UserData>) => {
     setUserDataState(prev => {
+      // If onboarding is complete, only allow updates to specific fields
+      if (prev.onboardingComplete) {
+        const allowedUpdates: Partial<UserData> = {};
+        for (const [key, value] of Object.entries(updates)) {
+          if ((EDITABLE_AFTER_ONBOARDING as readonly string[]).includes(key)) {
+            (allowedUpdates as Record<string, unknown>)[key] = value;
+          } else if (key === "onboardingComplete") {
+            // Allow setting onboardingComplete to true (locking), but not to false
+            if (value === true) {
+              allowedUpdates.onboardingComplete = true;
+            }
+          }
+        }
+
+        if (Object.keys(allowedUpdates).length === 0) {
+          console.warn("⚠️ Attempted to modify locked user fields after onboarding:",
+            Object.keys(updates).filter(k => !((EDITABLE_AFTER_ONBOARDING as readonly string[]).includes(k))));
+          return prev; // No changes allowed
+        }
+
+        updates = allowedUpdates;
+      }
+
       const next: UserData = {
         ...prev,
         ...updates,
