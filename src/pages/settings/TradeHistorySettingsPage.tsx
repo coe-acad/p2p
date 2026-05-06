@@ -14,6 +14,8 @@ const statusLabel = (status: string) => {
       return "Initiated";
     case "CONFIRMED":
       return "Confirmed";
+    case "COMPLETED":
+      return "Completed";
     default:
       return status;
   }

@@ -15,7 +15,7 @@ interface ConfirmOrderModalProps {
   listing: EnergyListing | null;
   offers: EnergyListing[];
   error: string | null;
-  status: 'idle' | 'selecting' | 'quoted' | 'confirming' | 'confirmed';
+  status: 'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed';
   onSelectOffer: (offer: EnergyListing) => Promise<void>;
   onCancel: () => void;
 }
@@ -68,7 +68,7 @@ export const ConfirmOrderModal = ({
               <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                 {offers.map((offer) => {
                   const offerTotal = offer.price_per_unit * offer.quantity_available;
-                  const isSelectingThisOffer = selectingOfferId === offer.id || (status === 'selecting' && selectedOffer?.id === offer.id);
+                  const isSelectingThisOffer = selectingOfferId === offer.id;
 
                   return (
                     <div key={offer.id} className="border rounded-lg p-4 space-y-3">

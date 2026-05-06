@@ -5,6 +5,8 @@ export interface EnergyListing {
   id: string;
   offer_id: string;
   catalog_id: string;
+  bpp_id?: string;
+  bpp_uri?: string;
   seller_id: string;
   seller_name: string;
   offer_name: string;

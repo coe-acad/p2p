@@ -15,7 +15,7 @@ const BuyerPaymentsPage = () => {
   useEffect(() => {
     const loadPayments = async () => {
       try {
-        const data = await getPayments();
+        const data = await getPayments("buyer");
         setPayments(data);
       } catch (error) {
         console.error("Failed to load payments:", error);
@@ -40,6 +40,8 @@ const BuyerPaymentsPage = () => {
         return <History size={16} className="text-muted-foreground" />;
     }
   };
+
+  const totalConfirmedAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <MainAppShell>
@@ -123,8 +125,8 @@ const BuyerPaymentsPage = () => {
           <div className="bg-gradient-to-br from-teal-50 to-green-50 rounded-xl p-4 shadow-card animate-slide-up border border-teal-200" style={{ animationDelay: "0.2s" }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-teal-600 font-medium">Account Balance</p>
-                <p className="text-2xl font-bold text-foreground mt-1">₹0</p>
+                <p className="text-xs text-teal-600 font-medium">Confirmed Purchases</p>
+                <p className="text-2xl font-bold text-foreground mt-1">₹{totalConfirmedAmount.toLocaleString()}</p>
               </div>
               <Wallet size={32} className="text-teal-500 opacity-20" />
             </div>

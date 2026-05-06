@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Check, Zap, ChevronDown, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, Zap, ChevronDown, AlertCircle, Wallet } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { getPayments, Payment } from "@/services/paymentService";
@@ -15,7 +15,7 @@ const PaymentsPage = () => {
   useEffect(() => {
     const loadPayments = async () => {
       try {
-        const data = await getPayments();
+        const data = await getPayments("seller");
         setPayments(data);
         setError(null);
       } catch (err) {
@@ -30,8 +30,8 @@ const PaymentsPage = () => {
     loadPayments();
   }, []);
 
-  const pendingPayments = payments.filter(p => p.status === "pending");
-  const totalAmount = pendingPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const completedPayments = payments.filter(p => p.status === "completed");
+  const totalAmount = completedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <MainAppShell>
@@ -46,8 +46,8 @@ const PaymentsPage = () => {
                 <ArrowLeft size={18} className="text-foreground" />
               </button>
               <div>
-                <h1 className="text-base font-bold text-foreground">Payments</h1>
-                <p className="text-2xs text-muted-foreground">Make a payment</p>
+                <h1 className="text-base font-bold text-foreground">Wallet</h1>
+                <p className="text-2xs text-muted-foreground">Track money you will receive</p>
               </div>
             </div>
             <SamaiLogo size="sm" showText={false} />
@@ -55,26 +55,26 @@ const PaymentsPage = () => {
 
           {/* Info Card */}
           <div className="bg-card rounded-xl p-2 shadow-card animate-slide-up space-y-1 flex-shrink-0 mx-auto w-full max-w-2xl">
-            <h3 className="text-xs font-semibold text-foreground">How you'll receive payments</h3>
+            <h3 className="text-xs font-semibold text-foreground">How receivables work</h3>
             <ul className="space-y-0.5">
               <li className="flex items-center gap-1.5">
                 <Check size={12} className="text-accent flex-shrink-0" />
-                <span className="text-[10px] text-muted-foreground">Earnings from sold energy are settled monthly</span>
+                <span className="text-[10px] text-muted-foreground">Confirmed energy sales are added to your receivables</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} className="text-accent flex-shrink-0" />
-                <span className="text-[10px] text-muted-foreground">Direct deposit to your UPI account</span>
+                <span className="text-[10px] text-muted-foreground">Payout amount reflects what the buyer is expected to pay</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} className="text-accent flex-shrink-0" />
-                <span className="text-[10px] text-muted-foreground">Track all transactions on this page</span>
+                <span className="text-[10px] text-muted-foreground">Track confirmed receipts and wallet totals on this page</span>
               </li>
             </ul>
           </div>
 
           {/* Total Amount Card */}
           <div className="bg-gradient-to-br from-primary/10 to-accent/5 rounded-xl p-2 shadow-card animate-slide-up border border-primary/20 flex-shrink-0 mx-auto w-full max-w-2xl">
-            <p className="text-[10px] text-muted-foreground">Total Amount to Pay</p>
+            <p className="text-[10px] text-muted-foreground">Total Receivable Amount</p>
             <p className="text-xl font-bold text-foreground">₹{totalAmount.toLocaleString()}</p>
           </div>
 
@@ -93,9 +93,9 @@ const PaymentsPage = () => {
               className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors flex-shrink-0"
             >
               <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold text-foreground">Pending Payments</h3>
+                <h3 className="text-sm font-semibold text-foreground">Confirmed Receipts</h3>
                 <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-medium">
-                  {loading ? "..." : pendingPayments.length}
+                  {loading ? "..." : completedPayments.length}
                 </span>
               </div>
               <ChevronDown
@@ -108,10 +108,10 @@ const PaymentsPage = () => {
               <div className="border-t border-border px-4 space-y-2 overflow-y-auto flex-1">
                 {loading ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
-                ) : pendingPayments.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">No pending payments</div>
+                ) : completedPayments.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">No confirmed receipts</div>
                 ) : (
-                  pendingPayments.map((payment) => (
+                  completedPayments.map((payment) => (
                     <div key={payment.payment_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg py-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
@@ -119,7 +119,7 @@ const PaymentsPage = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
-                            {payment.counterparty_phone ? `To ${payment.counterparty_phone}` : payment.description || "Energy Payment"}
+                            {payment.counterparty_phone ? `From ${payment.counterparty_phone}` : payment.description || "Energy Receipt"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {payment.currency} • Status: {payment.status}
@@ -139,15 +139,18 @@ const PaymentsPage = () => {
             )}
           </div>
 
-          {/* Payment Button - Fixed at Bottom */}
           <div className="border-t border-border pt-3 pb-3 bg-background flex-shrink-0 mt-auto mx-auto w-full max-w-2xl">
-            <button
-              onClick={() => navigate("/payment")}
-              className="w-full btn-solar !py-4 text-lg font-semibold flex items-center justify-center gap-3"
-            >
-              <CreditCard size={24} />
-              Make Payment
-            </button>
+            <div className="w-full bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <Wallet size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Wallet Summary</p>
+                <p className="text-xs text-muted-foreground">
+                  Confirmed trades are reflected here as the amount you will receive.
+                </p>
+              </div>
+            </div>
           </div>
       </div>
     </MainAppShell>

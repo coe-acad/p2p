@@ -14,7 +14,8 @@ interface QuoteOrderModalProps {
   listing: EnergyListing | null;
   quote: any;
   error: string | null;
-  status: 'idle' | 'selecting' | 'quoted' | 'confirming' | 'confirmed';
+  status: 'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed';
+  onGetQuote: () => Promise<void>;
   onConfirm: () => Promise<void>;
   onBack: () => void;
 }
@@ -25,6 +26,7 @@ export const QuoteOrderModal = ({
   quote,
   error,
   status,
+  onGetQuote,
   onConfirm,
   onBack,
 }: QuoteOrderModalProps) => {
@@ -35,13 +37,27 @@ export const QuoteOrderModal = ({
   const quoteQuantity = Number(
     quoteItem?.['beckn:quantity']?.unitQuantity ?? listing.quantity_available ?? 0
   );
+  const quoteOrderValue = quote?.orderValue ?? null;
   const quotedAmount = Number(
-    quoteOffer?.['beckn:price']?.value ??
-      quoteOffer?.['beckn:price']?.['schema:price'] ??
+    quoteOrderValue?.total ??
+      quoteOffer?.['beckn:price']?.value ??
+      ((quoteOffer?.['beckn:price']?.['schema:price'] ?? quoteOffer?.['beckn:price']?.price ?? listing.price_per_unit) *
+        quoteQuantity) ??
       listing.price_per_unit * listing.quantity_available
   );
   const quotePaymentStatus = quote?.['beckn:payment']?.['beckn:paymentStatus'] ?? 'Pending';
   const quoteOrderStatus = quote?.['beckn:orderStatus'] ?? 'Pending';
+  const hasQuote = Boolean(quote);
+  const primaryActionLabel =
+    status === 'quoting'
+      ? 'Getting Quote...'
+      : status === 'confirming'
+        ? 'Confirming...'
+        : status === 'confirmed'
+          ? 'Confirmed'
+          : hasQuote
+            ? 'Confirm Order'
+            : 'Get Quotation';
 
   return (
     <Dialog open={isOpen} onOpenChange={onBack}>
@@ -112,6 +128,13 @@ export const QuoteOrderModal = ({
             <p className="text-3xl font-bold text-blue-600">₹{quotedAmount.toFixed(2)}</p>
           </div>
 
+          {status === 'selected' && !hasQuote && !error && (
+            <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 p-3 rounded-lg">
+              <CheckCircle size={18} />
+              <span>Offer selected. Request the quotation to continue.</span>
+            </div>
+          )}
+
           {status === 'quoted' && !error && (
             <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
               <CheckCircle size={18} />
@@ -143,22 +166,27 @@ export const QuoteOrderModal = ({
               Back
             </Button>
             <Button
-              onClick={onConfirm}
-              disabled={status === 'confirmed' || (status !== 'quoted' && status !== 'confirming')}
+              onClick={hasQuote ? onConfirm : onGetQuote}
+              disabled={status === 'confirmed' || status === 'selecting' || status === 'quoting' || status === 'confirming'}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {status === 'confirming' ? (
+              {status === 'quoting' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Confirming...
+                  {primaryActionLabel}
+                </>
+              ) : status === 'confirming' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {primaryActionLabel}
                 </>
               ) : status === 'confirmed' ? (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Confirmed
+                  {primaryActionLabel}
                 </>
               ) : (
-                'Confirm Order'
+                primaryActionLabel
               )}
             </Button>
           </div>

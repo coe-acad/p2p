@@ -87,7 +87,7 @@ const BuyerHomePage = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
   const groupedListings = groupListingsByCatalog(listings);
@@ -126,6 +126,8 @@ const BuyerHomePage = () => {
     try {
       const selectResult = await orderService.select({
         offer_id: listing.offer_id,
+        bpp_id: listing.bpp_id,
+        bpp_uri: listing.bpp_uri,
         quantity: listing.quantity_available,
         price_per_unit: listing.price_per_unit,
         seller_name: listing.seller_name,
@@ -135,24 +137,40 @@ const BuyerHomePage = () => {
 
       setCurrentTransactionId(selectResult.transactionId);
 
-      // Auto-trigger init and treat on_init as the quotation step.
-      const initResult = await orderService.init(selectResult.transactionId, {
-        offer_id: listing.offer_id,
-        quantity: listing.quantity_available,
-        price_per_unit: listing.price_per_unit,
-        seller_name: listing.seller_name,
-        delivery_start: listing.delivery_start,
-        delivery_end: listing.delivery_end,
-      });
-
-      setCurrentOrderData(initResult.order);
       setShowOfferModal(false);
       setShowQuoteModal(true);
-      setOrderStatus('quoted');
+      setOrderStatus('selected');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
       setSelectedOffer(null);
       setOrderStatus('idle');
+    }
+  };
+
+  const handleGetQuotation = async () => {
+    if (!selectedOffer || !currentTransactionId) return;
+
+    setOrderStatus('quoting');
+    setOrderError(null);
+
+    try {
+      await orderService.init(currentTransactionId, {
+        offer_id: selectedOffer.offer_id,
+        bpp_id: selectedOffer.bpp_id,
+        bpp_uri: selectedOffer.bpp_uri,
+        quantity: selectedOffer.quantity_available,
+        price_per_unit: selectedOffer.price_per_unit,
+        seller_name: selectedOffer.seller_name,
+        delivery_start: selectedOffer.delivery_start,
+        delivery_end: selectedOffer.delivery_end,
+      });
+
+      const orderState = await orderService.waitForQuotation(currentTransactionId);
+      setCurrentOrderData(orderState.order);
+      setOrderStatus('quoted');
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Failed to get quotation');
+      setOrderStatus('selected');
     }
   };
 
@@ -167,6 +185,8 @@ const BuyerHomePage = () => {
         currentTransactionId,
         {
           offer_id: selectedOffer.offer_id,
+          bpp_id: selectedOffer.bpp_id,
+          bpp_uri: selectedOffer.bpp_uri,
           quantity: selectedOffer.quantity_available,
           price_per_unit: selectedOffer.price_per_unit,
           seller_name: selectedOffer.seller_name,
@@ -206,8 +226,7 @@ const BuyerHomePage = () => {
     setShowQuoteModal(false);
     setShowOfferModal(true);
     setOrderError(null);
-    setOrderStatus('idle');
-    setCurrentOrderData(null);
+    setOrderStatus(selectedOffer ? 'selected' : 'idle');
   };
 
   const handleCloseQuoteModal = () => {
@@ -355,6 +374,7 @@ const BuyerHomePage = () => {
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
+          onGetQuote={handleGetQuotation}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
         />
