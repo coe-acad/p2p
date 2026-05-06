@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
-import { useDiscoverListings } from "@/hooks/useDiscoverListings";
+import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
+import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
+import { orderService } from "@/services/orderService";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
 const BuyerHomePage = () => {
@@ -22,8 +24,14 @@ const BuyerHomePage = () => {
     clearFilters,
     goToPage,
   } = useDiscoverListings();
-  const [selectedListing, setSelectedListing] = useState<any>(null);
+  const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'confirming' | 'confirmed'>('idle');
+  const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
+  const [currentOrderData, setCurrentOrderData] = useState<any>(null);
 
   useEffect(() => {
     fetchListings();
@@ -33,6 +41,89 @@ const BuyerHomePage = () => {
     setIsRefreshing(true);
     await fetchListings();
     setIsRefreshing(false);
+  };
+
+  const handleSelectListing = async (listing: EnergyListing) => {
+    setSelectedListing(listing);
+    setShowOrderModal(true);
+    setOrderStatus('selecting');
+    setOrderError(null);
+
+    try {
+      // Call select endpoint with buyer phone
+      const selectResult = await orderService.select({
+        offer_id: listing.offer_id,
+        quantity: listing.quantity_available,
+        price_per_unit: listing.price_per_unit,
+        seller_name: listing.seller_name,
+        delivery_start: listing.delivery_start,
+        delivery_end: listing.delivery_end,
+      }, userData.phone);
+
+      setCurrentTransactionId(selectResult.transactionId);
+      setCurrentOrderData(selectResult.order);
+      setOrderStatus('selected');
+
+      // Auto-trigger init
+      const initResult = await orderService.init(selectResult.transactionId, {
+        offer_id: listing.offer_id,
+        quantity: listing.quantity_available,
+        price_per_unit: listing.price_per_unit,
+        seller_name: listing.seller_name,
+        delivery_start: listing.delivery_start,
+        delivery_end: listing.delivery_end,
+      });
+
+      setCurrentOrderData(initResult.order);
+      setOrderStatus('selected'); // Keep showing selected until user confirms
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
+      setOrderStatus('idle');
+    }
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!selectedListing || !currentTransactionId) return;
+
+    setOrderStatus('confirming');
+    setOrderError(null);
+
+    try {
+      const confirmResult = await orderService.confirm(
+        currentTransactionId,
+        {
+          offer_id: selectedListing.offer_id,
+          quantity: selectedListing.quantity_available,
+          price_per_unit: selectedListing.price_per_unit,
+          seller_name: selectedListing.seller_name,
+          delivery_start: selectedListing.delivery_start,
+          delivery_end: selectedListing.delivery_end,
+        },
+        currentOrderData
+      );
+
+      setCurrentOrderData(confirmResult.order);
+      setOrderStatus('confirmed');
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowOrderModal(false);
+        setSelectedListing(null);
+        setOrderStatus('idle');
+      }, 2000);
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Failed to confirm order');
+      setOrderStatus('selected');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowOrderModal(false);
+    setSelectedListing(null);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
   };
 
   const getGreeting = () => {
@@ -124,7 +215,7 @@ const BuyerHomePage = () => {
                   <EnergyListingCard
                     key={listing.id}
                     listing={listing}
-                    onSelect={setSelectedListing}
+                    onSelect={handleSelectListing}
                   />
                 ))}
               </div>
@@ -153,6 +244,17 @@ const BuyerHomePage = () => {
           )}
 
         </PageContainer>
+
+        {/* Order Confirmation Modal */}
+        <ConfirmOrderModal
+          isOpen={showOrderModal}
+          listing={selectedListing}
+          isLoading={orderLoading}
+          error={orderError}
+          status={orderStatus}
+          onConfirm={handleConfirmOrder}
+          onCancel={handleCloseModal}
+        />
       </div>
     </MainAppShell>
   );
