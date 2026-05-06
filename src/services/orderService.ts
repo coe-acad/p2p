@@ -35,6 +35,12 @@ export interface ConfirmResponse {
   orderId: string;
 }
 
+export interface TradeStatusResponse {
+  status: boolean;
+  price: number | null;
+  state: string | null;
+}
+
 const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
 const DEFAULT_BAP_URI = import.meta.env.VITE_ORDER_BAP_URI || 'http://atria-bap:8001/bap/receiver';
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
@@ -205,5 +211,45 @@ export const orderService = {
       console.error('Confirm failed:', error);
       throw error;
     }
+  },
+
+  async getTradeStatus(transactionId: string): Promise<TradeStatusResponse> {
+    return requestWithRetry<TradeStatusResponse>(
+      bppClient,
+      {
+        url: `/api/trade-status?transaction_id=${encodeURIComponent(transactionId)}`,
+        method: 'GET',
+      },
+      {
+        timeoutMs: 10000,
+        retries: 1,
+      }
+    );
+  },
+
+  async waitForConfirmation(
+    transactionId: string,
+    options?: { maxAttempts?: number; delayMs?: number }
+  ): Promise<TradeStatusResponse> {
+    const maxAttempts = options?.maxAttempts ?? 20;
+    const delayMs = options?.delayMs ?? 1000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const status = await this.getTradeStatus(transactionId);
+      if (status.status || status.state === 'CONFIRMED') {
+        return status;
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    const finalStatus = await this.getTradeStatus(transactionId);
+    if (finalStatus.status || finalStatus.state === 'CONFIRMED') {
+      return finalStatus;
+    }
+
+    throw new Error('Confirmation is still pending or failed validation');
   },
 };

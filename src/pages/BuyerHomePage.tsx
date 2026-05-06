@@ -8,6 +8,7 @@ import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
+import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
@@ -83,10 +84,10 @@ const BuyerHomePage = () => {
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderLoading, setOrderLoading] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'confirming' | 'confirmed'>('idle');
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
   const groupedListings = groupListingsByCatalog(listings);
@@ -109,7 +110,8 @@ const BuyerHomePage = () => {
   const handleSelectListing = async (listing: EnergyListing) => {
     setSelectedListing(listing);
     setSelectedOffer(null);
-    setShowOrderModal(true);
+    setShowOfferModal(true);
+    setShowQuoteModal(false);
     setOrderStatus('idle');
     setOrderError(null);
     setCurrentTransactionId('');
@@ -132,10 +134,8 @@ const BuyerHomePage = () => {
       }, userData.phone);
 
       setCurrentTransactionId(selectResult.transactionId);
-      setCurrentOrderData(selectResult.order);
-      setOrderStatus('selected');
 
-      // Auto-trigger init
+      // Auto-trigger init and treat on_init as the quotation step.
       const initResult = await orderService.init(selectResult.transactionId, {
         offer_id: listing.offer_id,
         quantity: listing.quantity_available,
@@ -146,7 +146,9 @@ const BuyerHomePage = () => {
       });
 
       setCurrentOrderData(initResult.order);
-      setOrderStatus('selected');
+      setShowOfferModal(false);
+      setShowQuoteModal(true);
+      setOrderStatus('quoted');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
       setSelectedOffer(null);
@@ -161,7 +163,7 @@ const BuyerHomePage = () => {
     setOrderError(null);
 
     try {
-      const confirmResult = await orderService.confirm(
+      await orderService.confirm(
         currentTransactionId,
         {
           offer_id: selectedOffer.offer_id,
@@ -174,24 +176,42 @@ const BuyerHomePage = () => {
         currentOrderData
       );
 
-      setCurrentOrderData(confirmResult.order);
+      await orderService.waitForConfirmation(currentTransactionId);
       setOrderStatus('confirmed');
 
       // Close modal after 2 seconds
       setTimeout(() => {
-        setShowOrderModal(false);
+        setShowQuoteModal(false);
         setSelectedListing(null);
         setSelectedOffer(null);
         setOrderStatus('idle');
       }, 2000);
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to confirm order');
-      setOrderStatus('selected');
+      setOrderStatus('quoted');
     }
   };
 
-  const handleCloseModal = () => {
-    setShowOrderModal(false);
+  const handleCloseOfferModal = () => {
+    setShowOfferModal(false);
+    setSelectedListing(null);
+    setSelectedOffer(null);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
+  };
+
+  const handleBackToOfferModal = () => {
+    setShowQuoteModal(false);
+    setShowOfferModal(true);
+    setOrderError(null);
+    setOrderStatus('idle');
+    setCurrentOrderData(null);
+  };
+
+  const handleCloseQuoteModal = () => {
+    setShowQuoteModal(false);
     setSelectedListing(null);
     setSelectedOffer(null);
     setOrderStatus('idle');
@@ -321,16 +341,22 @@ const BuyerHomePage = () => {
 
         {/* Order Confirmation Modal */}
         <ConfirmOrderModal
-          isOpen={showOrderModal}
-          listing={selectedOffer ?? selectedListing}
+          isOpen={showOfferModal}
+          listing={selectedListing}
           offers={selectedListing?.offers ?? []}
-          selectedOffer={selectedOffer}
-          isLoading={orderLoading}
           error={orderError}
           status={orderStatus}
           onSelectOffer={handleSelectOffer}
+          onCancel={handleCloseOfferModal}
+        />
+        <QuoteOrderModal
+          isOpen={showQuoteModal}
+          listing={selectedOffer}
+          quote={currentOrderData}
+          error={orderError}
+          status={orderStatus}
           onConfirm={handleConfirmOrder}
-          onCancel={handleCloseModal}
+          onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
         />
       </div>
     </MainAppShell>
