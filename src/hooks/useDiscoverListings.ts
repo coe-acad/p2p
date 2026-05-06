@@ -49,6 +49,8 @@ export const useDiscoverListings = () => {
   const [filters, setFilters] = useState<SearchFilters>({});
 
   const BAP_URL = import.meta.env.VITE_BAP_URL || "http://localhost:8001";
+  const NETWORK_ID =
+    import.meta.env.VITE_NETWORK_ID || "p2p-interdiscom-trading-test-network";
   const PAGE_SIZE = 10;
   const discoverClientRef = useRef(createApiClient(BAP_URL));
   const activeRequestRef = useRef<AbortController | null>(null);
@@ -64,13 +66,23 @@ export const useDiscoverListings = () => {
 
       // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
       if (pageNumber === 0) {
+        const discoverPayload = {
+          message: {
+            filters: {
+              type: "jsonpath",
+              expression:
+                "$.catalogs[*] ? " +
+                `(@.beckn:items[*].beckn:networkId[*] == '${NETWORK_ID}' && @.beckn:offers[*].beckn:isActive == true)`,
+            },
+          },
+        };
         await requestWithRetry<unknown>(
           discoverClientRef.current,
           {
             url: "/discover",
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            data: {},
+            data: discoverPayload,
           },
           {
             signal: controller.signal,
