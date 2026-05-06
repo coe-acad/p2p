@@ -44,6 +44,24 @@ export interface ListingsResponse {
   last_updated: string | null;
 }
 
+const sanitizeListings = (listings: EnergyListing[]): EnergyListing[] => {
+  const seen = new Set<string>();
+
+  return listings.filter((listing) => {
+    if (!listing.catalog_id || !listing.offer_id) {
+      return false;
+    }
+
+    const key = `${listing.catalog_id}:${listing.offer_id}`;
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+};
+
 export const useDiscoverListings = () => {
   const [listings, setListings] = useState<EnergyListing[]>([]);
   const [total, setTotal] = useState(0);
@@ -56,6 +74,7 @@ export const useDiscoverListings = () => {
   const NETWORK_ID =
     import.meta.env.VITE_NETWORK_ID || "p2p-interdiscom-trading-test-network";
   const PAGE_SIZE = 10;
+  const RAW_FETCH_LIMIT = 500;
   const discoverClientRef = useRef(createApiClient(BAP_URL));
   const activeRequestRef = useRef<AbortController | null>(null);
 
@@ -99,9 +118,9 @@ export const useDiscoverListings = () => {
 
       const params = new URLSearchParams();
 
-      // Add pagination
-      params.append("limit", PAGE_SIZE.toString());
-      params.append("offset", (pageNumber * PAGE_SIZE).toString());
+      // Fetch a broad raw offer set, then paginate grouped catalogs in the UI.
+      params.append("limit", RAW_FETCH_LIMIT.toString());
+      params.append("offset", "0");
 
       // Add filters
       if (searchFilters.seller_name) {
@@ -136,8 +155,10 @@ export const useDiscoverListings = () => {
         }
       );
 
-      setListings(data.listings);
-      setTotal(data.total);
+      const sanitizedListings = sanitizeListings(data.listings);
+
+      setListings(sanitizedListings);
+      setTotal(sanitizedListings.length);
       setCurrentPage(pageNumber);
       setFilters(searchFilters);
     } catch (err) {

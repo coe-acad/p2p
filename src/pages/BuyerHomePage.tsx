@@ -11,10 +11,16 @@ import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { orderService } from "@/services/orderService";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
+const CATALOGS_PER_PAGE = 10;
+
 const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
   const grouped = new Map<string, EnergyListing>();
 
   for (const listing of listings) {
+    if (!listing.catalog_id || !listing.offer_id) {
+      continue;
+    }
+
     const existing = grouped.get(listing.catalog_id);
     if (!existing) {
       grouped.set(listing.catalog_id, {
@@ -70,7 +76,6 @@ const BuyerHomePage = () => {
     loading,
     error,
     currentPage,
-    totalPages,
     fetchListings,
     clearFilters,
     goToPage,
@@ -85,6 +90,11 @@ const BuyerHomePage = () => {
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
   const groupedListings = groupListingsByCatalog(listings);
+  const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
+  const paginatedGroupedListings = groupedListings.slice(
+    currentPage * CATALOGS_PER_PAGE,
+    (currentPage + 1) * CATALOGS_PER_PAGE
+  );
 
   useEffect(() => {
     fetchListings();
@@ -275,7 +285,7 @@ const BuyerHomePage = () => {
                 </p>
               </div>
               <div className="grid gap-4">
-                {groupedListings.map((listing) => (
+                {paginatedGroupedListings.map((listing) => (
                   <EnergyListingCard
                     key={listing.id}
                     listing={listing}
