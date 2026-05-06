@@ -8,6 +8,10 @@ export interface EnergyListing {
   seller_id: string;
   seller_name: string;
   offer_name: string;
+  offers?: EnergyListing[];
+  offer_count?: number;
+  min_price_per_unit?: number;
+  max_price_per_unit?: number;
   price_per_unit: number;
   currency: string;
   quantity_available: number;
