@@ -2,8 +2,10 @@ import { getAuthHeaders } from "@/services/authHeaders";
 import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
 import { PaymentEnvelopeSchema, PaymentsEnvelopeSchema } from "@/services/apiSchemas";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
-const backendClient = createApiClient(BACKEND_URL);
+const BPP_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
+const BAP_URL = import.meta.env.VITE_BAP_URL ?? "http://localhost:8001";
+const bppClient = createApiClient(BPP_URL);
+const bapClient = createApiClient(BAP_URL);
 
 export interface Payment {
   payment_id: string;
@@ -33,7 +35,7 @@ export const createPayment = async (request: CreatePaymentRequest, options?: Req
   try {
     const headers = await getAuthHeaders();
     const data = await requestWithRetry<{ data: Payment }>(
-      backendClient,
+      bppClient,
       { url: "/api/payment", method: "POST", data: request, headers },
       { ...options, retries: 1 }
     );
@@ -43,11 +45,14 @@ export const createPayment = async (request: CreatePaymentRequest, options?: Req
   }
 };
 
-export const getPayments = async (options?: RequestOptions): Promise<Payment[]> => {
+export const getPayments = async (
+  role: "buyer" | "seller" = "seller",
+  options?: RequestOptions
+): Promise<Payment[]> => {
   try {
     const headers = await getAuthHeaders();
     const data = await requestWithRetry<{ payments?: Payment[] }>(
-      backendClient,
+      role === "buyer" ? bapClient : bppClient,
       { url: "/api/payments", method: "GET", headers },
       options
     );
@@ -61,7 +66,7 @@ export const getPayment = async (paymentId: string, options?: RequestOptions): P
   try {
     const headers = await getAuthHeaders();
     const data = await requestWithRetry<{ data: Payment }>(
-      backendClient,
+      bppClient,
       { url: `/api/payment/${paymentId}`, method: "GET", headers },
       options
     );
@@ -80,7 +85,7 @@ export const updatePaymentStatus = async (
   try {
     const headers = await getAuthHeaders();
     const data = await requestWithRetry<{ data: Payment }>(
-      backendClient,
+      bppClient,
       {
         url: `/api/payment/${paymentId}`,
         method: "PUT",

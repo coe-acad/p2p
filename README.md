@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# P2P Frontend
 
-## Project info
+This is the React frontend for the P2P energy trading app.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- Vite
+- React
+- TypeScript
+- Tailwind CSS
 
-There are several ways of editing your application.
+## Local Setup
 
-**Use Lovable**
+Install dependencies:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+cd /Users/NithyaSathish/Documents/winroom-demo/p2p-frontend/p2p
+npm install
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+Create `.env.local`:
 
-**Use your preferred IDE**
+```env
+VITE_BACKEND_URL=http://localhost:3002
+VITE_BAP_URL=http://localhost:8001
+VITE_PAYMENT_URL=http://localhost:8003
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Run the app:
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Default dev URL:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `http://localhost:5173`
 
-**Use GitHub Codespaces**
+## Backend Dependencies
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The frontend expects these local services:
 
-## What technologies are used for this project?
+- BPP at `http://localhost:3002`
+- BAP at `http://localhost:8001`
+- Payments at `http://localhost:8003`
 
-This project is built with:
+## Key API Usage
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- seller publish and account APIs go through `VITE_BACKEND_URL`
+- discovery goes through `VITE_BAP_URL`
+- Razorpay order creation goes through `VITE_PAYMENT_URL`

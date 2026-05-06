@@ -8,8 +8,66 @@ import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
+import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
+
+const CATALOGS_PER_PAGE = 10;
+
+const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
+  const grouped = new Map<string, EnergyListing>();
+
+  for (const listing of listings) {
+    if (!listing.catalog_id || !listing.offer_id) {
+      continue;
+    }
+
+    const existing = grouped.get(listing.catalog_id);
+    if (!existing) {
+      grouped.set(listing.catalog_id, {
+        ...listing,
+        offers: [listing],
+        offer_count: 1,
+        min_price_per_unit: listing.price_per_unit,
+        max_price_per_unit: listing.price_per_unit,
+      });
+      continue;
+    }
+
+    const offerCount = (existing.offer_count ?? 1) + 1;
+    const minPrice = Math.min(existing.min_price_per_unit ?? existing.price_per_unit, listing.price_per_unit);
+    const maxPrice = Math.max(existing.max_price_per_unit ?? existing.price_per_unit, listing.price_per_unit);
+
+    grouped.set(listing.catalog_id, {
+      ...existing,
+      offers: [...(existing.offers ?? []), listing],
+      offer_count: offerCount,
+      offer_name: `${offerCount} offers in this catalog`,
+      min_price_per_unit: minPrice,
+      max_price_per_unit: maxPrice,
+      quantity_available: existing.quantity_available + listing.quantity_available,
+      total_price: existing.total_price + listing.total_price,
+      delivery_start:
+        !existing.delivery_start || (listing.delivery_start && listing.delivery_start < existing.delivery_start)
+          ? listing.delivery_start
+          : existing.delivery_start,
+      delivery_end:
+        !existing.delivery_end || (listing.delivery_end && listing.delivery_end > existing.delivery_end)
+          ? listing.delivery_end
+          : existing.delivery_end,
+      validity_start:
+        !existing.validity_start || (listing.validity_start && listing.validity_start < existing.validity_start)
+          ? listing.validity_start
+          : existing.validity_start,
+      validity_end:
+        !existing.validity_end || (listing.validity_end && listing.validity_end > existing.validity_end)
+          ? listing.validity_end
+          : existing.validity_end,
+    });
+  }
+
+  return Array.from(grouped.values());
+};
 
 const BuyerHomePage = () => {
   const navigate = useNavigate();
@@ -19,19 +77,25 @@ const BuyerHomePage = () => {
     loading,
     error,
     currentPage,
-    totalPages,
     fetchListings,
     clearFilters,
     goToPage,
   } = useDiscoverListings();
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderLoading, setOrderLoading] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'confirming' | 'confirmed'>('idle');
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+  const groupedListings = groupListingsByCatalog(listings);
+  const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
+  const paginatedGroupedListings = groupedListings.slice(
+    currentPage * CATALOGS_PER_PAGE,
+    (currentPage + 1) * CATALOGS_PER_PAGE
+  );
 
   useEffect(() => {
     fetchListings();
@@ -45,14 +109,25 @@ const BuyerHomePage = () => {
 
   const handleSelectListing = async (listing: EnergyListing) => {
     setSelectedListing(listing);
-    setShowOrderModal(true);
+    setSelectedOffer(null);
+    setShowOfferModal(true);
+    setShowQuoteModal(false);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
+  };
+
+  const handleSelectOffer = async (listing: EnergyListing) => {
+    setSelectedOffer(listing);
     setOrderStatus('selecting');
     setOrderError(null);
 
     try {
-      // Call select endpoint with buyer phone
       const selectResult = await orderService.select({
         offer_id: listing.offer_id,
+        bpp_id: listing.bpp_id,
+        bpp_uri: listing.bpp_uri,
         quantity: listing.quantity_available,
         price_per_unit: listing.price_per_unit,
         seller_name: listing.seller_name,
@@ -61,65 +136,103 @@ const BuyerHomePage = () => {
       }, userData.phone);
 
       setCurrentTransactionId(selectResult.transactionId);
-      setCurrentOrderData(selectResult.order);
+
+      setShowOfferModal(false);
+      setShowQuoteModal(true);
       setOrderStatus('selected');
-
-      // Auto-trigger init
-      const initResult = await orderService.init(selectResult.transactionId, {
-        offer_id: listing.offer_id,
-        quantity: listing.quantity_available,
-        price_per_unit: listing.price_per_unit,
-        seller_name: listing.seller_name,
-        delivery_start: listing.delivery_start,
-        delivery_end: listing.delivery_end,
-      });
-
-      setCurrentOrderData(initResult.order);
-      setOrderStatus('selected'); // Keep showing selected until user confirms
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
+      setSelectedOffer(null);
       setOrderStatus('idle');
     }
   };
 
+  const handleGetQuotation = async () => {
+    if (!selectedOffer || !currentTransactionId) return;
+
+    setOrderStatus('quoting');
+    setOrderError(null);
+
+    try {
+      await orderService.init(currentTransactionId, {
+        offer_id: selectedOffer.offer_id,
+        bpp_id: selectedOffer.bpp_id,
+        bpp_uri: selectedOffer.bpp_uri,
+        quantity: selectedOffer.quantity_available,
+        price_per_unit: selectedOffer.price_per_unit,
+        seller_name: selectedOffer.seller_name,
+        delivery_start: selectedOffer.delivery_start,
+        delivery_end: selectedOffer.delivery_end,
+      });
+
+      const orderState = await orderService.waitForQuotation(currentTransactionId);
+      setCurrentOrderData(orderState.order);
+      setOrderStatus('quoted');
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Failed to get quotation');
+      setOrderStatus('selected');
+    }
+  };
+
   const handleConfirmOrder = async () => {
-    if (!selectedListing || !currentTransactionId) return;
+    if (!selectedOffer || !currentTransactionId) return;
 
     setOrderStatus('confirming');
     setOrderError(null);
 
     try {
-      const confirmResult = await orderService.confirm(
+      await orderService.confirm(
         currentTransactionId,
         {
-          offer_id: selectedListing.offer_id,
-          quantity: selectedListing.quantity_available,
-          price_per_unit: selectedListing.price_per_unit,
-          seller_name: selectedListing.seller_name,
-          delivery_start: selectedListing.delivery_start,
-          delivery_end: selectedListing.delivery_end,
+          offer_id: selectedOffer.offer_id,
+          bpp_id: selectedOffer.bpp_id,
+          bpp_uri: selectedOffer.bpp_uri,
+          quantity: selectedOffer.quantity_available,
+          price_per_unit: selectedOffer.price_per_unit,
+          seller_name: selectedOffer.seller_name,
+          delivery_start: selectedOffer.delivery_start,
+          delivery_end: selectedOffer.delivery_end,
         },
         currentOrderData
       );
 
-      setCurrentOrderData(confirmResult.order);
+      await orderService.waitForConfirmation(currentTransactionId);
       setOrderStatus('confirmed');
 
       // Close modal after 2 seconds
       setTimeout(() => {
-        setShowOrderModal(false);
+        setShowQuoteModal(false);
         setSelectedListing(null);
+        setSelectedOffer(null);
         setOrderStatus('idle');
       }, 2000);
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to confirm order');
-      setOrderStatus('selected');
+      setOrderStatus('quoted');
     }
   };
 
-  const handleCloseModal = () => {
-    setShowOrderModal(false);
+  const handleCloseOfferModal = () => {
+    setShowOfferModal(false);
     setSelectedListing(null);
+    setSelectedOffer(null);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
+  };
+
+  const handleBackToOfferModal = () => {
+    setShowQuoteModal(false);
+    setShowOfferModal(true);
+    setOrderError(null);
+    setOrderStatus(selectedOffer ? 'selected' : 'idle');
+  };
+
+  const handleCloseQuoteModal = () => {
+    setShowQuoteModal(false);
+    setSelectedListing(null);
+    setSelectedOffer(null);
     setOrderStatus('idle');
     setOrderError(null);
     setCurrentTransactionId('');
@@ -203,15 +316,15 @@ const BuyerHomePage = () => {
           )}
 
           {/* Listings Grid */}
-          {!loading && listings.length > 0 && !selectedListing && (
+          {!loading && groupedListings.length > 0 && !selectedListing && (
             <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Available Listings ({listings.length})
+                  Available Listings ({groupedListings.length})
                 </p>
               </div>
               <div className="grid gap-4">
-                {listings.map((listing) => (
+                {paginatedGroupedListings.map((listing) => (
                   <EnergyListingCard
                     key={listing.id}
                     listing={listing}
@@ -233,7 +346,7 @@ const BuyerHomePage = () => {
           )}
 
           {/* Empty State */}
-          {!loading && listings.length === 0 && !selectedListing && (
+          {!loading && groupedListings.length === 0 && !selectedListing && (
             <div className="text-center py-12">
               <Zap size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-muted-foreground mb-2">No listings available</p>
@@ -247,13 +360,23 @@ const BuyerHomePage = () => {
 
         {/* Order Confirmation Modal */}
         <ConfirmOrderModal
-          isOpen={showOrderModal}
+          isOpen={showOfferModal}
           listing={selectedListing}
-          isLoading={orderLoading}
+          offers={selectedListing?.offers ?? []}
           error={orderError}
           status={orderStatus}
+          onSelectOffer={handleSelectOffer}
+          onCancel={handleCloseOfferModal}
+        />
+        <QuoteOrderModal
+          isOpen={showQuoteModal}
+          listing={selectedOffer}
+          quote={currentOrderData}
+          error={orderError}
+          status={orderStatus}
+          onGetQuote={handleGetQuotation}
           onConfirm={handleConfirmOrder}
-          onCancel={handleCloseModal}
+          onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
         />
       </div>
     </MainAppShell>

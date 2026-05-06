@@ -12,6 +12,10 @@ interface EnergyListingCardProps {
 
 export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps) => {
   const [isFavorite, setIsFavorite] = useState(false);
+  const offerCount = listing.offer_count ?? 1;
+  const hasMultipleOffers = offerCount > 1;
+  const minPrice = listing.min_price_per_unit ?? listing.price_per_unit;
+  const maxPrice = listing.max_price_per_unit ?? listing.price_per_unit;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -47,6 +51,11 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
             <CardDescription className="text-sm mt-1">
               {listing.offer_name}
             </CardDescription>
+            {hasMultipleOffers && (
+              <p className="text-xs text-gray-500 mt-1">
+                {offerCount} offers grouped into one catalog entry
+              </p>
+            )}
           </div>
           <button
             onClick={() => setIsFavorite(!isFavorite)}
@@ -63,7 +72,9 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">Price</p>
             <p className="text-lg font-semibold">
-              ₹{listing.price_per_unit.toFixed(2)}/{listing.quantity_unit}
+              {hasMultipleOffers
+                ? `₹${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}/${listing.quantity_unit}`
+                : `₹${listing.price_per_unit.toFixed(2)}/${listing.quantity_unit}`}
             </p>
           </div>
           <div>
