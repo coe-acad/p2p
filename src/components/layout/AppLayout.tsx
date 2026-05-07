@@ -12,7 +12,7 @@ export const AppLayout = ({ children, initialTab = "home" }: AppLayoutProps) => 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="app-viewport-min flex">
       {/* Sidebar nav (desktop only) */}
       <div className="hidden md:block">
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

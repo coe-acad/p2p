@@ -12,7 +12,7 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
   const { isOnline } = useNetworkStatus();
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="app-viewport flex flex-col bg-background overflow-hidden">
       {/* Offline Banner */}
       {!isOnline && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 sm:px-6 flex-shrink-0">

@@ -58,7 +58,6 @@ const ProfilePage = () => {
     {
       title: t("profile.preferences"),
       items: [
-        { icon: Package, label: "Trade History", sublabel: "Track published and live trades", route: "/settings/trade-history" },
         { icon: CalendarClock, label: "Login History", sublabel: "View your login activity", route: "/login-history" },
         { icon: Sparkles, label: t("profile.howSamaiHelps"), sublabel: userData.automationLevel === "auto" ? t("profile.autoPlaceOrders") : t("profile.showRecommendations"), route: "/settings/automation" },
         { icon: MessageSquare, label: t("profile.yourContext"), sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : t("profile.notSet"), route: "/settings/context" },

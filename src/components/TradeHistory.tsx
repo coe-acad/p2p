@@ -6,20 +6,32 @@ import type { EnergyListing } from "@/hooks/useDiscoverListings";
 import { Zap } from "lucide-react";
 
 interface TradeHistoryProps {
-  buyerPhone: string;
+  role: "buyer" | "seller";
+  buyerPhone?: string;
 }
 
-export const TradeHistory = ({ buyerPhone }: TradeHistoryProps) => {
-  const { trades, loading, error, refresh } = useTradeHistory(buyerPhone);
+const statusTone = (status: string) => {
+  if (status === "CONFIRMED") return "bg-green-100 text-green-700";
+  if (status === "COMPLETED") return "bg-blue-100 text-blue-700";
+  if (status === "PUBLISHED") return "bg-indigo-100 text-indigo-700";
+  if (status === "INITIATED") return "bg-purple-100 text-purple-700";
+  if (status === "SELECTED") return "bg-amber-100 text-amber-700";
+  if (status === "CONFIRMING") return "bg-orange-100 text-orange-700";
+  if (status === "CANCELLED") return "bg-red-100 text-red-700";
+  return "bg-yellow-100 text-yellow-700";
+};
+
+export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
+  const { trades, loading, error, refresh } = useTradeHistory(role, buyerPhone);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteStatus, setQuoteStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
 
-  const statuses = ["CONFIRMED", "COMPLETED", "PENDING", "CANCELLED"];
+  const statuses = Array.from(new Set(trades.map((trade) => trade.backendStatus))).filter(Boolean);
   const filteredTrades = selectedStatus
-    ? trades.filter((trade) => trade.status === selectedStatus)
+    ? trades.filter((trade) => trade.backendStatus === selectedStatus)
     : trades;
 
   if (loading) {
@@ -67,7 +79,7 @@ export const TradeHistory = ({ buyerPhone }: TradeHistoryProps) => {
   };
 
   const openPendingTrade = async (trade: Trade) => {
-    if (trade.status !== "PENDING") {
+    if (role !== "buyer" || trade.status !== "PENDING" || trade.type !== "trade") {
       return;
     }
 
@@ -195,18 +207,18 @@ export const TradeHistory = ({ buyerPhone }: TradeHistoryProps) => {
         <div className="space-y-3">
           {filteredTrades.map((trade) => (
             <div
-              key={trade.transactionId}
+              key={trade.transactionId || trade.catalogId}
               className={`bg-white border border-gray-200 rounded-lg p-4 transition-shadow ${
-                trade.status === "PENDING" ? "cursor-pointer hover:shadow-md" : ""
+                role === "buyer" && trade.status === "PENDING" && trade.type === "trade"
+                  ? "cursor-pointer hover:shadow-md"
+                  : ""
               }`}
               onClick={() => void openPendingTrade(trade)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">{trade.sellerName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {trade.quantity} kWh @ ₹{trade.pricePerUnit.toFixed(2)}/kWh
-                  </p>
+                  <p className="font-semibold text-foreground">{trade.title}</p>
+                  <p className="text-sm text-muted-foreground">{trade.subtitle}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {new Date(trade.confirmedAt).toLocaleDateString()} at{" "}
                     {new Date(trade.confirmedAt).toLocaleTimeString([], {
@@ -221,29 +233,23 @@ export const TradeHistory = ({ buyerPhone }: TradeHistoryProps) => {
                     ₹{trade.totalAmount.toFixed(2)}
                   </p>
                   <span
-                    className={`inline-block px-2 py-1 rounded text-xs font-semibold mt-1 ${
-                      trade.status === "CONFIRMED"
-                        ? "bg-green-100 text-green-700"
-                        : trade.status === "COMPLETED"
-                          ? "bg-blue-100 text-blue-700"
-                        : trade.status === "PENDING"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                    }`}
+                    className={`inline-block px-2 py-1 rounded text-xs font-semibold mt-1 ${statusTone(trade.backendStatus)}`}
                   >
-                    {trade.status}
+                    {trade.backendStatus}
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500 mt-2">ID: {trade.transactionId}</p>
+              <p className="text-xs text-gray-500 mt-2">
+                ID: {trade.transactionId || trade.catalogId}
+              </p>
             </div>
           ))}
         </div>
       )}
 
       <QuoteOrderModal
-        isOpen={Boolean(selectedTrade)}
+        isOpen={role === "buyer" && Boolean(selectedTrade)}
         listing={tradeToListing(selectedTrade)}
         quote={quote}
         error={quoteError}
