@@ -16,13 +16,26 @@ export const useAuth = (): AuthState => {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let softTimeoutId: NodeJS.Timeout;
+    let hardTimeoutId: NodeJS.Timeout;
+
+    // If we already have app-side session hints, give Firebase auth restore
+    // longer to recover before treating the user as logged out.
+    const hasCachedSessionHint =
+      Boolean(sessionStorage.getItem("samai_user_data_session")) ||
+      Boolean(localStorage.getItem("samai_user_prefs")) ||
+      Boolean(localStorage.getItem("samai_onboarding_complete")) ||
+      Boolean(localStorage.getItem("samai_selected_intent"));
+
+    const softTimeoutMs = 5000;
+    const hardTimeoutMs = hasCachedSessionHint ? 20000 : 10000;
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (mounted) {
         setUser(firebaseUser);
         setIsLoading(false);
-        clearTimeout(timeoutId);
+        clearTimeout(softTimeoutId);
+        clearTimeout(hardTimeoutId);
 
         if (firebaseUser) {
           recordLogin().catch(error => {
@@ -32,16 +45,23 @@ export const useAuth = (): AuthState => {
       }
     });
 
-    timeoutId = setTimeout(() => {
+    softTimeoutId = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("Auth initialization is slow, still waiting for Firebase session restore");
+      }
+    }, softTimeoutMs);
+
+    hardTimeoutId = setTimeout(() => {
       if (mounted && isLoading) {
         console.warn("Auth initialization timed out, proceeding without user");
         setIsLoading(false);
       }
-    }, 5000);
+    }, hardTimeoutMs);
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
+      clearTimeout(softTimeoutId);
+      clearTimeout(hardTimeoutId);
       unsubscribe();
     };
   }, []);
