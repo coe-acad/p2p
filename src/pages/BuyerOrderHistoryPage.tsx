@@ -26,7 +26,7 @@ const BuyerOrderHistoryPage = () => {
 
           {/* Trade History */}
           <div className="animate-slide-up">
-            <TradeHistory buyerPhone={userData.phone} />
+            <TradeHistory role="buyer" buyerPhone={userData.phone} />
           </div>
         </PageContainer>
       </div>

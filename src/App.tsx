@@ -48,7 +48,6 @@ import UserContextPage from "./pages/settings/UserContextPage";
 import AutomationSettingsPage from "./pages/settings/AutomationSettingsPage";
 import VacationsSettingsPage from "./pages/settings/VacationsSettingsPage";
 import PaymentSettingsPage from "./pages/settings/PaymentSettingsPage";
-import TradeHistorySettingsPage from "./pages/settings/TradeHistorySettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -58,7 +57,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen bg-background">
+        <div className="app-viewport-min bg-background">
           <Routes>
             {/* Public routes - redirects to /home if already logged in */}
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
@@ -109,7 +108,6 @@ const App = () => (
             <Route path="/settings/automation" element={<RoleProtectedRoute requiredIntent="sell"><AutomationSettingsPage /></RoleProtectedRoute>} />
             <Route path="/settings/vacations" element={<RoleProtectedRoute requiredIntent="sell"><VacationsSettingsPage /></RoleProtectedRoute>} />
             <Route path="/settings/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentSettingsPage /></RoleProtectedRoute>} />
-            <Route path="/settings/trade-history" element={<RoleProtectedRoute requiredIntent="sell"><TradeHistorySettingsPage /></RoleProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

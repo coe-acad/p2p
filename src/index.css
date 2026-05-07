@@ -130,6 +130,18 @@
 }
 
 @layer components {
+  .app-viewport {
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  .app-viewport-min {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
+
   /* Premium button variants */
   .btn-solar {
     @apply relative overflow-hidden font-semibold text-primary-foreground px-6 py-3 rounded-xl transition-all duration-200;
