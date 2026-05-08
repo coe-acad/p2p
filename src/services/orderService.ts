@@ -7,11 +7,10 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return v.toString(16);
 });
 
-// Call Python BPP service directly (adapters handle Beckn protocol signing/validation for callbacks)
-const BPP_URL = 'http://localhost:3002';
+const BPP_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3002';
 const BAP_URL = import.meta.env.VITE_BAP_URL ?? 'http://localhost:8001';
-const bppClient = createApiClient(BPP_URL);
 const bapClient = createApiClient(BAP_URL);
+const bppClient = createApiClient(BPP_URL);
 
 export interface OrderDetails {
   offer_id: string;
@@ -100,7 +99,7 @@ export const orderService = {
 
     try {
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/select',
           method: 'POST',
@@ -161,7 +160,7 @@ export const orderService = {
 
     try {
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/init',
           method: 'POST',
@@ -201,7 +200,7 @@ export const orderService = {
 
     try {
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/confirm',
           method: 'POST',
