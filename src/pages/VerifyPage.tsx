@@ -23,7 +23,7 @@ const VerifyPage = () => {
     const isReturning = !!existingUser;
 
     if (isReturning && existingUser) {
-      // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
+      // Returning users must always follow the role already stored in Firestore.
       const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
 
       const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
