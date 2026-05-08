@@ -594,8 +594,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           {step === "phone" && (
             <div className="flex flex-col gap-3 animate-slide-up">
               <div className="rounded-2xl border border-orange-200/70 bg-white/92 p-4 shadow-card">
-                <p className="mb-3 text-sm font-medium text-foreground">Mobile number</p>
-                <label className="block text-xs font-medium text-foreground mb-1.5">Mobile Number</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Mobile Number</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">+91</span>
                   <input
