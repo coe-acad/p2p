@@ -7,8 +7,8 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return v.toString(16);
 });
 
-const BPP_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3002';
-const BAP_URL = import.meta.env.VITE_BAP_URL ?? 'http://localhost:8001';
+const BPP_URL = import.meta.env.VITE_BACKEND_URL;
+const BAP_URL = import.meta.env.VITE_BAP_URL;
 const bapClient = createApiClient(BAP_URL);
 const bppClient = createApiClient(BPP_URL);
 
