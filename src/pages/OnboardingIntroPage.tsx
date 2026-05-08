@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, MapPin, Cpu, MessageCircle, Sun, Sparkles } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const OnboardingIntroPage = () => {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ const OnboardingIntroPage = () => {
         </div>
       </div>
 
-      <div className="w-full max-w-md flex flex-col items-center gap-8 px-4 relative z-10">
+      <PageContainer gap={8} className="items-center relative z-10">
         {/* Logo */}
         <div className="animate-fade-in">
           <SamaiLogo size="md" />
@@ -87,11 +88,11 @@ const OnboardingIntroPage = () => {
           onClick={() => {
             // Clear userContext for new users starting fresh onboarding
             const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-            localStorage.setItem("samai_user_data", JSON.stringify({ 
-              ...currentData, 
-              userContext: "" 
+            localStorage.setItem("samai_user_data", JSON.stringify({
+              ...currentData,
+              userContext: ""
             }));
-            navigate("/onboarding/location");
+            navigate("/intent");
           }}
           className="btn-solar w-full flex items-center justify-center gap-2 animate-slide-up !py-3.5"
           style={{ animationDelay: "0.3s" }}
@@ -100,7 +101,7 @@ const OnboardingIntroPage = () => {
           Let's get started
           <ArrowRight size={18} />
         </button>
-      </div>
+      </PageContainer>
     </div>
   );
 };

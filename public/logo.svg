@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200">
+
+  <!-- Outer circle -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#7777aa" stroke-width="2.5"/>
+
+  <!-- Small vertical tick at bottom-left of circle -->
+  <line x1="18" y1="65" x2="18" y2="73" stroke="#6666aa" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Small vertical tick at top-right of circle -->
+  <line x1="82" y1="27" x2="82" y2="35" stroke="#6666aa" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Diagonal slash line going from bottom-left to top-right, behind bolt -->
+  <line x1="22" y1="72" x2="78" y2="28" stroke="#7777bb" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Lightning bolt (blue, wide) -->
+  <polygon
+    points="56,18 38,52 51,52 44,82 66,45 52,45 62,18"
+    fill="#2233cc"
+    stroke="#1122aa"
+    stroke-width="0.5"
+    stroke-linejoin="round"
+  />
+
+</svg>

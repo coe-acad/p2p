@@ -18,7 +18,7 @@ const OnboardingTalkPage = () => {
   return (
     <TalkToSamaiScreen
       onContinue={handleContinue}
-      onBack={() => navigate("/onboarding/location", { state: { isVCVerified } })}
+      onBack={() => navigate(-1)}
     />
   );
 };

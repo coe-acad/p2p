@@ -1,76 +1,99 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
-import { usePublishedTrades, type ConfirmedTrade } from "@/hooks/usePublishedTrades";
+import { useUserData } from "@/hooks/useUserData";
+import { ensureUserOnServer, loadUser } from "@/services/userService";
 
-// Generate mock 30-day trading history for returning users
-const generateReturningUserData = () => {
-  const confirmedTrades: ConfirmedTrade[] = [];
-  
-  // Generate trades for past 30 days
-  for (let day = 0; day < 30; day++) {
-    // 2-4 trades per day
-    const tradesPerDay = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < tradesPerDay; i++) {
-      const hour = 6 + Math.floor(Math.random() * 12); // 6 AM to 6 PM
-      const kWh = 2 + Math.floor(Math.random() * 6); // 2-7 kWh
-      const rate = 6 + Math.random(); // ₹6-7 per unit
-      confirmedTrades.push({
-        time: `${hour.toString().padStart(2, '0')}:00`,
-        kWh,
-        rate: Math.round(rate * 10) / 10,
-        earnings: Math.round(kWh * rate),
-        buyer: ["BESCOM Grid", "Neighbour - Flat 3B", "Community Pool"][Math.floor(Math.random() * 3)],
-      });
-    }
-  }
-  
-  return { confirmedTrades };
-};
+const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "sell" || value === "buy";
 
 const VerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const intent = location.state?.intent || "sell";
+  // Intent from IntentPage selection (only present for new-user flow)
+  const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
   const isReturningUser = location.state?.isReturningUser || false;
-  const { confirmTrades, setShowConfirmedTrades } = usePublishedTrades();
+  const { userData: currentUserData, setUserData } = useUserData();
 
-  const handleVerified = () => {
-    if (isReturningUser) {
-      // Returning user - populate with 30 days of trading history and go to home
-      const { confirmedTrades } = generateReturningUserData();
-      confirmTrades(confirmedTrades);
-      setShowConfirmedTrades(true);
-      
-      // Mark onboarding as complete for returning users
+  const handleVerified = async (phone?: string) => {
+    if (!phone) return;
+
+    const phoneWithCountry = `+91${phone}`;
+
+    // Check if user already exists in database
+    const existingUser = await loadUser(phoneWithCountry);
+    const isReturning = !!existingUser;
+
+    if (isReturning && existingUser) {
+      // Returning users must always follow the role already stored in Firestore.
+      const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
+
+      const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
+      setUserData({
+        ...existingWithoutIntent,
+        phone: phoneWithCountry,
+        aadhaarVerified: true,
+        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+        onboardingComplete: true, // Lock all user details for returning users
+      });
+
+      ensureUserOnServer({
+        name: existingUser.name || "",
+        meter_number: existingUser.consumerId || "",
+        discom: existingUser.discom || "",
+        consumerId: existingUser.consumerId || "",
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
+
+      // Mark all onboarding steps as complete
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");
-      // Mark all onboarding steps as done (removes setup banner)
       localStorage.setItem("samai_onboarding_location_done", "true");
       localStorage.setItem("samai_onboarding_devices_done", "true");
       localStorage.setItem("samai_onboarding_talk_done", "true");
-      
-      // Set Jyotirmayee's profile data for returning users
-      const returningUserContext = "आई एम ए स्कूल टीचर मेरे लिए स्कूल इंपॉर्टेंट है मैं 5 दिन स्कूल चलाती हूं 5 दिन सुबह से शाम तक बिजली का इस्तेमाल होता है ज्यादातर पंख लाइट एक्स्ट्रा सैटरडे संडे को स्कूल की छुट्टी होती है";
-      const currentData = JSON.parse(localStorage.getItem("samai_user_data") || "{}");
-      localStorage.setItem("samai_user_data", JSON.stringify({ 
-        ...currentData, 
-        name: "Jyotirmayee",
-        phone: "+91 97697 21566",
-        address: "abc street, Delhi, India",
-        city: "Delhi, India",
-        discom: "TPDDL",
-        consumerId: "80000190017",
-        upiId: "jyotirmayee@upi",
-        userContext: returningUserContext,
-        automationLevel: "auto",
-        isReturningUser: true,
-        isVCVerified: true
-      }));
-      
-      navigate("/home", { replace: true });
+
+      const targetRoute =
+        resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
+      navigate(targetRoute, { replace: true });
     } else {
-      // New user - continue to success/onboarding
-      navigate("/success", { state: { intent } });
+      // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
+      const intentFromStorage = localStorage.getItem("samai_selected_intent");
+      const newUserIntent: "sell" | "buy" | undefined =
+        (isIntentValue(selectedIntent) ? selectedIntent : undefined) ||
+        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined);
+      if (!newUserIntent) {
+        navigate("/intent", { replace: true });
+        return;
+      }
+      const newUserData = {
+        phone: phoneWithCountry,
+        aadhaarVerified: true,
+        intent: newUserIntent,
+        name: currentUserData.name || "",
+        consumerId: currentUserData.consumerId || "",
+        address: currentUserData.address || "",
+        city: currentUserData.city || "",
+        discom: currentUserData.discom || "",
+        automationLevel: "recommend" as const,
+        onboardingComplete: true, // Lock all user details after signup
+      };
+
+      setUserData(newUserData);
+
+      localStorage.removeItem("samai_selected_intent");
+
+      ensureUserOnServer({
+        name: newUserData.name,
+        meter_number: newUserData.consumerId,
+        discom: newUserData.discom,
+        consumerId: newUserData.consumerId,
+      }).catch((err) => console.error("Failed to ensure user on server:", err));
+
+      localStorage.setItem("samai_onboarding_complete", "true");
+      localStorage.setItem("samai_aadhaar_verified", "true");
+      localStorage.setItem("samai_onboarding_location_done", "true");
+      localStorage.setItem("samai_onboarding_devices_done", "true");
+      localStorage.setItem("samai_onboarding_talk_done", "true");
+
+      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/home";
+      navigate(targetRoute, { replace: true });
     }
   };
 
@@ -79,6 +102,7 @@ const VerifyPage = () => {
       onVerified={handleVerified}
       onBack={() => navigate(isReturningUser ? "/" : "/intent")}
       isReturningUser={isReturningUser}
+      selectedIntent={selectedIntent}
     />
   );
 };

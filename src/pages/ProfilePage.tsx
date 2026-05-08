@@ -1,53 +1,76 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { ChevronLeft, User, Zap, Battery, Gauge, Bell, Globe, FileText, Settings, ChevronRight, MessageSquare, Sparkles, ShoppingCart, Building2, CalendarClock, Wallet, Package, LogOut } from "lucide-react";
 import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { useAuth } from "@/hooks/useAuth";
+import { PageContainer } from "@/components/layout/PageContainer";
+import MainAppShell from "@/components/layout/MainAppShell";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { userData } = useUserData();
-  
+  const { logout } = useAuth();
+
   const locality = extractLocality(userData.address);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
 
   const sections = [
     {
-      title: "Account",
+      title: t("profile.account"),
       items: [
-        { icon: User, label: "Personal Details", sublabel: userData.name, route: "/settings/mobile" },
-        { icon: ShoppingCart, label: "Your Role", sublabel: "Seller", route: "/settings/role" },
-        { icon: Settings, label: "Home Profile", sublabel: "3 BHK • Residential", route: "/settings/devices?type=profile" },
-        { icon: Building2, label: "Location", sublabel: locality, route: "/settings/discom" },
+        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/settings/profile" },
+        { icon: ShoppingCart, label: t("profile.yourRole"), sublabel: t("profile.seller"), route: "/settings/role" },
+        { icon: Settings, label: t("profile.homeProfile"), sublabel: "3 BHK • Residential", route: "/settings/devices?type=profile" },
+        { icon: Building2, label: t("profile.location"), sublabel: locality, route: "/settings/discom" },
       ]
     },
     {
-      title: "Devices",
+      title: t("profile.devices"),
       items: [
-        { icon: Zap, label: "Solar Inverter", sublabel: "Growatt • 5 kW", route: "/settings/devices?type=inverter" },
-        { icon: Battery, label: "Battery", sublabel: "Luminous • 10 kWh", route: "/settings/devices?type=battery" },
-        { icon: Gauge, label: "Smart Meter", sublabel: "Genus • Bi-directional", route: "/settings/devices?type=meter" },
+        { icon: Zap, label: t("profile.solarInverter"), sublabel: "Growatt • 5 kW", route: "/settings/devices?type=inverter" },
+        { icon: Battery, label: t("profile.battery"), sublabel: "Luminous • 10 kWh", route: "/settings/devices?type=battery" },
+        { icon: Gauge, label: t("profile.smartMeter"), sublabel: "Genus • Bi-directional", route: "/settings/devices?type=meter" },
       ]
     },
     {
-      title: "Location & DISCOM",
+      title: t("profile.locationDiscom"),
       items: [
-        { icon: Globe, label: "DISCOM Settings", sublabel: `${userData.discom || "BESCOM"} • ${locality}`, route: "/settings/discom" },
-        { icon: FileText, label: "VC Documents", sublabel: "Connection VC Verified ✓", route: "/settings/vc-documents" },
+        { icon: Globe, label: t("profile.discomSettings"), sublabel: `${userData.discom || "BESCOM"} • ${locality}`, route: "/settings/discom" },
+        { icon: FileText, label: t("profile.vcDocuments"), sublabel: t("profile.connectionVerified"), route: "/settings/vc-documents" },
       ]
     },
     {
-      title: "Preferences",
+      title: t("profile.yourOrders"),
       items: [
-        { icon: Sparkles, label: "How Samai Helps", sublabel: userData.automationLevel === "auto" ? "Auto-place orders" : "Show recommendations", route: "/settings/automation" },
-        { icon: Wallet, label: "Payment Method", sublabel: userData.upiId || "Not set", route: "/settings/payment" },
-        { icon: MessageSquare, label: "Your Context", sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : "Not set", route: "/settings/context" },
-        { icon: CalendarClock, label: "Vacations & Holidays", sublabel: userData.schoolHolidays || userData.summerVacationStart ? "Dates saved" : "Not set", route: "/settings/vacations" },
-        { icon: Bell, label: "Notifications", sublabel: "Enabled", route: null },
+        { icon: Package, label: t("profile.orderHistory"), sublabel: t("profile.viewAllTrades"), route: "/order-history" },
+        { icon: Wallet, label: t("payments.title"), sublabel: userData.upiId || t("profile.setUpPayment"), route: "/payments" },
+      ]
+    },
+    {
+      title: t("profile.preferences"),
+      items: [
+        { icon: CalendarClock, label: "Login History", sublabel: "View your login activity", route: "/login-history" },
+        { icon: Sparkles, label: t("profile.howSamaiHelps"), sublabel: userData.automationLevel === "auto" ? t("profile.autoPlaceOrders") : t("profile.showRecommendations"), route: "/settings/automation" },
+        { icon: MessageSquare, label: t("profile.yourContext"), sublabel: userData.userContext ? (userData.userContext.length > 25 ? userData.userContext.substring(0, 25) + "..." : userData.userContext) : t("profile.notSet"), route: "/settings/context" },
+        { icon: CalendarClock, label: t("profile.vacationsHolidays"), sublabel: userData.schoolHolidays || userData.summerVacationStart ? t("profile.datesSaved") : t("profile.notSet"), route: "/settings/vacations" },
+        { icon: Bell, label: t("profile.notifications"), sublabel: t("profile.enabled"), route: null },
       ]
     },
   ];
 
   return (
-    <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+    <MainAppShell>
+      <div className="screen-container !justify-start !pt-4 !pb-6">
+        <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -56,7 +79,7 @@ const ProfilePage = () => {
           >
             <ChevronLeft size={20} className="text-foreground" />
           </button>
-          <h1 className="text-lg font-bold text-foreground">Profile & Settings</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("profile.title")}</h1>
         </div>
 
         {/* Profile Card */}
@@ -102,15 +125,17 @@ const ProfilePage = () => {
           ))}
         </div>
 
-        {/* Demo Reset */}
+        {/* Logout Button */}
         <button
-          onClick={() => navigate("/")}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+          onClick={handleLogout}
+          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
         >
-          ← Start demo over
+          <LogOut size={16} />
+          <span className="text-sm font-medium">Logout</span>
         </button>
+        </PageContainer>
       </div>
-    </div>
+    </MainAppShell>
   );
 };
 

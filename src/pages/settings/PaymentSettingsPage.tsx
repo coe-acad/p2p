@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Wallet, Check } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { useToast } from "@/hooks/use-toast";
+import PageContainer from "@/components/layout/PageContainer";
 
 const PaymentSettingsPage = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const PaymentSettingsPage = () => {
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+      <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -107,7 +108,7 @@ const PaymentSettingsPage = () => {
             Save Payment Method
           </button>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

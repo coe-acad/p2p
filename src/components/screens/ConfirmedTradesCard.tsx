@@ -1,5 +1,6 @@
 import { Lock, CheckCircle2 } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmedTrade {
   time: string;
@@ -17,15 +18,16 @@ interface ConfirmedTradesCardProps {
 }
 
 const ConfirmedTradesCard = ({ trades, className = "", style, innerRef }: ConfirmedTradesCardProps) => {
+  const { t } = useTranslation();
   if (trades.length === 0) return null;
 
   return (
     <div ref={innerRef} className={`bg-card rounded-xl border border-border shadow-card p-3 ${className}`} style={style}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Confirmed</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("trades.confirmed")}</p>
         <div className="flex items-center gap-1 text-2xs text-accent bg-accent/10 rounded-full px-2 py-0.5">
           <Lock size={9} />
-          <span>Locked in</span>
+          <span>{t("prepared.lockedIn")}</span>
         </div>
       </div>
       

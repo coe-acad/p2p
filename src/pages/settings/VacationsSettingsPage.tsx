@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, GraduationCap, Sun, CalendarClock } from "lucide-react";
 import { useState } from "react";
 import { useUserData } from "@/hooks/useUserData";
+import PageContainer from "@/components/layout/PageContainer";
 
 const VacationsSettingsPage = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const VacationsSettingsPage = () => {
 
   return (
     <div className="screen-container !justify-start !pt-4 !pb-6">
-      <div className="w-full max-w-md flex flex-col gap-4 px-4">
+      <PageContainer gap={4}>
         {/* Header */}
         <div className="flex items-center gap-3 animate-fade-in">
           <button 
@@ -133,10 +134,9 @@ const VacationsSettingsPage = () => {
         >
           Save Vacation Dates
         </button>
-      </div>
+      </PageContainer>
     </div>
   );
 };
 
 export default VacationsSettingsPage;
-

@@ -3,6 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  PublicOnlyRoute,
+  RoleProtectedRoute,
+  VerificationRoute,
+  IntentAccessRoute,
+} from "@/components/layout/ProtectedRoute";
 
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
@@ -10,20 +16,31 @@ import VerifyPage from "./pages/VerifyPage";
 import SuccessPage from "./pages/SuccessPage";
 
 import OnboardingIntroPage from "./pages/OnboardingIntroPage";
-import OnboardingLocationPage from "./pages/OnboardingLocationPage";
+import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import CalculatingPage from "./pages/CalculatingPage";
+import EarningsHookPage from "./pages/EarningsHookPage";
 import PreparedPage from "./pages/PreparedPage";
 import PublishedPage from "./pages/PublishedPage";
 import HomePage from "./pages/HomePage";
+import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
+import PaymentPage from "./pages/PaymentPage";
 import ProfilePage from "./pages/ProfilePage";
+import BuyerProfilePage from "./pages/BuyerProfilePage";
+import BuyerPaymentsPage from "./pages/BuyerPaymentsPage";
+import BuyerAskSamaiPage from "./pages/BuyerAskSamaiPage";
+import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
+import LoginHistoryPage from "./pages/LoginHistoryPage";
+import AskSamaiPage from "./pages/AskSamaiPage";
 import NotFound from "./pages/NotFound";
 
 // Settings Pages
 import RoleSettingsPage from "./pages/settings/RoleSettingsPage";
 import MobileSettingsPage from "./pages/settings/MobileSettingsPage";
+import ProfileSettingsPage from "./pages/settings/ProfileSettingsPage";
 import DiscomSettingsPage from "./pages/settings/DiscomSettingsPage";
 import VCDocumentsPage from "./pages/settings/VCDocumentsPage";
 import DevicesSettingsPage from "./pages/settings/DevicesSettingsPage";
@@ -39,44 +56,63 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Initial Flow - Welcome is the common landing for all users */}
-          <Route path="/" element={<WelcomePage />} />
-          <Route path="/intent" element={<IntentPage />} />
-          <Route path="/verify" element={<VerifyPage />} />
-          <Route path="/success" element={<SuccessPage />} />
-          
-          {/* Onboarding Steps (2 steps: Location+Devices combined, then Talk) */}
-          <Route path="/onboarding" element={<OnboardingIntroPage />} />
-          <Route path="/onboarding/location" element={<OnboardingLocationPage />} />
-          <Route path="/onboarding/talk" element={<OnboardingTalkPage />} />
-          
-          {/* Post-Onboarding */}
-          <Route path="/calculating" element={<CalculatingPage />} />
-          <Route path="/prepared" element={<PreparedPage />} />
-          <Route path="/published" element={<PublishedPage />} />
-          
-          {/* Main App */}
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/today-trades" element={<TodayTradesPage />} />
-          <Route path="/payments" element={<PaymentsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          
-          {/* Settings Pages */}
-          <Route path="/settings/role" element={<RoleSettingsPage />} />
-          <Route path="/settings/mobile" element={<MobileSettingsPage />} />
-          <Route path="/settings/discom" element={<DiscomSettingsPage />} />
-          <Route path="/settings/vc-documents" element={<VCDocumentsPage />} />
-          <Route path="/settings/devices" element={<DevicesSettingsPage />} />
-          <Route path="/settings/context" element={<UserContextPage />} />
-          <Route path="/settings/automation" element={<AutomationSettingsPage />} />
-          <Route path="/settings/vacations" element={<VacationsSettingsPage />} />
-          <Route path="/settings/payment" element={<PaymentSettingsPage />} />
-          
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <div className="app-viewport-min bg-background">
+          <Routes>
+            {/* Public routes - redirects to /home if already logged in */}
+            <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
+            <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
+            {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
+            <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
+
+            {/* Protected routes - redirects to / if not logged in */}
+            <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
+
+            {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
+            <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
+
+            {/* Post-Onboarding - Seller only */}
+            <Route path="/calculating" element={<RoleProtectedRoute requiredIntent="sell"><CalculatingPage /></RoleProtectedRoute>} />
+            <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsHookPage /></RoleProtectedRoute>} />
+            <Route path="/prepared" element={<RoleProtectedRoute requiredIntent="sell"><PreparedPage /></RoleProtectedRoute>} />
+            <Route path="/published" element={<RoleProtectedRoute requiredIntent="sell"><PublishedPage /></RoleProtectedRoute>} />
+
+            {/* Seller Main App */}
+            <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
+            <Route path="/ask-samai" element={<RoleProtectedRoute requiredIntent="sell"><AskSamaiPage /></RoleProtectedRoute>} />
+            <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
+            <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
+            <Route path="/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfilePage /></RoleProtectedRoute>} />
+            <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+            <Route path="/login-history" element={<RoleProtectedRoute requiredIntent="sell"><LoginHistoryPage /></RoleProtectedRoute>} />
+
+            {/* Buyer Main App */}
+            <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
+            <Route path="/buyer-profile" element={<RoleProtectedRoute requiredIntent="buy"><BuyerProfilePage /></RoleProtectedRoute>} />
+            <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-payment" element={<RoleProtectedRoute requiredIntent="buy"><PaymentPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-ask-samai" element={<RoleProtectedRoute requiredIntent="buy"><BuyerAskSamaiPage /></RoleProtectedRoute>} />
+            <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
+
+            {/* Seller Settings Pages */}
+            <Route path="/settings/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfileSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/role" element={<RoleProtectedRoute requiredIntent="sell"><RoleSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/mobile" element={<RoleProtectedRoute requiredIntent="sell"><MobileSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/discom" element={<RoleProtectedRoute requiredIntent="sell"><DiscomSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/vc-documents" element={<RoleProtectedRoute requiredIntent="sell"><VCDocumentsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/devices" element={<RoleProtectedRoute requiredIntent="sell"><DevicesSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/context" element={<RoleProtectedRoute requiredIntent="sell"><UserContextPage /></RoleProtectedRoute>} />
+            <Route path="/settings/automation" element={<RoleProtectedRoute requiredIntent="sell"><AutomationSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/vacations" element={<RoleProtectedRoute requiredIntent="sell"><VacationsSettingsPage /></RoleProtectedRoute>} />
+            <Route path="/settings/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentSettingsPage /></RoleProtectedRoute>} />
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

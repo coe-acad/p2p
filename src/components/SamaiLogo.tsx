@@ -1,4 +1,4 @@
-import samaiLogoSvg from "@/assets/samai-logo.svg";
+const samaiLogoSvg = "/logo.svg";
 
 interface SamaiLogoProps {
   size?: "xs" | "sm" | "md" | "lg";
