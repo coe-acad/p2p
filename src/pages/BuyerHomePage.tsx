@@ -133,7 +133,7 @@ const BuyerHomePage = () => {
         seller_name: listing.seller_name,
         delivery_start: listing.delivery_start,
         delivery_end: listing.delivery_end,
-      }, userData.phone);
+      });
 
       setCurrentTransactionId(selectResult.transactionId);
 

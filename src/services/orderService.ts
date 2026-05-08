@@ -50,7 +50,7 @@ export interface OrderStateResponse {
 }
 
 const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
-const DEFAULT_BAP_URI = import.meta.env.VITE_ORDER_BAP_URI || 'http://atria-bap:8001/bap/receiver';
+const DEFAULT_BAP_URI = import.meta.env.VITE_ORDER_BAP_URI || 'https://atria-bap.atriauniversity.ai/bap/receiver';
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
 const DEFAULT_BPP_URI = import.meta.env.VITE_ORDER_BPP_URI || 'https://atria-bpp.atriauniversity.ai';
 
@@ -91,7 +91,7 @@ const extractOrderAmount = (order: any): number | null => {
 };
 
 export const orderService = {
-  async select(orderDetails: OrderDetails, buyerPhone?: string): Promise<SelectResponse> {
+  async select(orderDetails: OrderDetails): Promise<SelectResponse> {
     const context = createContext(orderDetails);
 
     const payload: any = {
@@ -112,10 +112,6 @@ export const orderService = {
         },
       },
     };
-
-    if (buyerPhone) {
-      payload.buyerPhone = buyerPhone;
-    }
 
     try {
       const headers = await getAuthHeaders();
