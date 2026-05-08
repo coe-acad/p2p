@@ -1,7 +1,7 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser, saveUser } from "@/services/userService";
+import { ensureUserOnServer, loadUser } from "@/services/userService";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "sell" || value === "buy";
 
@@ -34,19 +34,6 @@ const VerifyPage = () => {
         ...(resolvedIntent ? { intent: resolvedIntent } : {}),
         onboardingComplete: true, // Lock all user details for returning users
       });
-
-      // Save to Firestore BEFORE navigating to ensure intent is persisted
-      await saveUser({
-        phone: phoneWithCountry,
-        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-        name: existingUser.name || "",
-        address: existingUser.address || "",
-        city: existingUser.city || "",
-        discom: existingUser.discom || "",
-        consumerId: existingUser.consumerId || "",
-        automationLevel: existingUser.automationLevel || "recommend",
-        aadhaarVerified: true,
-      } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
 
       ensureUserOnServer({
         name: existingUser.name || "",
@@ -91,11 +78,6 @@ const VerifyPage = () => {
       setUserData(newUserData);
 
       localStorage.removeItem("samai_selected_intent");
-
-      // Save to Firestore BEFORE navigating to ensure intent is persisted
-      await saveUser(newUserData as any).catch((err) =>
-        console.error("Failed to save user intent to Firestore:", err)
-      );
 
       ensureUserOnServer({
         name: newUserData.name,

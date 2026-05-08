@@ -306,11 +306,11 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
 
       // For new users, save phone number so profile data can be saved to Firestore
       if (!isUserReturning) {
-        // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
-        const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
+        // Only stage the phone number here.
+        // Intent must be decided and persisted only in VerifyPage after we conclusively
+        // determine whether this is an existing account or a true new-user signup.
         setUserData({
           phone: `+91${phoneNumber}`,
-          ...(flowIntent ? { intent: flowIntent } : {}),
         });
         // New users proceed with verification steps
         setStep("profile");
