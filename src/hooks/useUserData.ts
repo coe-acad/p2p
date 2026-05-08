@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { saveUser, loadUser } from "@/services/userService";
+import { loadUser } from "@/services/userService";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" =>
   value === "sell" || value === "buy";
@@ -233,7 +233,6 @@ export const useUserData = () => {
         name: updates.name ? normalizeName(updates.name) : prev.name,
         address: updates.address ? normalizeAddress(updates.address) : prev.address,
       };
-      saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });
   };
