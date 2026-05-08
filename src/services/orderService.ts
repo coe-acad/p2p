@@ -7,10 +7,7 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return v.toString(16);
 });
 
-// Call Python BPP service directly (adapters handle Beckn protocol signing/validation for callbacks)
-const BPP_URL = 'http://localhost:3002';
 const BAP_URL = import.meta.env.VITE_BAP_URL ?? 'http://localhost:8001';
-const bppClient = createApiClient(BPP_URL);
 const bapClient = createApiClient(BAP_URL);
 
 export interface OrderDetails {
@@ -71,6 +68,28 @@ const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) 
   ttl: 'PT30S',
 });
 
+const extractOrderAmount = (order: any): number | null => {
+  const paymentValue = order?.['beckn:payment']?.['beckn:amount']?.value;
+  if (typeof paymentValue === 'number') {
+    return paymentValue;
+  }
+  if (typeof paymentValue === 'string' && paymentValue.trim()) {
+    const parsed = Number(paymentValue);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
+  const orderValue = order?.['beckn:orderValue']?.value ?? order?.orderValue?.total;
+  if (typeof orderValue === 'number') {
+    return orderValue;
+  }
+  if (typeof orderValue === 'string' && orderValue.trim()) {
+    const parsed = Number(orderValue);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
+  return null;
+};
+
 export const orderService = {
   async select(orderDetails: OrderDetails, buyerPhone?: string): Promise<SelectResponse> {
     const context = createContext(orderDetails);
@@ -99,12 +118,14 @@ export const orderService = {
     }
 
     try {
+      const headers = await getAuthHeaders();
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/select',
           method: 'POST',
           data: payload,
+          headers,
         },
         {
           timeoutMs: 10000,
@@ -160,12 +181,14 @@ export const orderService = {
     };
 
     try {
+      const headers = await getAuthHeaders();
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/init',
           method: 'POST',
           data: payload,
+          headers,
         },
         {
           timeoutMs: 10000,
@@ -200,12 +223,14 @@ export const orderService = {
     };
 
     try {
+      const headers = await getAuthHeaders();
       const response = await requestWithRetry<any>(
-        bppClient,
+        bapClient,
         {
           url: '/confirm',
           method: 'POST',
           data: payload,
+          headers,
         },
         {
           timeoutMs: 10000,
@@ -225,17 +250,12 @@ export const orderService = {
   },
 
   async getTradeStatus(transactionId: string): Promise<TradeStatusResponse> {
-    return requestWithRetry<TradeStatusResponse>(
-      bppClient,
-      {
-        url: `/api/trade-status?transaction_id=${encodeURIComponent(transactionId)}`,
-        method: 'GET',
-      },
-      {
-        timeoutMs: 10000,
-        retries: 1,
-      }
-    );
+    const state = await this.getOrderState(transactionId);
+    return {
+      status: state.order_state === 'CONFIRMED',
+      price: extractOrderAmount(state.order),
+      state: state.order_state,
+    };
   },
 
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
@@ -283,9 +303,13 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const status = await this.getTradeStatus(transactionId);
-      if (status.status || status.state === 'CONFIRMED') {
-        return status;
+      const state = await this.getOrderState(transactionId);
+      if (state.order_state === 'CONFIRMED' && state.order) {
+        return {
+          status: true,
+          price: extractOrderAmount(state.order),
+          state: state.order_state,
+        };
       }
 
       if (attempt < maxAttempts - 1) {
@@ -293,9 +317,13 @@ export const orderService = {
       }
     }
 
-    const finalStatus = await this.getTradeStatus(transactionId);
-    if (finalStatus.status || finalStatus.state === 'CONFIRMED') {
-      return finalStatus;
+    const finalState = await this.getOrderState(transactionId);
+    if (finalState.order_state === 'CONFIRMED' && finalState.order) {
+      return {
+        status: true,
+        price: extractOrderAmount(finalState.order),
+        state: finalState.order_state,
+      };
     }
 
     throw new Error('Confirmation is still pending or failed validation');
