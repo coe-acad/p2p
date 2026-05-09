@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { createApiClient, requestWithRetry, toApiError } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError } from "@/services/apiClient";
 
 export interface EnergyListing {
   id: string;
@@ -7,9 +7,14 @@ export interface EnergyListing {
   catalog_id: string;
   bpp_id?: string;
   bpp_uri?: string;
+  offer_item_ids?: string[];
   seller_id: string;
   seller_name: string;
   offer_name: string;
+  offer_provider?: string;
+  offer_descriptor?: Record<string, unknown>;
+  offer_price?: Record<string, unknown>;
+  offer_attributes?: Record<string, unknown>;
   offers?: EnergyListing[];
   offer_count?: number;
   min_price_per_unit?: number;
@@ -72,7 +77,7 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const BAP_URL = import.meta.env.VITE_BAP_URL || "http://localhost:8001";
+  const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
   const NETWORK_ID =
     import.meta.env.VITE_NETWORK_ID || "p2p-interdiscom-trading-test-network";
   const PAGE_SIZE = 10;

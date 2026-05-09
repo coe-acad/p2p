@@ -1,9 +1,9 @@
 import { getAuthHeaders } from "@/services/authHeaders";
-import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError, type RequestOptions } from "@/services/apiClient";
 import { PaymentEnvelopeSchema, PaymentsEnvelopeSchema } from "@/services/apiSchemas";
 
-const BPP_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
-const BAP_URL = import.meta.env.VITE_BAP_URL ?? "http://localhost:8001";
+const BPP_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
 const bppClient = createApiClient(BPP_URL);
 const bapClient = createApiClient(BAP_URL);
 

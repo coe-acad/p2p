@@ -5,6 +5,7 @@ import { format, addDays, parse } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { auth } from "@/lib/firebase";
 import { logger } from "@/lib/logger";
+import { resolveRequiredEnv } from "@/services/apiClient";
 import {
   Dialog,
   DialogContent,
@@ -238,7 +239,7 @@ const PreparedTomorrowScreen = ({
     logger.devLog("ID token obtained:", Boolean(token));
     const authHeader = { Authorization: `Bearer ${token}` };
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+    const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
     const API_URL = `${BACKEND_URL}/api/create`;
 
     logger.devLog("Publishing trades:", payload);

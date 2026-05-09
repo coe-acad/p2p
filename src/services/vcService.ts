@@ -1,7 +1,7 @@
 import { getAuthHeaders } from "@/services/authHeaders";
-import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError, type RequestOptions } from "@/services/apiClient";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
+const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
 const backendClient = createApiClient(BACKEND_URL);
 
 export interface VCVerificationResult {
