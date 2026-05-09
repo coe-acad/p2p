@@ -21,6 +21,22 @@ const DEFAULT_RETRY_DELAY_MS = 300;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const resolveRequiredEnv = (
+  envValue: string | undefined,
+  fallback: string,
+  envName: string
+): string => {
+  if (envValue && envValue.trim()) {
+    return envValue;
+  }
+
+  if (import.meta.env.PROD) {
+    throw new Error(`Missing required environment variable: ${envName}`);
+  }
+
+  return fallback;
+};
+
 export const createApiClient = (baseURL: string): AxiosInstance => {
   return axios.create({
     baseURL,
@@ -85,4 +101,3 @@ export const requestWithRetry = async <T>(
     }
   }
 };
-

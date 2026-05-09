@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import SamaiLogo from "@/components/SamaiLogo";
 import MainAppShell from "@/components/layout/MainAppShell";
+import { resolveRequiredEnv } from "@/services/apiClient";
 
 interface RazorpayOrderResponse {
   order_id: string;
@@ -50,7 +51,7 @@ const PaymentPage = () => {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const paymentUrl = import.meta.env.VITE_PAYMENT_URL || "http://localhost:8003";
+  const paymentUrl = resolveRequiredEnv(import.meta.env.VITE_PAYMENT_URL, "http://localhost:8003", "VITE_PAYMENT_URL");
 
   useEffect(() => {
     const createOrder = async () => {
