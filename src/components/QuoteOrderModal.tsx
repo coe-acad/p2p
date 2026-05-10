@@ -47,7 +47,7 @@ export const QuoteOrderModal = ({
   );
   const quotePaymentStatus = quote?.['beckn:payment']?.['beckn:paymentStatus'] ?? 'Pending';
   const quoteOrderStatus = quote?.['beckn:orderStatus'] ?? 'Pending';
-  const hasQuote = Boolean(quote);
+  const hasQuote = status === 'quoted' || status === 'confirming' || status === 'confirmed';
   const primaryActionLabel =
     status === 'quoting'
       ? 'Getting Quote...'
