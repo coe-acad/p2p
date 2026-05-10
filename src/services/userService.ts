@@ -2,12 +2,12 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
-import { createApiClient, requestWithRetry, toApiError, type RequestOptions } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError, type RequestOptions } from "@/services/apiClient";
 import { getAuthHeaders } from "@/services/authHeaders";
 import { EnsureUserResponseSchema } from "@/services/apiSchemas";
 
 const COLLECTION = "users";
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3002";
+const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
 const backendClient = createApiClient(BACKEND_URL);
 
 // Save (merge) user data to Firestore, keyed by phone number

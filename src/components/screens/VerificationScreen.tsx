@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
 const discomByState: Record<string, string> = {
@@ -283,7 +284,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       await confirmationResultRef.current.confirm(enteredOtp);
 
       // Bootstrap Firebase auth by setting custom claims with phone number
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+      const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
       const token = await auth.currentUser?.getIdToken();
       if (token) {
         try {

@@ -126,16 +126,24 @@ const BuyerHomePage = () => {
     try {
       const selectResult = await orderService.select({
         offer_id: listing.offer_id,
+        seller_id: listing.seller_id,
         bpp_id: listing.bpp_id,
         bpp_uri: listing.bpp_uri,
+        offer_item_ids: listing.offer_item_ids,
+        offer_provider: listing.offer_provider,
+        offer_descriptor: listing.offer_descriptor,
+        offer_price: listing.offer_price,
+        offer_attributes: listing.offer_attributes,
         quantity: listing.quantity_available,
         price_per_unit: listing.price_per_unit,
         seller_name: listing.seller_name,
         delivery_start: listing.delivery_start,
         delivery_end: listing.delivery_end,
-      }, userData.phone);
+      });
 
       setCurrentTransactionId(selectResult.transactionId);
+      const selectedOrderState = await orderService.waitForSelectedOrder(selectResult.transactionId);
+      setCurrentOrderData(selectedOrderState.order);
 
       setShowOfferModal(false);
       setShowQuoteModal(true);
@@ -156,14 +164,20 @@ const BuyerHomePage = () => {
     try {
       await orderService.init(currentTransactionId, {
         offer_id: selectedOffer.offer_id,
+        seller_id: selectedOffer.seller_id,
         bpp_id: selectedOffer.bpp_id,
         bpp_uri: selectedOffer.bpp_uri,
+        offer_item_ids: selectedOffer.offer_item_ids,
+        offer_provider: selectedOffer.offer_provider,
+        offer_descriptor: selectedOffer.offer_descriptor,
+        offer_price: selectedOffer.offer_price,
+        offer_attributes: selectedOffer.offer_attributes,
         quantity: selectedOffer.quantity_available,
         price_per_unit: selectedOffer.price_per_unit,
         seller_name: selectedOffer.seller_name,
         delivery_start: selectedOffer.delivery_start,
         delivery_end: selectedOffer.delivery_end,
-      });
+      }, currentOrderData);
 
       const orderState = await orderService.waitForQuotation(currentTransactionId);
       setCurrentOrderData(orderState.order);
@@ -185,8 +199,14 @@ const BuyerHomePage = () => {
         currentTransactionId,
         {
           offer_id: selectedOffer.offer_id,
+          seller_id: selectedOffer.seller_id,
           bpp_id: selectedOffer.bpp_id,
           bpp_uri: selectedOffer.bpp_uri,
+          offer_item_ids: selectedOffer.offer_item_ids,
+          offer_provider: selectedOffer.offer_provider,
+          offer_descriptor: selectedOffer.offer_descriptor,
+          offer_price: selectedOffer.offer_price,
+          offer_attributes: selectedOffer.offer_attributes,
           quantity: selectedOffer.quantity_available,
           price_per_unit: selectedOffer.price_per_unit,
           seller_name: selectedOffer.seller_name,
