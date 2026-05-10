@@ -9,6 +9,7 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
 
 const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, 'http://localhost:8001', 'VITE_BAP_URL');
 const bapClient = createApiClient(BAP_URL);
+const bppClient = createApiClient(BPP_URL);
 
 export interface OrderDetails {
   offer_id: string;
