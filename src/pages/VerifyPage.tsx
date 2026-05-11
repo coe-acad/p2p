@@ -35,12 +35,14 @@ const VerifyPage = () => {
         onboardingComplete: true, // Lock all user details for returning users
       });
 
-      ensureUserOnServer({
-        name: existingUser.name || "",
-        meter_number: existingUser.consumerId || "",
-        discom: existingUser.discom || "",
-        consumerId: existingUser.consumerId || "",
-      }).catch((err) => console.error("Failed to ensure user on server:", err));
+      if (resolvedIntent === "sell") {
+        ensureUserOnServer({
+          name: existingUser.name || "",
+          meter_number: existingUser.consumerId || "",
+          discom: existingUser.discom || "",
+          consumerId: existingUser.consumerId || "",
+        }).catch((err) => console.error("Failed to ensure user on server:", err));
+      }
 
       // Mark all onboarding steps as complete
       localStorage.setItem("samai_onboarding_complete", "true");
@@ -79,12 +81,14 @@ const VerifyPage = () => {
 
       localStorage.removeItem("samai_selected_intent");
 
-      ensureUserOnServer({
-        name: newUserData.name,
-        meter_number: newUserData.consumerId,
-        discom: newUserData.discom,
-        consumerId: newUserData.consumerId,
-      }).catch((err) => console.error("Failed to ensure user on server:", err));
+      if (newUserIntent === "sell") {
+        ensureUserOnServer({
+          name: newUserData.name,
+          meter_number: newUserData.consumerId,
+          discom: newUserData.discom,
+          consumerId: newUserData.consumerId,
+        }).catch((err) => console.error("Failed to ensure user on server:", err));
+      }
 
       localStorage.setItem("samai_onboarding_complete", "true");
       localStorage.setItem("samai_aadhaar_verified", "true");

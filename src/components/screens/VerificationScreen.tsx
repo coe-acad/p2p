@@ -283,25 +283,28 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
 
-      // Bootstrap Firebase auth by setting custom claims with phone number
-      const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
-      const token = await auth.currentUser?.getIdToken();
-      if (token) {
-        try {
-          await fetch(`${BACKEND_URL}/api/auth/setup`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
-          });
-          logger.devLog("Auth bootstrap complete");
-          // Force token refresh to include the newly set phone_number custom claim
-          await auth.currentUser?.getIdToken(true);
-          logger.devLog("Token refreshed with phone_number claim");
-        } catch (err) {
-          logger.devDebug("Auth bootstrap failed (non-critical):", err);
+      // Seller flows still use BPP-backed auth/bootstrap helpers.
+      // Buyer flows should not call seller BPP auth endpoints during startup.
+      if (selectedIntent === "sell") {
+        const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+        const token = await auth.currentUser?.getIdToken();
+        if (token) {
+          try {
+            await fetch(`${BACKEND_URL}/api/auth/setup`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
+            });
+            logger.devLog("Auth bootstrap complete");
+            // Force token refresh to include the newly set phone_number custom claim
+            await auth.currentUser?.getIdToken(true);
+            logger.devLog("Token refreshed with phone_number claim");
+          } catch (err) {
+            logger.devDebug("Auth bootstrap failed (non-critical):", err);
+          }
         }
       }
 
@@ -338,14 +341,16 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       name,
       consumerId: meter_number,
     });
-    try {
-      await ensureUserOnServer({
-        name,
-        meter_number,
-        consumerId: meter_number,
-      });
-    } catch (err) {
-      logger.error("Failed to sync user profile", err);
+    if (selectedIntent === "sell") {
+      try {
+        await ensureUserOnServer({
+          name,
+          meter_number,
+          consumerId: meter_number,
+        });
+      } catch (err) {
+        logger.error("Failed to sync user profile", err);
+      }
     }
     setStep("aadhaar");
   };
