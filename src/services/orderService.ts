@@ -63,7 +63,7 @@ const DEFAULT_BAP_URI = resolveRequiredEnv(
 );
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
 const DEFAULT_BPP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BPP_URI,
+  import.meta.env.VITE_ORDER_BPP_URI || import.meta.env.VITE_BACKEND_URL,
   'https://atria-bpp.atriauniversity.ai',
   'VITE_ORDER_BPP_URI'
 );
