@@ -5,7 +5,7 @@ import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, Shield
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { ensureUserOnServer } from "@/services/userService";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -57,6 +57,7 @@ const isValidGSTIN = (gstin: string): boolean => {
 
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selectedIntent }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
+  const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
 
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -206,8 +207,12 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
 
       // For new users, check if phone number already exists in database
       if (!isUserReturning) {
-        const existingUser = await loadUser(`+91${phoneNumber}`);
-        if (existingUser) {
+        const response = await fetch(`${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(`+91${phoneNumber}`)}`);
+        if (!response.ok) {
+          throw new Error("Could not verify registration status. Please try again.");
+        }
+        const result = await response.json() as { exists?: boolean };
+        if (result.exists) {
           // User already registered - we'll show popup after sending OTP
           shouldShowModal = true;
         }
@@ -284,7 +289,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       await confirmationResultRef.current.confirm(enteredOtp);
 
       // Bootstrap Firebase auth by setting custom claims with phone number
-      const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
       const token = await auth.currentUser?.getIdToken();
       if (token) {
         try {
