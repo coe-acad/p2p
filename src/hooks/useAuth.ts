@@ -18,6 +18,7 @@ export const useAuth = (): AuthState => {
     let mounted = true;
     let softTimeoutId: NodeJS.Timeout;
     let hardTimeoutId: NodeJS.Timeout;
+    let sessionTimeoutId: NodeJS.Timeout;
 
     // If we already have app-side session hints, give Firebase auth restore
     // longer to recover before treating the user as logged out.
@@ -29,6 +30,18 @@ export const useAuth = (): AuthState => {
 
     const softTimeoutMs = 5000;
     const hardTimeoutMs = hasCachedSessionHint ? 20000 : 10000;
+    const SESSION_TIMEOUT_MS = 5 * 60 * 60 * 1000; // 5 hours
+
+    const setupSessionTimeout = () => {
+      clearTimeout(sessionTimeoutId);
+      sessionTimeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn("Session expired after 5 hours, auto-logging out");
+          signOut(auth).catch(err => console.error("Auto-logout failed:", err));
+        }
+      }, SESSION_TIMEOUT_MS);
+      localStorage.setItem("samai_session_start", Date.now().toString());
+    };
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (mounted) {
@@ -38,9 +51,13 @@ export const useAuth = (): AuthState => {
         clearTimeout(hardTimeoutId);
 
         if (firebaseUser) {
+          setupSessionTimeout();
           recordLogin().catch(error => {
             console.error("Failed to record login:", error);
           });
+        } else {
+          clearTimeout(sessionTimeoutId);
+          localStorage.removeItem("samai_session_start");
         }
       }
     });
@@ -62,6 +79,7 @@ export const useAuth = (): AuthState => {
       mounted = false;
       clearTimeout(softTimeoutId);
       clearTimeout(hardTimeoutId);
+      clearTimeout(sessionTimeoutId);
       unsubscribe();
     };
   }, []);
