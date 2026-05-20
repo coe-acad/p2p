@@ -202,21 +202,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     setIsSendingOtp(true);
     setPhoneError("");
     try {
-      let shouldShowModal = false;
-
-      // For new users, check if phone number already exists in database
-      if (!isUserReturning) {
-        const response = await fetch(`${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(`+91${phoneNumber}`)}`);
-        if (!response.ok) {
-          throw new Error("Could not verify registration status. Please try again.");
-        }
-        const result = await response.json() as { exists?: boolean };
-        if (result.exists) {
-          // User already registered - we'll show popup after sending OTP
-          shouldShowModal = true;
-        }
-      }
-
       logger.devLog("Sending OTP via backend");
 
       // Call backend send-otp endpoint
@@ -235,12 +220,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       sessionIdRef.current = session_id;
       logger.devLog("OTP sent successfully, session_id received");
 
-      // Show modal AFTER OTP is sent, not before
-      if (shouldShowModal) {
-        setShowAlreadyRegisteredModal(true);
-      } else {
-        setStep("otp");
-      }
+      // Move to OTP entry step
+      setStep("otp");
     } catch (err: any) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
@@ -293,8 +274,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       await signInWithCustomToken(auth, custom_token);
       logger.devLog("User signed in successfully");
 
-      // For new users, save phone number so profile data can be saved to Firestore
-      if (!isUserReturning && is_new_user) {
+      // Backend tells us if this is a new user or returning user
+      if (is_new_user) {
+        // New user: save phone number and show profile form
         // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
         const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
         setUserData({
@@ -304,7 +286,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
         // New users proceed with verification steps
         setStep("profile");
       } else {
-        // Returning users skip verification steps and go directly to home
+        // Returning user: skip verification steps and go directly to home
+        // Update isUserReturning state so we know this is a returning user
+        setIsUserReturning(true);
         // Don't save here - let VerifyPage load the complete data from database
         onVerified(phoneNumber);
       }
