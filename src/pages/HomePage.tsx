@@ -41,6 +41,7 @@ const getGreeting = (t: (key: string) => string) => {
 // Earnings data with animation states - for returning users only
 // Varied projected values with proportional kWh: ₹6.15 per kWh rate
 // Today: ₹178 → 29 kWh, Tomorrow: ₹185 → 30 kWh
+// this is the dummy data
 // Month = 30x of today's values
 const initialTodayData = { actual: 56, expected: 178, actualKwh: 9, expectedKwh: 29 };
 const tomorrowExpected = { earnings: 185, units: 30 }; // Different from today's projection
