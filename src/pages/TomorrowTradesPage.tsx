@@ -217,8 +217,18 @@ const TomorrowTradesPage = () => {
             <div className="flex items-start gap-3">
               <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-800">Error</p>
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="font-semibold text-red-800">Unable to load offers</p>
+                <p className="text-sm text-red-700">
+                  {error.includes("pattern") || error.includes("authorization")
+                    ? "There was a temporary issue loading your catalog. Please refresh and try again."
+                    : error}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+                >
+                  Refresh page
+                </button>
               </div>
             </div>
           </div>
