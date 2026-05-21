@@ -18,53 +18,76 @@ const VerifyPage = () => {
 
     const phoneWithCountry = `+91${phone}`;
 
-    // Check if user already exists in database
-    const existingUser = await loadUser(phoneWithCountry);
-    const isReturning = !!existingUser;
+    // Check if user already exists via backend API (doesn't require auth)
+    let isReturning = false;
+    let existingUser = null;
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+      const response = await fetch(`${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(phoneWithCountry)}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.exists) {
+          isReturning = true;
+          // After auth, we'll load full user data from Firestore
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check if user exists:", err);
+      // Continue anyway - will be treated as new user if check fails
+    }
 
-    if (isReturning && existingUser) {
-      // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
-      const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
+    if (isReturning) {
+      // Returning user: load full profile from Firestore now that they're authenticated
+      try {
+        existingUser = await loadUser(phoneWithCountry);
+      } catch (err) {
+        console.error("Failed to load returning user profile:", err);
+      }
 
-      const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
-      setUserData({
-        ...existingWithoutIntent,
-        phone: phoneWithCountry,
-        aadhaarVerified: true,
-        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-        onboardingComplete: true, // Lock all user details for returning users
-      });
+      if (existingUser) {
+        // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
+        const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
 
-      // Save to Firestore BEFORE navigating to ensure intent is persisted
-      await saveUser({
-        phone: phoneWithCountry,
-        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-        name: existingUser.name || "",
-        address: existingUser.address || "",
-        city: existingUser.city || "",
-        discom: existingUser.discom || "",
-        consumerId: existingUser.consumerId || "",
-        automationLevel: existingUser.automationLevel || "recommend",
-        aadhaarVerified: true,
-      } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
+        const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
+        setUserData({
+          ...existingWithoutIntent,
+          phone: phoneWithCountry,
+          aadhaarVerified: true,
+          ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+          onboardingComplete: true, // Lock all user details for returning users
+        });
 
-      ensureUserOnServer({
-        name: existingUser.name || "",
-        meter_number: existingUser.consumerId || "",
-        discom: existingUser.discom || "",
-        consumerId: existingUser.consumerId || "",
-      }).catch((err) => console.error("Failed to ensure user on server:", err));
+        // Save to Firestore BEFORE navigating to ensure intent is persisted
+        await saveUser({
+          phone: phoneWithCountry,
+          ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+          name: existingUser.name || "",
+          address: existingUser.address || "",
+          city: existingUser.city || "",
+          discom: existingUser.discom || "",
+          consumerId: existingUser.consumerId || "",
+          automationLevel: existingUser.automationLevel || "recommend",
+          aadhaarVerified: true,
+        } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
 
-      // Mark all onboarding steps as complete
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-      localStorage.setItem("samai_onboarding_talk_done", "true");
+        ensureUserOnServer({
+          name: existingUser.name || "",
+          meter_number: existingUser.consumerId || "",
+          discom: existingUser.discom || "",
+          consumerId: existingUser.consumerId || "",
+        }).catch((err) => console.error("Failed to ensure user on server:", err));
 
-      const targetRoute =
-        resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
-      navigate(targetRoute, { replace: true });
+        // Mark all onboarding steps as complete
+        localStorage.setItem("samai_onboarding_complete", "true");
+        localStorage.setItem("samai_aadhaar_verified", "true");
+        localStorage.setItem("samai_onboarding_location_done", "true");
+        localStorage.setItem("samai_onboarding_devices_done", "true");
+        localStorage.setItem("samai_onboarding_talk_done", "true");
+
+        const targetRoute =
+          resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
+        navigate(targetRoute, { replace: true });
+      }
     } else {
       // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
       const intentFromStorage = localStorage.getItem("samai_selected_intent");
