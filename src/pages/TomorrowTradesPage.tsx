@@ -119,26 +119,44 @@ const TomorrowTradesPage = () => {
   }, [userData.phone, profileHydrated]);
 
   // Convert UTC timestamp to IST display format
-  const formatTimeInIST = (utcTimestamp: string): string => {
+  const formatTimeInIST = (utcTimestamp: unknown): string => {
     try {
-      if (!utcTimestamp || typeof utcTimestamp !== "string") {
-        console.warn("Invalid timestamp:", utcTimestamp);
+      if (!utcTimestamp) {
         return "Invalid time";
       }
 
-      let date: Date;
+      const timestampStr = String(utcTimestamp).trim();
+      if (!timestampStr) {
+        return "Invalid time";
+      }
 
-      // Try to parse the timestamp
+      let date: Date | null = null;
+
+      // Try to parse the timestamp with multiple strategies
       try {
-        date = new Date(utcTimestamp);
+        date = new Date(timestampStr);
+        if (isNaN(date.getTime())) {
+          date = null;
+        }
       } catch (e) {
-        console.error("Date parsing error:", e, "timestamp:", utcTimestamp);
-        return "Invalid time";
+        date = null;
       }
 
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        console.warn("Invalid date value:", utcTimestamp);
+      // If direct parsing fails, try manual parsing
+      if (!date) {
+        const isoMatch = timestampStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        if (isoMatch) {
+          const [, year, month, day, hours, minutes] = isoMatch;
+          try {
+            date = new Date(`${year}-${month}-${day}T${hours}:${minutes}:${String(isoMatch[6]).padStart(2, "0")}Z`);
+          } catch (e) {
+            date = null;
+          }
+        }
+      }
+
+      if (!date || isNaN(date.getTime())) {
+        console.warn("Could not parse timestamp:", utcTimestamp);
         return "Invalid time";
       }
 
@@ -151,7 +169,7 @@ const TomorrowTradesPage = () => {
 
       const ampm = hours >= 12 ? "PM" : "AM";
       const displayHours = hours % 12 || 12;
-      const displayMinutes = minutes.toString().padStart(2, "0");
+      const displayMinutes = String(minutes).padStart(2, "0");
 
       return `${displayHours}:${displayMinutes} ${ampm}`;
     } catch (err) {
