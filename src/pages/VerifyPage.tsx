@@ -68,6 +68,7 @@ const VerifyPage = () => {
           consumerId: existingUser.consumerId || "",
           automationLevel: existingUser.automationLevel || "recommend",
           aadhaarVerified: true,
+          onboardingComplete: true,
         } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
 
         ensureUserOnServer({

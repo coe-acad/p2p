@@ -175,6 +175,7 @@ export const useUserData = () => {
             name: normalizeName(remote.name ?? prev.name),
             address: normalizeAddress(remote.address ?? prev.address),
             phone: remote.phone || phone || prev.phone,
+            onboardingComplete: (remoteRest as Partial<UserData>).onboardingComplete ?? prev.onboardingComplete,
           }));
         }
       } catch (err) {
