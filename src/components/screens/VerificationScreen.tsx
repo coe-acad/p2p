@@ -222,9 +222,15 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           if (!container) {
             throw new Error("reCAPTCHA container not found in DOM");
           }
-          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+          const recaptchaConfig: any = {
             size: "invisible",
-          });
+          };
+          // Add site key if available (for production reCAPTCHA)
+          const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+          if (siteKey) {
+            recaptchaConfig.siteKey = siteKey;
+          }
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", recaptchaConfig);
           logger.devLog("RecaptchaVerifier initialized successfully");
         } catch (err: any) {
           logger.error("Recaptcha initialization failed", err);
