@@ -86,7 +86,7 @@ const TomorrowTradesPage = () => {
       const date = new Date(utcTimestamp);
       // IST is UTC+5:30
       const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-      return istDate.toLocaleTimeString("en-IN", {
+      return istDate.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
