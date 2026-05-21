@@ -95,7 +95,27 @@ const TomorrowTradesPage = () => {
   // Convert UTC timestamp to IST display format
   const formatTimeInIST = (utcTimestamp: string): string => {
     try {
-      const date = new Date(utcTimestamp);
+      if (!utcTimestamp || typeof utcTimestamp !== "string") {
+        console.warn("Invalid timestamp:", utcTimestamp);
+        return "Invalid time";
+      }
+
+      let date: Date;
+
+      // Try to parse the timestamp
+      try {
+        date = new Date(utcTimestamp);
+      } catch (e) {
+        console.error("Date parsing error:", e, "timestamp:", utcTimestamp);
+        return "Invalid time";
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date value:", utcTimestamp);
+        return "Invalid time";
+      }
+
       // IST is UTC+5:30
       const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
 
@@ -108,7 +128,8 @@ const TomorrowTradesPage = () => {
       const displayMinutes = minutes.toString().padStart(2, "0");
 
       return `${displayHours}:${displayMinutes} ${ampm}`;
-    } catch {
+    } catch (err) {
+      console.error("formatTimeInIST error:", err);
       return "Invalid time";
     }
   };
