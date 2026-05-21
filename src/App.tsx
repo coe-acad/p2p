@@ -25,6 +25,7 @@ import PublishedPage from "./pages/PublishedPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
+import TomorrowTradesPage from "./pages/TomorrowTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PaymentPage from "./pages/PaymentPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
             <Route path="/ask-samai" element={<RoleProtectedRoute requiredIntent="sell"><AskSamaiPage /></RoleProtectedRoute>} />
             <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
+            <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
             <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
             <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
             <Route path="/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfilePage /></RoleProtectedRoute>} />

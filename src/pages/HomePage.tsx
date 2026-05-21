@@ -497,11 +497,7 @@ const HomePage = () => {
           
           <button
             onClick={() => {
-              if (tomorrowStatus === "not_published") {
-                navigate("/prepared");
-              } else {
-                navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: tomorrowStatus === "published_confirmed" } });
-              }
+              navigate("/tomorrow-trades");
             }}
             className="w-full text-left rounded-lg p-3"
             style={{ background: "linear-gradient(135deg, hsl(175 50% 42%) 0%, hsl(185 45% 38%) 100%)" }}

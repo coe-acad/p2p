@@ -1,0 +1,261 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { ChevronLeft, AlertCircle, Zap } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import MainAppShell from "@/components/layout/MainAppShell";
+import PageContainer from "@/components/layout/PageContainer";
+
+interface TradeItem {
+  startTime: string;
+  endTime: string;
+  kWh: number;
+  price: number;
+}
+
+interface TomorrowCatalog {
+  trades: TradeItem[];
+  generatedAt?: string;
+  generationId?: string;
+  consumptionId?: string;
+}
+
+const TomorrowTradesPage = () => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const { userData, profileHydrated } = useUserData();
+  const { user } = useAuth();
+
+  const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch tomorrow's catalog from API
+  useEffect(() => {
+    const fetchTomorrowCatalog = async () => {
+      if (!profileHydrated || !userData.phone) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get Firebase auth token
+        const token = await user?.getIdToken();
+
+        const response = await fetch(
+          `/api/sellers/${encodeURIComponent(userData.phone)}/tomorrow`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token && { Authorization: `Bearer ${token}` }),
+            },
+          }
+        );
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            throw new Error("You are not authorized to view this catalog");
+          }
+          throw new Error("Failed to fetch tomorrow's catalog");
+        }
+
+        const data = await response.json();
+        setCatalog(data);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "An error occurred";
+        setError(errorMsg);
+        console.error("Error fetching tomorrow's catalog:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTomorrowCatalog();
+  }, [userData.phone, profileHydrated]);
+
+  // Convert UTC timestamp to IST display format
+  const formatTimeInIST = (utcTimestamp: string): string => {
+    try {
+      const date = new Date(utcTimestamp);
+      // IST is UTC+5:30
+      const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+      return istDate.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "Invalid time";
+    }
+  };
+
+  // Get tomorrow's date in IST
+  const getTomorrowDateIST = (): string => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toLocaleDateString("en-IN", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Calculate total earnings and kWh
+  const totalStats = catalog?.trades.reduce(
+    (acc, trade) => ({
+      kWh: acc.kWh + trade.kWh,
+      earnings: acc.earnings + trade.kWh * trade.price,
+    }),
+    { kWh: 0, earnings: 0 }
+  ) || { kWh: 0, earnings: 0 };
+
+  return (
+    <MainAppShell contentClassName="lg:py-6">
+      <PageContainer>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ChevronLeft size={20} className="text-foreground" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">All set for tomorrow</h1>
+            <p className="text-sm text-muted-foreground">{getTomorrowDateIST()} (Recommended)</p>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading tomorrow's offers...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="rounded-lg bg-red-50 border border-red-200 p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-800">Error</p>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && (!catalog?.trades || catalog.trades.length === 0) && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-6 text-center">
+            <Zap size={32} className="mx-auto mb-3 text-blue-600" />
+            <p className="font-semibold text-blue-900 mb-1">No offers for tomorrow</p>
+            <p className="text-sm text-blue-700">
+              You don't have any excess energy scheduled for tomorrow. Check back later or adjust your settings.
+            </p>
+          </div>
+        )}
+
+        {/* Catalog View */}
+        {!loading && !error && catalog?.trades && catalog.trades.length > 0 && (
+          <div className="space-y-6">
+            {/* Expected Earnings Card */}
+            <div className="rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-sm text-emerald-700 font-medium mb-2">Expected Earnings</p>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-4xl font-bold text-emerald-900">₹{totalStats.earnings.toFixed(0)}</span>
+              </div>
+              <p className="text-sm text-emerald-700">{totalStats.kWh.toFixed(2)} kWh</p>
+              <div className="mt-4 pt-4 border-t border-emerald-200">
+                <p className="text-xs text-emerald-600">100% Solar</p>
+              </div>
+            </div>
+
+            {/* Planned Trades Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Planned Trades</h2>
+                <p className="text-xs text-muted-foreground">Refreshes in 2h 49m</p>
+              </div>
+
+              <div className="space-y-3">
+                {catalog.trades.map((trade, index) => {
+                  const startTimeIST = formatTimeInIST(trade.startTime);
+                  const endTimeIST = formatTimeInIST(trade.endTime);
+                  const totalPrice = trade.kWh * trade.price;
+
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-lg bg-white border border-gray-200 p-4 hover:border-emerald-300 transition"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <p className="font-semibold text-foreground">
+                              {startTimeIST} – {endTimeIST}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>{trade.kWh} kWh</span>
+                            <span>₹{trade.price.toFixed(2)}/unit</span>
+                          </div>
+                        </div>
+
+                        {/* Price on the right */}
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-foreground">₹{totalPrice.toFixed(0)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  toast({
+                    title: "Catalog approved",
+                    description: "Your trades are set for tomorrow",
+                  });
+                  navigate(-1);
+                }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition"
+              >
+                Approve Now
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-foreground font-semibold py-3 rounded-lg transition"
+              >
+                Change
+              </button>
+            </div>
+
+            {/* Disclaimer */}
+            <p className="text-xs text-muted-foreground text-center">
+              Prices may improve as demand updates.
+            </p>
+          </div>
+        )}
+      </PageContainer>
+    </MainAppShell>
+  );
+};
+
+export default TomorrowTradesPage;
