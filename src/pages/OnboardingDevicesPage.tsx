@@ -8,10 +8,10 @@ const OnboardingDevicesPage = () => {
 
   return (
     <LocationDeviceScreen
-      onBack={() => navigate("/home")}
+      onBack={() => navigate(-1)}
       onContinue={() => {
         localStorage.setItem(ONBOARDING_DEVICES_KEY, "true");
-        navigate("/home", { replace: true });
+        navigate("/onboarding/talk", { replace: true });
       }}
     />
   );

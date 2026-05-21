@@ -92,7 +92,7 @@ const OnboardingIntroPage = () => {
               ...currentData,
               userContext: ""
             }));
-            navigate("/intent");
+            navigate("/onboarding/devices");
           }}
           className="btn-solar w-full flex items-center justify-center gap-2 animate-slide-up !py-3.5"
           style={{ animationDelay: "0.3s" }}

@@ -108,12 +108,18 @@ const VerifyPage = () => {
         city: currentUserData.city || "",
         discom: currentUserData.discom || "",
         automationLevel: "recommend" as const,
-        onboardingComplete: true, // Lock all user details after signup
+        onboardingComplete: false, // New users must complete onboarding first
       };
 
       setUserData(newUserData);
 
       localStorage.removeItem("samai_selected_intent");
+      // Clear onboarding flags for new users - they need to complete these steps
+      localStorage.removeItem("samai_onboarding_complete");
+      localStorage.removeItem("samai_onboarding_location_done");
+      localStorage.removeItem("samai_onboarding_devices_done");
+      localStorage.removeItem("samai_onboarding_talk_done");
+      localStorage.setItem("samai_aadhaar_verified", "true");
 
       // Save to Firestore BEFORE navigating to ensure intent is persisted
       await saveUser(newUserData as any).catch((err) =>
@@ -127,13 +133,8 @@ const VerifyPage = () => {
         consumerId: newUserData.consumerId,
       }).catch((err) => console.error("Failed to ensure user on server:", err));
 
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-      localStorage.setItem("samai_onboarding_talk_done", "true");
-
-      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/home";
+      // New sellers go to onboarding, new buyers go directly to buyer-home
+      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/onboarding";
       navigate(targetRoute, { replace: true });
     }
   };

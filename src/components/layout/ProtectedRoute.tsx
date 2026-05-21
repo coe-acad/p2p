@@ -62,6 +62,11 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
     return <Navigate to={homePathForIntent(userIntent)} replace />;
   }
 
+  // For sellers, check if onboarding is complete before allowing access to main app
+  if (requiredIntent === "sell" && !userData.onboardingComplete) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <>{children}</>;
 };
 
