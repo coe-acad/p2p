@@ -36,8 +36,15 @@ const TomorrowTradesPage = () => {
   // Fetch tomorrow's catalog from API
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
-      if (!profileHydrated || !userData.phone) {
+      if (!profileHydrated) {
+        console.log("Profile not hydrated yet");
+        return;
+      }
+
+      if (!userData?.phone) {
+        console.log("No phone number in userData:", userData);
         setLoading(false);
+        setError("User phone number not available");
         return;
       }
 
@@ -235,9 +242,11 @@ const TomorrowTradesPage = () => {
             <div className="rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
               <p className="text-sm text-emerald-700 font-medium mb-2">Expected Earnings</p>
               <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-4xl font-bold text-emerald-900">₹{totalStats.earnings.toFixed(0)}</span>
+                <span className="text-4xl font-bold text-emerald-900">
+                  ₹{isFinite(totalStats.earnings) ? totalStats.earnings.toFixed(0) : "0"}
+                </span>
               </div>
-              <p className="text-sm text-emerald-700">{totalStats.kWh.toFixed(2)} kWh</p>
+              <p className="text-sm text-emerald-700">{isFinite(totalStats.kWh) ? totalStats.kWh.toFixed(2) : "0"} kWh</p>
               <div className="mt-4 pt-4 border-t border-emerald-200">
                 <p className="text-xs text-emerald-600">100% Solar</p>
               </div>
@@ -251,38 +260,50 @@ const TomorrowTradesPage = () => {
               </div>
 
               <div className="space-y-3">
-                {catalog.trades.map((trade, index) => {
-                  console.log(`Processing trade ${index}:`, trade);
-                  const startTimeIST = formatTimeInIST(trade.startTime);
-                  const endTimeIST = formatTimeInIST(trade.endTime);
-                  const totalPrice = trade.kWh * trade.price;
+                {catalog.trades && Array.isArray(catalog.trades) && catalog.trades.map((trade, index) => {
+                  if (!trade || typeof trade !== "object") {
+                    console.warn(`Invalid trade at index ${index}:`, trade);
+                    return null;
+                  }
 
-                  return (
-                    <div
-                      key={index}
-                      className="rounded-lg bg-white border border-gray-200 p-4 hover:border-emerald-300 transition"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <p className="font-semibold text-foreground">
-                              {startTimeIST} – {endTimeIST}
+                  try {
+                    console.log(`Processing trade ${index}:`, trade);
+                    const startTimeIST = formatTimeInIST(String(trade.startTime || ""));
+                    const endTimeIST = formatTimeInIST(String(trade.endTime || ""));
+                    const totalPrice = (Number(trade.kWh) || 0) * (Number(trade.price) || 0);
+
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-lg bg-white border border-gray-200 p-4 hover:border-emerald-300 transition"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                              <p className="font-semibold text-foreground">
+                                {startTimeIST} – {endTimeIST}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>{Number(trade.kWh || 0).toFixed(2)} kWh</span>
+                              <span>₹{Number(trade.price || 0).toFixed(2)}/unit</span>
+                            </div>
+                          </div>
+
+                          {/* Price on the right */}
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-foreground">
+                              ₹{isFinite(totalPrice) ? totalPrice.toFixed(0) : "0"}
                             </p>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{trade.kWh} kWh</span>
-                            <span>₹{trade.price.toFixed(2)}/unit</span>
-                          </div>
-                        </div>
-
-                        {/* Price on the right */}
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-foreground">₹{totalPrice.toFixed(0)}</p>
                         </div>
                       </div>
-                    </div>
-                  );
+                    );
+                  } catch (err) {
+                    console.error(`Error rendering trade ${index}:`, err);
+                    return null;
+                  }
                 })}
               </div>
             </div>
