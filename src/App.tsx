@@ -13,15 +13,9 @@ import {
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
-import SuccessPage from "./pages/SuccessPage";
 
-import OnboardingIntroPage from "./pages/OnboardingIntroPage";
 import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
-import CalculatingPage from "./pages/CalculatingPage";
-import EarningsHookPage from "./pages/EarningsHookPage";
-import PreparedPage from "./pages/PreparedPage";
-import PublishedPage from "./pages/PublishedPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
@@ -66,19 +60,9 @@ const App = () => (
             {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
             <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
 
-            {/* Protected routes - redirects to / if not logged in */}
-            <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
-
-            {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
-            <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
+            {/* Onboarding Steps - Seller only */}
             <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
             <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
-
-            {/* Post-Onboarding - Seller only */}
-            <Route path="/calculating" element={<RoleProtectedRoute requiredIntent="sell"><CalculatingPage /></RoleProtectedRoute>} />
-            <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsHookPage /></RoleProtectedRoute>} />
-            <Route path="/prepared" element={<RoleProtectedRoute requiredIntent="sell"><PreparedPage /></RoleProtectedRoute>} />
-            <Route path="/published" element={<RoleProtectedRoute requiredIntent="sell"><PublishedPage /></RoleProtectedRoute>} />
 
             {/* Seller Main App */}
             <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />

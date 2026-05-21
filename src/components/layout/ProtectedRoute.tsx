@@ -65,7 +65,7 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
 
   // For sellers, check if onboarding is complete before allowing access to main app
   // But exclude onboarding flow paths so users can complete onboarding
-  const ONBOARDING_FLOW_PATHS = ['/onboarding', '/calculating', '/earnings', '/prepared', '/published', '/success'];
+  const ONBOARDING_FLOW_PATHS = ['/onboarding'];
   const isOnOnboardingFlow = ONBOARDING_FLOW_PATHS.some(p => location.pathname.startsWith(p));
 
   if (requiredIntent === "sell" && !userData.onboardingComplete && !isOnOnboardingFlow) {

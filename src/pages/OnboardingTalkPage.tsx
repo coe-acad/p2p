@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import TalkToSamaiScreen from "@/components/screens/TalkToSamaiScreen";
 
@@ -7,9 +7,7 @@ const ONBOARDING_COMPLETE_KEY = "samai_onboarding_complete";
 
 const OnboardingTalkPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { setUserData } = useUserData();
-  const isVCVerified = location.state?.isVCVerified ?? false;
 
   const handleContinue = async () => {
     localStorage.setItem(ONBOARDING_TALK_KEY, "true");
@@ -18,7 +16,7 @@ const OnboardingTalkPage = () => {
     // Update onboardingComplete flag in Firestore
     setUserData({ onboardingComplete: true });
 
-    navigate("/calculating", { state: { isVCVerified } });
+    navigate("/home", { replace: true });
   };
 
   return (

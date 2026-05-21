@@ -134,8 +134,8 @@ const VerifyPage = () => {
         consumerId: newUserData.consumerId,
       }).catch((err) => console.error("Failed to ensure user on server:", err));
 
-      // New sellers go to onboarding, new buyers go directly to buyer-home
-      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/onboarding";
+      // New sellers go to devices setup (skip intro), new buyers go directly to buyer-home
+      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/onboarding/devices";
       navigate(targetRoute, { replace: true });
     }
   };
