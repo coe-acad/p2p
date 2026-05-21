@@ -158,7 +158,8 @@ export const useUserData = () => {
 
       hadFirebaseUserRef.current = true;
 
-      if (!firebaseUser.phoneNumber) {
+      // Only load from Firestore if user is fully authenticated (has UID and phone)
+      if (!firebaseUser.uid || !firebaseUser.phoneNumber) {
         setProfileHydrated(true);
         return;
       }
