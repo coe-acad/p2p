@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import MainAppShell from "@/components/layout/MainAppShell";
 import PageContainer from "@/components/layout/PageContainer";
+import { getAuthHeaders } from "@/services/authHeaders";
 
 interface TradeItem {
   startTime: string;
@@ -38,6 +39,7 @@ const TomorrowTradesPage = () => {
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch tomorrow's catalog from API
   useEffect(() => {
@@ -210,6 +212,50 @@ const TomorrowTradesPage = () => {
     { kWh: 0, earnings: 0 }
   ) || { kWh: 0, earnings: 0 };
 
+  // Handle catalog approval and submission
+  const handleApprove = async () => {
+    if (!catalog?.trades || catalog.trades.length === 0) {
+      setError("No trades to approve");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${backendUrl}/api/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body: JSON.stringify({
+          trades: catalog.trades,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to approve catalog");
+      }
+
+      toast({
+        title: "Catalog approved",
+        description: "Your trades have been submitted successfully",
+      });
+      navigate(-1);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to approve catalog";
+      console.error("Approve error:", err);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <MainAppShell contentClassName="lg:py-6">
       <PageContainer>
@@ -347,20 +393,16 @@ const TomorrowTradesPage = () => {
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <button
-                onClick={() => {
-                  toast({
-                    title: "Catalog approved",
-                    description: "Your trades are set for tomorrow",
-                  });
-                  navigate(-1);
-                }}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition"
+                onClick={handleApprove}
+                disabled={submitting}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-semibold py-3 rounded-lg transition"
               >
-                Approve Now
+                {submitting ? "Submitting..." : "Approve Now"}
               </button>
               <button
                 onClick={() => navigate(-1)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-foreground font-semibold py-3 rounded-lg transition"
+                disabled={submitting}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-foreground font-semibold py-3 rounded-lg transition"
               >
                 Change
               </button>
