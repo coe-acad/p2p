@@ -214,6 +214,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       }
 
       // Initialize RecaptchaVerifier if not already done
+      const isTestingMode = import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
+
       if (!recaptchaVerifierRef.current) {
         try {
           const container = document.getElementById("recaptcha-container");
@@ -226,8 +228,13 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           logger.devLog("RecaptchaVerifier initialized successfully");
         } catch (err: any) {
           logger.error("Recaptcha initialization failed", err);
-          setPhoneError("Verification initialization failed. Please try again.");
-          throw err;
+          // In testing mode, allow continuing without reCAPTCHA
+          if (!isTestingMode) {
+            setPhoneError("Verification initialization failed. Please try again.");
+            throw err;
+          } else {
+            logger.devLog("Continuing without reCAPTCHA in testing mode");
+          }
         }
       }
 

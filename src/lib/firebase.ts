@@ -14,10 +14,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-const isDevPhoneAuthBypassEnabled =
-  import.meta.env.DEV &&
+
+// Allow disabling phone app verification for testing (e.g., local development)
+const isDisablePhoneAppVerificationForTesting =
   import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
 
-// Fail-safe default is secure: only allow bypass in explicit local development.
-auth.settings.appVerificationDisabledForTesting = isDevPhoneAuthBypassEnabled;
+if (isDisablePhoneAppVerificationForTesting) {
+  auth.settings.appVerificationDisabledForTesting = true;
+  console.log("🔓 Phone app verification DISABLED for testing");
+}
+
 export const db = getFirestore(app);
