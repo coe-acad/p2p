@@ -22,12 +22,18 @@ interface TomorrowCatalog {
   consumptionId?: string;
 }
 
+const resolveBackendUrl = (envUrl?: string): string => {
+  if (envUrl) return envUrl;
+  return "http://localhost:3002";
+};
+
 const TomorrowTradesPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
   const { userData, profileHydrated } = useUserData();
   const { user } = useAuth();
+  const backendUrl = resolveBackendUrl(import.meta.env.VITE_BACKEND_URL);
 
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,8 +65,10 @@ const TomorrowTradesPage = () => {
         const encodedPhone = encodeURIComponent(userData.phone);
         console.log("Encoded phone:", encodedPhone);
 
-        const response = await fetch(
-          `/api/sellers/${encodedPhone}/tomorrow`,
+        const apiUrl = `${backendUrl}/api/sellers/${encodedPhone}/tomorrow`;
+        console.log("API URL:", apiUrl);
+
+        const response = await fetch(apiUrl,
           {
             method: "GET",
             headers: {
