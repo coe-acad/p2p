@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { signInWithCustomToken } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck, MapPin, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer } from "@/services/userService";
+import { ensureUserOnServer, loadUser } from "@/services/userService";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -57,7 +57,6 @@ const isValidGSTIN = (gstin: string): boolean => {
 
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selectedIntent }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
-  const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
 
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -101,7 +100,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   const [otpError, setOtpError] = useState("");
   const [isUserReturning, setIsUserReturning] = useState(isReturningUser);
 
-  const sessionIdRef = useRef<string | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
   
   const fetchingMessages = [
     { icon: Loader2, text: "Connecting to DigiLocker...", spin: true },
@@ -202,29 +202,64 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     setIsSendingOtp(true);
     setPhoneError("");
     try {
-      logger.devLog("Sending OTP via backend");
+      let shouldShowModal = false;
 
-      // Call backend send-otp endpoint
-      const sendOtpResponse = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: phoneNumber }),
-      });
-
-      if (!sendOtpResponse.ok) {
-        const errorData = await sendOtpResponse.json();
-        throw new Error(errorData.detail || "Failed to send OTP");
+      // For new users, check if phone number already exists in database
+      if (!isUserReturning) {
+        const existingUser = await loadUser(`+91${phoneNumber}`);
+        if (existingUser) {
+          // User already registered - we'll show popup after sending OTP
+          shouldShowModal = true;
+        }
       }
 
-      const { session_id } = await sendOtpResponse.json();
-      sessionIdRef.current = session_id;
-      logger.devLog("OTP sent successfully, session_id received");
+      // Initialize RecaptchaVerifier if not already done
+      if (!recaptchaVerifierRef.current) {
+        try {
+          const container = document.getElementById("recaptcha-container");
+          if (!container) {
+            throw new Error("reCAPTCHA container not found in DOM");
+          }
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+            size: "invisible",
+          });
+          logger.devLog("RecaptchaVerifier initialized successfully");
+        } catch (err: any) {
+          logger.error("Recaptcha initialization failed", err);
+          setPhoneError("Verification initialization failed. Please try again.");
+          throw err;
+        }
+      }
 
-      // Move to OTP entry step
-      setStep("otp");
+      logger.devLog("Sending OTP (dev only; number not logged in production)");
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("OTP request timed out. Please try again.")), 15000)
+      );
+
+      confirmationResultRef.current = await Promise.race([
+        signInWithPhoneNumber(
+          auth,
+          `+91${phoneNumber}`,
+          recaptchaVerifierRef.current
+        ),
+        timeoutPromise
+      ]) as ConfirmationResult;
+
+      logger.devLog("OTP sent successfully");
+
+      // Show modal AFTER OTP is sent, not before
+      if (shouldShowModal) {
+        setShowAlreadyRegisteredModal(true);
+      } else {
+        setStep("otp");
+      }
     } catch (err: any) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
+      recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
     } finally {
       setIsSendingOtp(false);
     }
@@ -244,39 +279,34 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   };
 
   const verifyOtp = async (enteredOtp: string) => {
-    if (!sessionIdRef.current) return;
+    if (!confirmationResultRef.current) return;
     try {
-      logger.devLog("Verifying OTP via backend");
+      await confirmationResultRef.current.confirm(enteredOtp);
 
-      // Call backend verify-otp endpoint
-      const verifyResponse = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone_number: phoneNumber,
-          otp: enteredOtp,
-          session_id: sessionIdRef.current,
-        }),
-      });
-
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json();
-        setOtpError(errorData.detail || "Invalid OTP. Please try again.");
-        setOtp(["", "", "", "", "", ""]);
-        document.getElementById("otp-0")?.focus();
-        return;
+      // Bootstrap Firebase auth by setting custom claims with phone number
+      const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        try {
+          await fetch(`${BACKEND_URL}/api/auth/setup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
+          });
+          logger.devLog("Auth bootstrap complete");
+          // Force token refresh to include the newly set phone_number custom claim
+          await auth.currentUser?.getIdToken(true);
+          logger.devLog("Token refreshed with phone_number claim");
+        } catch (err) {
+          logger.devDebug("Auth bootstrap failed (non-critical):", err);
+        }
       }
 
-      const { custom_token, is_new_user } = await verifyResponse.json();
-      logger.devLog("OTP verified, signing in with custom token");
-
-      // Sign in with the custom token returned from backend
-      await signInWithCustomToken(auth, custom_token);
-      logger.devLog("User signed in successfully");
-
-      // Backend tells us if this is a new user or returning user
-      if (is_new_user) {
-        // New user: save phone number and show profile form
+      // For new users, save phone number so profile data can be saved to Firestore
+      if (!isUserReturning) {
         // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
         const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
         setUserData({
@@ -286,15 +316,12 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
         // New users proceed with verification steps
         setStep("profile");
       } else {
-        // Returning user: skip verification steps and go directly to home
-        // Update isUserReturning state so we know this is a returning user
-        setIsUserReturning(true);
+        // Returning users skip verification steps and go directly to home
         // Don't save here - let VerifyPage load the complete data from database
         onVerified(phoneNumber);
       }
-    } catch (err: any) {
-      logger.error("OTP verification failed", err);
-      setOtpError(err.message || "Invalid OTP. Please try again.");
+    } catch {
+      setOtpError("Invalid OTP. Please try again.");
       setOtp(["", "", "", "", "", ""]);
       document.getElementById("otp-0")?.focus();
     }
@@ -324,6 +351,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   };
 
   const handleResendOtp = async () => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     await handlePhoneSubmit();
@@ -1109,6 +1138,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
         </div>
       </div>
 
+      {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
+      <div id="recaptcha-container" />
 
       {/* Terms & Conditions Modal */}
       {showTermsModal && (
