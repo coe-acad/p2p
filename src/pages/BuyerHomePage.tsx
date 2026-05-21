@@ -141,48 +141,17 @@ const BuyerHomePage = () => {
       });
 
       setCurrentTransactionId(selectResult.transactionId);
-      const selectedOrderState = await orderService.waitForSelectedOrder(selectResult.transactionId);
-      setCurrentOrderData(selectedOrderState.order);
+      // init fires automatically on the BAP after on_select — wait for INITIATED directly
+      const quotedOrderState = await orderService.waitForQuotation(selectResult.transactionId);
+      setCurrentOrderData(quotedOrderState.order);
 
       setShowOfferModal(false);
       setShowQuoteModal(true);
-      setOrderStatus('selected');
+      setOrderStatus('quoted');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
       setSelectedOffer(null);
       setOrderStatus('idle');
-    }
-  };
-
-  const handleGetQuotation = async () => {
-    if (!selectedOffer || !currentTransactionId) return;
-
-    setOrderStatus('quoting');
-    setOrderError(null);
-
-    try {
-      await orderService.init(currentTransactionId, {
-        offer_id: selectedOffer.offer_id,
-        bpp_id: selectedOffer.bpp_id,
-        bpp_uri: selectedOffer.bpp_uri,
-        offer_item_ids: selectedOffer.offer_item_ids,
-        offer_provider: selectedOffer.offer_provider,
-        offer_descriptor: selectedOffer.offer_descriptor,
-        offer_price: selectedOffer.offer_price,
-        offer_attributes: selectedOffer.offer_attributes,
-        quantity: selectedOffer.quantity_available,
-        price_per_unit: selectedOffer.price_per_unit,
-        seller_name: selectedOffer.seller_name,
-        delivery_start: selectedOffer.delivery_start,
-        delivery_end: selectedOffer.delivery_end,
-      }, currentOrderData);
-
-      const orderState = await orderService.waitForQuotation(currentTransactionId);
-      setCurrentOrderData(orderState.order);
-      setOrderStatus('quoted');
-    } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Failed to get quotation');
-      setOrderStatus('selected');
     }
   };
 
@@ -391,7 +360,7 @@ const BuyerHomePage = () => {
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
-          onGetQuote={handleGetQuotation}
+          onGetQuote={async () => {}}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
         />
