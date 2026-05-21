@@ -47,9 +47,13 @@ const TomorrowTradesPage = () => {
 
         // Get Firebase auth token
         const token = await user?.getIdToken();
+        console.log("Token acquired:", !!token);
+
+        const encodedPhone = encodeURIComponent(userData.phone);
+        console.log("Encoded phone:", encodedPhone);
 
         const response = await fetch(
-          `/api/sellers/${encodeURIComponent(userData.phone)}/tomorrow`,
+          `/api/sellers/${encodedPhone}/tomorrow`,
           {
             method: "GET",
             headers: {
@@ -58,6 +62,8 @@ const TomorrowTradesPage = () => {
             },
           }
         );
+
+        console.log("Response status:", response.status);
 
         if (!response.ok) {
           if (response.status === 403) {
@@ -68,11 +74,15 @@ const TomorrowTradesPage = () => {
 
         const data = await response.json();
         console.log("Received data:", data);
+        console.log("Data type:", typeof data);
+        console.log("Trades array:", data?.trades);
+
         setCatalog(data);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "An error occurred";
         setError(errorMsg);
         console.error("Error fetching tomorrow's catalog:", err);
+        console.error("Error type:", err instanceof Error ? err.constructor.name : typeof err);
         console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
       } finally {
         setLoading(false);
@@ -202,6 +212,7 @@ const TomorrowTradesPage = () => {
 
               <div className="space-y-3">
                 {catalog.trades.map((trade, index) => {
+                  console.log(`Processing trade ${index}:`, trade);
                   const startTimeIST = formatTimeInIST(trade.startTime);
                   const endTimeIST = formatTimeInIST(trade.endTime);
                   const totalPrice = trade.kWh * trade.price;
