@@ -15,7 +15,8 @@ const WelcomePage = () => {
     localStorage.removeItem("samai_onboarding_talk_done");
     localStorage.removeItem("samai_published_trades");
     localStorage.removeItem("samai_hide_setup_banner");
-    navigate("/verify", { state: { isReturningUser: false } });
+    // New users must select intent first, then go to verification
+    navigate("/intent", { state: { isNewUser: true } });
   };
 
   return (
