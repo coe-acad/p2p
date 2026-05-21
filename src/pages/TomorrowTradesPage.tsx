@@ -67,11 +67,13 @@ const TomorrowTradesPage = () => {
         }
 
         const data = await response.json();
+        console.log("Received data:", data);
         setCatalog(data);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "An error occurred";
         setError(errorMsg);
         console.error("Error fetching tomorrow's catalog:", err);
+        console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
       } finally {
         setLoading(false);
       }
@@ -86,11 +88,16 @@ const TomorrowTradesPage = () => {
       const date = new Date(utcTimestamp);
       // IST is UTC+5:30
       const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-      return istDate.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
+
+      // Manual formatting to avoid locale-specific issues
+      const hours = istDate.getUTCHours();
+      const minutes = istDate.getUTCMinutes();
+
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHours = hours % 12 || 12;
+      const displayMinutes = minutes.toString().padStart(2, "0");
+
+      return `${displayHours}:${displayMinutes} ${ampm}`;
     } catch {
       return "Invalid time";
     }
