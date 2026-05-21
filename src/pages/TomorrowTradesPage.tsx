@@ -64,20 +64,39 @@ const TomorrowTradesPage = () => {
         );
 
         console.log("Response status:", response.status);
+        console.log("Response headers:", {
+          contentType: response.headers.get("content-type"),
+        });
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.log("Error response body:", errorText);
           if (response.status === 403) {
             throw new Error("You are not authorized to view this catalog");
           }
           throw new Error("Failed to fetch tomorrow's catalog");
         }
 
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log("Raw response text:", responseText);
+
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr);
+          throw parseErr;
+        }
+
         console.log("Received data:", data);
         console.log("Data type:", typeof data);
         console.log("Trades array:", data?.trades);
 
-        setCatalog(data);
+        if (data && typeof data === "object") {
+          setCatalog(data);
+        } else {
+          throw new Error("Invalid response format");
+        }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "An error occurred";
         setError(errorMsg);
