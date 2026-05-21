@@ -107,11 +107,15 @@ const TomorrowTradesPage = () => {
   const getTomorrowDateIST = (): string => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toLocaleDateString("en-IN", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    });
+
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const dayName = weekdays[tomorrow.getDay()];
+    const monthName = months[tomorrow.getMonth()];
+    const date = tomorrow.getDate();
+
+    return `${dayName}, ${date} ${monthName}`;
   };
 
   // Calculate total earnings and kWh
