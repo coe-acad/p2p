@@ -5,7 +5,7 @@ import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, Shield
 import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { ensureUserOnServer } from "@/services/userService";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -202,17 +202,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     setIsSendingOtp(true);
     setPhoneError("");
     try {
-      let shouldShowModal = false;
-
-      // For new users, check if phone number already exists in database
-      if (!isUserReturning) {
-        const existingUser = await loadUser(`+91${phoneNumber}`);
-        if (existingUser) {
-          // User already registered - we'll show popup after sending OTP
-          shouldShowModal = true;
-        }
-      }
-
       // Initialize RecaptchaVerifier if not already done
       const isTestingMode = import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
 
@@ -261,13 +250,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       ]) as ConfirmationResult;
 
       logger.devLog("OTP sent successfully");
-
-      // Show modal AFTER OTP is sent, not before
-      if (shouldShowModal) {
-        setShowAlreadyRegisteredModal(true);
-      } else {
-        setStep("otp");
-      }
+      setStep("otp");
     } catch (err: any) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
