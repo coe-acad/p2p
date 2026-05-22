@@ -107,18 +107,10 @@ export const IntentAccessRoute = ({ children }: RouteProps) => {
 };
 
 export const VerificationRoute = ({ children }: RouteProps) => {
-  const { user, isLoading } = useAuth();
-  const { userData, profileHydrated } = useUserData();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingSpinner />;
-  }
-
-  if (user) {
-    if (!profileHydrated) {
-      return <LoadingSpinner />;
-    }
-    return <Navigate to={homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;

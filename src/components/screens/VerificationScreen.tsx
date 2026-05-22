@@ -39,6 +39,8 @@ interface VerificationScreenProps {
   selectedIntent?: "sell" | "buy";
 }
 
+const RECAPTCHA_CONTAINER_ID = "recaptcha-container";
+
 const isValidIndianMobile = (phone: string): boolean => {
   return /^[6-9]\d{9}$/.test(phone);
 };
@@ -102,6 +104,28 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
 
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+
+  const resetRecaptchaVerifier = () => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
+
+    const container = document.getElementById(RECAPTCHA_CONTAINER_ID);
+    if (container) {
+      container.innerHTML = "";
+    }
+  };
+
+  const getPhoneAuthErrorMessage = (error: unknown) => {
+    const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code) : "";
+    const message =
+      typeof error === "object" && error && "message" in error ? String((error as { message?: string }).message) : "";
+
+    if (code === "auth/captcha-check-failed" || message.includes("auth/captcha-check-failed")) {
+      return "Phone verification failed. Firebase reCAPTCHA rejected this request. Check that the current domain is authorized in Firebase Auth and retry.";
+    }
+
+    return message || "Failed to send OTP. Please try again.";
+  };
   
   const fetchingMessages = [
     { icon: Loader2, text: "Connecting to DigiLocker...", spin: true },
@@ -137,6 +161,12 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       };
     }
   }, [step, onVerified]);
+
+  useEffect(() => {
+    return () => {
+      resetRecaptchaVerifier();
+    };
+  }, []);
 
   // Auto-detect location when reaching location step
   useEffect(() => {
@@ -207,19 +237,18 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
 
       if (!recaptchaVerifierRef.current) {
         try {
-          const container = document.getElementById("recaptcha-container");
+          resetRecaptchaVerifier();
+
+          const container = document.getElementById(RECAPTCHA_CONTAINER_ID);
           if (!container) {
             throw new Error("reCAPTCHA container not found in DOM");
           }
-          const recaptchaConfig: any = {
+
+          const recaptchaConfig = {
             size: "invisible",
           };
-          // Add site key if available (for production reCAPTCHA)
-          const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-          if (siteKey) {
-            recaptchaConfig.siteKey = siteKey;
-          }
-          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", recaptchaConfig);
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, RECAPTCHA_CONTAINER_ID, recaptchaConfig);
+          await recaptchaVerifierRef.current.render();
           logger.devLog("RecaptchaVerifier initialized successfully");
         } catch (err: any) {
           logger.error("Recaptcha initialization failed", err);
@@ -253,9 +282,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       setStep("otp");
     } catch (err: any) {
       logger.error("Phone OTP send failed", err);
-      setPhoneError(err.message ?? "Failed to send OTP. Please try again.");
-      recaptchaVerifierRef.current?.clear();
-      recaptchaVerifierRef.current = null;
+      setPhoneError(getPhoneAuthErrorMessage(err));
+      resetRecaptchaVerifier();
     } finally {
       setIsSendingOtp(false);
     }
@@ -347,8 +375,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   };
 
   const handleResendOtp = async () => {
-    recaptchaVerifierRef.current?.clear();
-    recaptchaVerifierRef.current = null;
+    resetRecaptchaVerifier();
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     await handlePhoneSubmit();
@@ -1135,7 +1162,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
       </div>
 
       {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
-      <div id="recaptcha-container" />
+      <div id={RECAPTCHA_CONTAINER_ID} />
 
       {/* Terms & Conditions Modal */}
       {showTermsModal && (
