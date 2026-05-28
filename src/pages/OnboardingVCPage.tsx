@@ -93,9 +93,9 @@ const OnboardingVCPage = () => {
         description: `${detectedType === "consumption" ? "Consumption" : "Generation"} credential saved`,
       });
 
-      // Mark VC as uploaded and continue
+      // Mark VC as pending verification and continue
       localStorage.setItem(ONBOARDING_VC_KEY, "true");
-      setUserData({ vcUploaded: true, vcUploadedAt: new Date().toISOString() });
+      setUserData({ isVCVerified: false });
       navigate("/home", { replace: true });
     } catch (error) {
       console.error("Upload error:", error);

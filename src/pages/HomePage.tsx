@@ -69,7 +69,8 @@ const HomePage = () => {
   };
   
   // Get verification status from router state or userData (persisted)
-  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
+  // Default to false (unverified) if not set
+  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? false;
   const justPublished = location.state?.justPublished ?? false;
   
   // Determine if user is new (based on userData flag)
@@ -203,8 +204,6 @@ const HomePage = () => {
     setHideVCBanner(newValue);
     localStorage.setItem(HIDE_VC_BANNER_KEY, String(newValue));
   };
-
-  const hasUploadedVC = userData.vcUploaded === true;
 
   const dismissNudge = (id: string) => {
     setDismissedNudges([...dismissedNudges, id]);
@@ -348,8 +347,8 @@ const HomePage = () => {
           </button>
         )}
 
-        {/* VC Upload Banner - Shown if not uploaded and not hidden */}
-        {!hasUploadedVC && !hideVCBanner && (
+        {/* VC Verification Banner - Shown if not verified and not hidden */}
+        {!isVCVerified && !hideVCBanner && (
           <div className="bg-gradient-to-r from-cyan-100 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/10 border border-cyan-300/40 dark:border-cyan-700/30 rounded-xl animate-slide-up backdrop-blur-sm overflow-hidden">
             <button
               onClick={() => setShowVCModal(true)}
@@ -361,10 +360,10 @@ const HomePage = () => {
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-medium text-foreground">
-                    Upload your credentials to enable trading
+                    Verify your credentials to start trading
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Add your electricity meter or solar system credentials
+                    Upload your electricity meter or solar system credentials
                   </p>
                 </div>
               </div>
@@ -387,7 +386,7 @@ const HomePage = () => {
         )}
 
         {/* Dev button to show hidden VC banner */}
-        {hideVCBanner && !hasUploadedVC && (
+        {hideVCBanner && !isVCVerified && (
           <button
             onClick={toggleHideVCBanner}
             className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 self-end"
@@ -685,10 +684,10 @@ const HomePage = () => {
         isOpen={showVCModal}
         onClose={() => setShowVCModal(false)}
         onSuccess={() => {
-          setUserData({ vcUploaded: true, vcUploadedAt: new Date().toISOString() });
+          setUserData({ isVCVerified: false });
           toast({
-            title: "Success!",
-            description: "Your credentials have been uploaded and you can now trade tomorrow's energy",
+            title: "Credentials uploaded!",
+            description: "Your credentials are pending verification. Trading will be enabled once approved.",
           });
         }}
       />

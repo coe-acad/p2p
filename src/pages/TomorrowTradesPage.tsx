@@ -41,11 +41,21 @@ const TomorrowTradesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Check if VC is verified
+  const isVCVerified = userData?.isVCVerified === true;
+
   // Fetch tomorrow's catalog from API
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
       if (!profileHydrated) {
         console.log("Profile not hydrated yet");
+        return;
+      }
+
+      if (!isVCVerified) {
+        console.log("VC not verified yet");
+        setLoading(false);
+        setError("Please verify your credentials before accessing tomorrow's catalog");
         return;
       }
 
@@ -285,22 +295,33 @@ const TomorrowTradesPage = () => {
 
         {/* Error State */}
         {error && !loading && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-4 mb-6">
+          <div className={`rounded-lg border p-4 mb-6 ${!isVCVerified ? "bg-cyan-50 border-cyan-200" : "bg-red-50 border-red-200"}`}>
             <div className="flex items-start gap-3">
-              <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${!isVCVerified ? "text-cyan-600" : "text-red-600"}`} />
               <div>
-                <p className="font-semibold text-red-800">Unable to load offers</p>
-                <p className="text-sm text-red-700">
-                  {error.includes("pattern") || error.includes("authorization")
-                    ? "There was a temporary issue loading your catalog. Please refresh and try again."
-                    : error}
+                <p className={`font-semibold ${!isVCVerified ? "text-cyan-800" : "text-red-800"}`}>
+                  {!isVCVerified ? "Verification Required" : "Unable to load offers"}
                 </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
-                >
-                  Refresh page
-                </button>
+                <p className={`text-sm ${!isVCVerified ? "text-cyan-700" : "text-red-700"}`}>
+                  {error}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  {!isVCVerified ? (
+                    <button
+                      onClick={() => navigate("/home")}
+                      className={`text-sm ${!isVCVerified ? "text-cyan-600 hover:text-cyan-700" : "text-red-600 hover:text-red-700"} underline`}
+                    >
+                      Go to home
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="text-sm text-red-600 hover:text-red-700 underline"
+                    >
+                      Refresh page
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
