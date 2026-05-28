@@ -10,7 +10,7 @@ import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
-import { ShoppingCart, Zap, User, RefreshCw, AlertCircle } from "lucide-react";
+import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
 
@@ -82,8 +82,6 @@ const BuyerHomePage = () => {
     goToPage,
   } = useDiscoverListings();
 
-  // Check if VC is verified
-  const isVCVerified = userData?.isVCVerified === true;
 
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
@@ -280,26 +278,6 @@ const BuyerHomePage = () => {
             </div>
           </div>
 
-          {/* VC Verification Required Banner */}
-          {!isVCVerified && (
-            <div className="bg-cyan-50 border border-cyan-300 rounded-lg p-4 animate-slide-up">
-              <div className="flex items-start gap-3">
-                <AlertCircle size={20} className="text-cyan-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-cyan-800">Verification Required</p>
-                  <p className="text-sm text-cyan-700 mt-1">
-                    Please verify your credentials to browse and purchase energy from sellers.
-                  </p>
-                  <button
-                    onClick={() => navigate("/buyer-profile")}
-                    className="mt-2 text-sm text-cyan-600 hover:text-cyan-700 underline font-medium"
-                  >
-                    Go to profile to verify
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Search and Filter Section */}
           <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
