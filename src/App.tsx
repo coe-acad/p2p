@@ -16,6 +16,7 @@ import VerifyPage from "./pages/VerifyPage";
 
 import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
 import OnboardingTalkPage from "./pages/OnboardingTalkPage";
+import OnboardingVCPage from "./pages/OnboardingVCPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
@@ -63,6 +64,7 @@ const App = () => (
             {/* Onboarding Steps - Seller only */}
             <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
             <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/vc" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingVCPage /></RoleProtectedRoute>} />
 
             {/* Seller Main App */}
             <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />

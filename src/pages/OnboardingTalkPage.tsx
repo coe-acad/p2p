@@ -3,7 +3,6 @@ import { useUserData } from "@/hooks/useUserData";
 import TalkToSamaiScreen from "@/components/screens/TalkToSamaiScreen";
 
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
-const ONBOARDING_COMPLETE_KEY = "samai_onboarding_complete";
 
 const OnboardingTalkPage = () => {
   const navigate = useNavigate();
@@ -11,12 +10,9 @@ const OnboardingTalkPage = () => {
 
   const handleContinue = async () => {
     localStorage.setItem(ONBOARDING_TALK_KEY, "true");
-    localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true");
 
-    // Update onboardingComplete flag in Firestore
-    setUserData({ onboardingComplete: true });
-
-    navigate("/home", { replace: true });
+    // Continue to VC upload step
+    navigate("/onboarding/vc", { replace: true });
   };
 
   return (

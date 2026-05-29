@@ -9,6 +9,7 @@ const OnboardingIntroPage = () => {
   const steps = [
     { step: 1, title: "Verify your electricity connection", icon: MapPin, color: "from-orange-400 to-amber-500" },
     { step: 2, title: "Help Samai understand you", icon: MessageCircle, color: "from-purple-400 to-indigo-500" },
+    { step: 3, title: "Upload your credentials", icon: Sparkles, color: "from-teal-400 to-cyan-500" },
   ];
 
   return (
@@ -58,7 +59,7 @@ const OnboardingIntroPage = () => {
             Your Samai account is ready!
           </h2>
           <p className="text-sm text-muted-foreground">
-            Complete 2 quick steps before you start earning.
+            Complete 3 quick steps before you start earning.
           </p>
         </div>
 

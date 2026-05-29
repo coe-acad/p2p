@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun } from "lucide-react";
+import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,12 +20,15 @@ import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useAuth } from "@/hooks/useAuth";
 import LanguageToggle from "@/components/LanguageToggle";
 import MainAppShell from "@/components/layout/MainAppShell";
+import VCUploadModal from "@/components/modals/VCUploadModal";
 
 // Session storage keys
 const NOTIFICATION_SHOWN_KEY = "samai_confirmed_notification_shown";
 const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
+const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 const HIDE_SETUP_BANNER_KEY = "samai_hide_setup_banner";
+const HIDE_VC_BANNER_KEY = "samai_hide_vc_banner";
 const HAS_COMPLETED_FIRST_TRADE_KEY = "samai_has_completed_first_trade";
 const SESSION_APPROVED_KEY = "samai_session_approved";
 
@@ -66,7 +69,8 @@ const HomePage = () => {
   };
   
   // Get verification status from router state or userData (persisted)
-  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? true;
+  // Default to false (unverified) if not set
+  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? false;
   const justPublished = location.state?.justPublished ?? false;
   
   // Determine if user is new (based on userData flag)
@@ -79,6 +83,10 @@ const HomePage = () => {
   const [hideSetupBanner, setHideSetupBanner] = useState(() => {
     return localStorage.getItem(HIDE_SETUP_BANNER_KEY) === "true";
   });
+  const [hideVCBanner, setHideVCBanner] = useState(() => {
+    return localStorage.getItem(HIDE_VC_BANNER_KEY) === "true";
+  });
+  const [showVCModal, setShowVCModal] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showMegaCelebration, setShowMegaCelebration] = useState(false);
   const [earningsView, setEarningsView] = useState<"today" | "month">("today");
@@ -91,17 +99,86 @@ const HomePage = () => {
   const [displayedKwh, setDisplayedKwh] = useState(getInitialKwh());
   const [celebrationCount, setCelebrationCount] = useState(0);
   const [lastEarningsIncrease, setLastEarningsIncrease] = useState(5);
-  
+
+  // Fetch tomorrow's trades from API
+  const [tomorrowTrades, setTomorrowTrades] = useState<any>(null);
+  const [fetchedTomorrowData, setFetchedTomorrowData] = useState(false);
+
+  const { user: authUser } = useAuth();
+
+  // Check if VC is verified
+  const vcData = userData?.vc_data as any || {};
+  const hasVC = Object.keys(vcData).length > 0;
+
+  useEffect(() => {
+    const fetchTomorrowTrades = async () => {
+      if (!userData?.phone || !authUser || !hasVC) return;
+
+      try {
+        const token = await authUser.getIdToken();
+
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+        const encodedPhone = encodeURIComponent(userData.phone);
+
+        console.log("Fetching tomorrow trades for:", encodedPhone, "with token:", !!token);
+
+        const response = await fetch(`${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("Tomorrow trades response:", response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Tomorrow trades data:", data);
+          setTomorrowTrades(data);
+          setFetchedTomorrowData(true);
+        } else {
+          const errorText = await response.text();
+          console.error("Failed to fetch tomorrow trades:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+            requestUrl: `${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`,
+            hasToken: !!token,
+          });
+          setFetchedTomorrowData(true);
+        }
+      } catch (err) {
+        console.error("Error fetching tomorrow trades:", err);
+        setFetchedTomorrowData(true);
+      }
+    };
+
+    fetchTomorrowTrades();
+  }, [userData?.phone, authUser, hasVC]);
+
+  // Calculate tomorrow data from actual trades
+  const calculateTomorrowData = () => {
+    if (!tomorrowTrades?.trades || tomorrowTrades.trades.length === 0) {
+      return { units: 0, earnings: 0, avgRate: 0 };
+    }
+
+    const totalKwh = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + (Number(trade.kWh) || 0), 0);
+    const totalEarnings = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + ((Number(trade.kWh) || 0) * (Number(trade.price) || 0)), 0);
+    const avgRate = totalKwh > 0 ? totalEarnings / totalKwh : 0;
+
+    return { units: totalKwh, earnings: totalEarnings, avgRate };
+  };
+
+  const tomorrowDataFromAPI = calculateTomorrowData();
+
   // Tomorrow status based on published trades OR justPublished flag from navigation
   const isPublished = tradesData.isPublished || justPublished;
-  const tomorrowStatus: TomorrowStatus = isPublished 
+  const tomorrowStatus: TomorrowStatus = isPublished
     ? (tradesData.showConfirmedTrades ? "published_confirmed" : "published_pending")
     : "not_published";
-  const tomorrowData = { 
-    units: totalUnits, 
-    earnings: totalEarnings, 
-    avgRate: avgRate 
-  };
+  // Use API data if fetched, otherwise fallback to hardcoded values
+  const tomorrowData = fetchedTomorrowData ? tomorrowDataFromAPI : tomorrowExpected;
   // Only show confirmed trades if explicitly flagged
   const hasConfirmedTrades = tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
 
@@ -189,6 +266,12 @@ const HomePage = () => {
     const newValue = !hideSetupBanner;
     setHideSetupBanner(newValue);
     localStorage.setItem(HIDE_SETUP_BANNER_KEY, String(newValue));
+  };
+
+  const toggleHideVCBanner = () => {
+    const newValue = !hideVCBanner;
+    setHideVCBanner(newValue);
+    localStorage.setItem(HIDE_VC_BANNER_KEY, String(newValue));
   };
 
   const dismissNudge = (id: string) => {
@@ -330,6 +413,55 @@ const HomePage = () => {
           >
             <EyeOff size={9} />
             <span>[Dev] Show setup banner</span>
+          </button>
+        )}
+
+        {/* VC Verification Banner - Shown if not verified and not hidden */}
+        {!isVCVerified && !hideVCBanner && (
+          <div className="bg-gradient-to-r from-cyan-100 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/10 border border-cyan-300/40 dark:border-cyan-700/30 rounded-xl animate-slide-up backdrop-blur-sm overflow-hidden">
+            <button
+              onClick={() => setShowVCModal(true)}
+              className="w-full flex items-center justify-between p-3 text-left hover:bg-white/30 dark:hover:bg-background/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-cyan-200 dark:bg-cyan-800/40 flex items-center justify-center">
+                  <Shield size={10} className="text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-foreground">
+                    Verify your credentials to start trading
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Upload your electricity meter or solar system credentials
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ArrowRight size={14} className="text-cyan-500" />
+              </div>
+            </button>
+
+            {/* Hide option */}
+            <div className="px-3 pb-2">
+              <button
+                onClick={toggleHideVCBanner}
+                className="w-full flex items-center justify-center gap-1 p-1 text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                <EyeOff size={9} />
+                <span>[Dev] Hide banner</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dev button to show hidden VC banner */}
+        {hideVCBanner && !isVCVerified && (
+          <button
+            onClick={toggleHideVCBanner}
+            className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 self-end"
+          >
+            <EyeOff size={9} />
+            <span>[Dev] Show VC banner</span>
           </button>
         )}
 
@@ -507,12 +639,12 @@ const HomePage = () => {
                 <p className="text-[10px] text-white/80 mb-0.5">{t("home.sellingTomorrow")}</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl font-black text-white">
-                    ₹{tomorrowData.earnings || tomorrowExpected.earnings}
+                    ₹{Math.round(tomorrowData.earnings)}
                   </span>
                 </div>
-                <p className="text-[10px] text-white/70 mt-0.5">{tomorrowData.units || tomorrowExpected.units} kWh</p>
+                <p className="text-[10px] text-white/70 mt-0.5">{(tomorrowData.units || 0).toFixed(2)} kWh</p>
               </div>
-              
+
               {/* Right side - Published status */}
               <div className="text-right">
                 {isPublished ? (
@@ -522,7 +654,7 @@ const HomePage = () => {
                       <span className="text-[10px] font-semibold text-white uppercase">{t("home.published")}</span>
                     </div>
                     <p className="text-[10px] text-white/70 uppercase">{t("home.avgRate")}</p>
-                    <p className="text-sm font-bold text-white">₹{tomorrowData.avgRate || 6.3}/kWh</p>
+                    <p className="text-sm font-bold text-white">₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh</p>
                   </>
                 ) : (
                   <>
@@ -615,6 +747,19 @@ const HomePage = () => {
         </div>
       </div>
       </div>
+
+      {/* VC Upload Modal */}
+      <VCUploadModal
+        isOpen={showVCModal}
+        onClose={() => setShowVCModal(false)}
+        onSuccess={() => {
+          setUserData({ isVCVerified: false });
+          toast({
+            title: "Credentials uploaded!",
+            description: "Your credentials are pending verification. Trading will be enabled once approved.",
+          });
+        }}
+      />
     </MainAppShell>
   );
 };
