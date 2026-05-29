@@ -6,19 +6,8 @@ import { useTranslation } from "react-i18next";
 import { auth } from "@/lib/firebase";
 import { logger } from "@/lib/logger";
 import { resolveRequiredEnv } from "@/services/apiClient";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTitle, DialogContent, Menu, MenuItem, IconButton } from "@mui/material";
 import SamaiLogo from "../SamaiLogo";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import ConfirmedTradesCard from "./ConfirmedTradesCard";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
@@ -367,6 +356,7 @@ const PreparedTomorrowScreen = ({
   const [chatInput, setChatInput] = useState("");
   const [chatResponse, setChatResponse] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [slotMenuAnchor, setSlotMenuAnchor] = useState<Record<string, HTMLElement | null>>({});
 
   const handleOpenControl = () => {
     setModalStep('main');
@@ -653,36 +643,50 @@ const PreparedTomorrowScreen = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-foreground">₹{slot.earnings}</p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="p-1 rounded-full hover:bg-secondary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                          <MoreVertical size={14} className="text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-36">
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            resetApprovalState();
-                            setChatInput(`Edit trade at ${slot.time}`);
-                            handleOpenControl();
-                          }}
-                          className="text-xs"
-                        >
-                          <Pencil size={12} className="mr-2" />
-                          {t("common.edit")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            resetApprovalState();
-                            setExcludedSlotIds(prev => [...prev, slot.id]);
-                          }}
-                          className="text-xs text-destructive focus:text-destructive"
-                        >
-                          <Trash2 size={12} className="mr-2" />
-                          {t("prepared.remove")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => setSlotMenuAnchor({ ...slotMenuAnchor, [slot.id]: e.currentTarget })}
+                      sx={{ opacity: 0, ":hover": { opacity: 1 }, ":focus": { opacity: 1 } }}
+                    >
+                      <MoreVertical size={14} className="text-muted-foreground" />
+                    </IconButton>
+                    <Menu
+                      anchorEl={slotMenuAnchor[slot.id]}
+                      open={Boolean(slotMenuAnchor[slot.id])}
+                      onClose={() => setSlotMenuAnchor({ ...slotMenuAnchor, [slot.id]: null })}
+                      slotProps={{
+                        paper: {
+                          sx: {
+                            width: 144,
+                            bgcolor: "background.paper",
+                          },
+                        },
+                      }}
+                    >
+                      <MenuItem
+                        onClick={() => {
+                          resetApprovalState();
+                          setChatInput(`Edit trade at ${slot.time}`);
+                          handleOpenControl();
+                          setSlotMenuAnchor({ ...slotMenuAnchor, [slot.id]: null });
+                        }}
+                        sx={{ py: 0.75 }}
+                      >
+                        <Pencil size={12} style={{ marginRight: 8 }} />
+                        {t("common.edit")}
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => {
+                          resetApprovalState();
+                          setExcludedSlotIds(prev => [...prev, slot.id]);
+                          setSlotMenuAnchor({ ...slotMenuAnchor, [slot.id]: null });
+                        }}
+                        sx={{ py: 0.75, color: "error.main" }}
+                      >
+                        <Trash2 size={12} style={{ marginRight: 8 }} />
+                        {t("prepared.remove")}
+                      </MenuItem>
+                    </Menu>
                   </div>
                 </div>
               ))}
@@ -740,17 +744,15 @@ const PreparedTomorrowScreen = ({
       </div>
 
       {/* Take Control Modal */}
-      <Dialog open={showControlModal} onOpenChange={setShowControlModal}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
-          <DialogHeader className="p-4 pb-3 border-b border-border">
-            <DialogTitle className="text-base font-semibold">{t("prepared.takeControl")}</DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t("prepared.adjustPlanForTomorrow", {
-                today: todayFormatted,
-                day: format(tomorrow, "EEEE"),
-              })}
-            </p>
-          </DialogHeader>
+      <Dialog open={showControlModal} onClose={() => setShowControlModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("prepared.takeControl")}</DialogTitle>
+        <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ fontSize: "0.75rem", color: "rgba(0,0,0,0.6)", marginTop: "-0.5rem" }}>
+            {t("prepared.adjustPlanForTomorrow", {
+              today: todayFormatted,
+              day: format(tomorrow, "EEEE"),
+            })}
+          </div>
 
           {modalStep === 'main' && (
             <div className="p-4 space-y-4">

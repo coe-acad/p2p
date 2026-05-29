@@ -1,12 +1,12 @@
 import { createTheme } from "@mui/material/styles";
 
-const primaryColor = "#f59e0b"; // amber
-const secondaryColor = "#1a9e7a"; // teal
-const backgroundColor = "#fafbfc";
-const surfaceColor = "#ffffff";
-const borderColor = "#e5e7eb";
-const textPrimary = "#111827";
-const textSecondary = "#6b7280";
+const primaryColor = "#f59e0b"; // amber (primary)
+const secondaryColor = "#1a9e7a"; // teal (secondary)
+const backgroundColor = "#fef9f5"; // warm beige/cream background
+const surfaceColor = "#fffcf9"; // warm white surface
+const borderColor = "#f5ddc8"; // warm border
+const textPrimary = "#2d2520"; // warm dark
+const textSecondary = "#8b7d70"; // warm gray
 
 export const muiTheme = createTheme({
   palette: {
@@ -46,7 +46,7 @@ export const muiTheme = createTheme({
       main: "#f59e0b",
     },
     info: {
-      main: "#3b82f6",
+      main: "#f59e0b",
     },
   },
   typography: {
@@ -113,7 +113,7 @@ export const muiTheme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 16,
   },
   components: {
     MuiAppBar: {
@@ -130,11 +130,11 @@ export const muiTheme = createTheme({
         root: {
           backgroundColor: surfaceColor,
           border: "none",
-          boxShadow: "0 1px 3px rgba(26, 158, 122, 0.08)",
-          borderRadius: "12px",
-          transition: "all 0.2s ease",
+          boxShadow: "0 8px 16px rgba(245, 158, 11, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04)",
+          borderRadius: "16px",
+          transition: "box-shadow 0.3s ease, transform 0.3s ease",
           "&:hover": {
-            boxShadow: "0 8px 16px rgba(26, 158, 122, 0.15)",
+            boxShadow: "0 12px 24px rgba(245, 158, 11, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06)",
           },
         },
       },
@@ -142,43 +142,56 @@ export const muiTheme = createTheme({
     MuiCardContent: {
       styleOverrides: {
         root: {
-          padding: "20px",
+          padding: "12px 16px",
           "&:last-child": {
-            paddingBottom: "20px",
+            paddingBottom: "12px",
           },
+        },
+      },
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: {
+          padding: "12px 16px",
         },
       },
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: "8px",
+          borderRadius: "12px",
           textTransform: "none",
           fontWeight: 600,
-          transition: "all 0.2s ease",
-          "&:hover": {
-            transform: "translateY(-1px)",
-          },
+          transition: "box-shadow 0.3s ease, background-color 0.3s ease",
         },
         contained: {
-          background: `linear-gradient(135deg, ${primaryColor} 0%, #0d8a6a 100%)`,
-          boxShadow: "0 4px 12px rgba(26, 158, 122, 0.25)",
+          backgroundColor: primaryColor,
+          color: "#ffffff",
+          boxShadow: "0 6px 16px rgba(245, 158, 11, 0.2), 0 2px 4px rgba(0, 0, 0, 0.08)",
+          border: "none",
           "&:hover": {
-            boxShadow: "0 6px 16px rgba(26, 158, 122, 0.35)",
+            backgroundColor: "#d97706",
+            boxShadow: "0 8px 20px rgba(245, 158, 11, 0.3), 0 4px 8px rgba(0, 0, 0, 0.12)",
+          },
+          "&:active": {
+            boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08)",
           },
         },
         outlined: {
-          borderColor: primaryColor,
+          borderColor: "transparent",
           color: primaryColor,
+          backgroundColor: "rgba(245, 158, 11, 0.08)",
+          boxShadow: "0 2px 8px rgba(245, 158, 11, 0.08)",
           "&:hover": {
-            backgroundColor: "rgba(26, 158, 122, 0.06)",
-            borderColor: primaryColor,
+            backgroundColor: "rgba(245, 158, 11, 0.12)",
+            borderColor: "transparent",
+            boxShadow: "0 4px 12px rgba(245, 158, 11, 0.12)",
           },
         },
         text: {
           color: primaryColor,
           "&:hover": {
-            backgroundColor: "rgba(26, 158, 122, 0.08)",
+            backgroundColor: "rgba(245, 158, 11, 0.08)",
           },
         },
       },
@@ -186,10 +199,10 @@ export const muiTheme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
-          borderRadius: "8px",
-          transition: "all 0.2s ease",
+          borderRadius: "12px",
+          transition: "background-color 0.3s ease, box-shadow 0.3s ease",
           "&:hover": {
-            backgroundColor: "rgba(0, 0, 0, 0.04)",
+            backgroundColor: "rgba(245, 158, 11, 0.08)",
           },
         },
       },
@@ -198,18 +211,21 @@ export const muiTheme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            borderRadius: "8px",
+            borderRadius: "12px",
             backgroundColor: backgroundColor,
-            transition: "all 0.2s ease",
+            boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.05)",
+            transition: "box-shadow 0.3s ease, border-color 0.3s ease",
             "& fieldset": {
-              borderColor: borderColor,
+              borderColor: "transparent",
             },
             "&:hover fieldset": {
-              borderColor: primaryColor,
+              borderColor: "transparent",
+            },
+            "&.Mui-focused": {
+              boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 0 0 3px rgba(245, 158, 11, 0.1)",
             },
             "&.Mui-focused fieldset": {
-              borderColor: primaryColor,
-              boxShadow: `0 0 0 3px rgba(26, 158, 122, 0.1)`,
+              borderColor: "transparent",
             },
           },
         },
@@ -243,7 +259,7 @@ export const muiTheme = createTheme({
         paper: {
           backgroundColor: surfaceColor,
           borderRight: "none",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+          boxShadow: "4px 0 16px rgba(245, 158, 11, 0.06), 2px 0 4px rgba(0, 0, 0, 0.04)",
         },
       },
     },
@@ -261,21 +277,24 @@ export const muiTheme = createTheme({
           fontWeight: 500,
         },
         outlined: {
-          borderColor: primaryColor,
+          borderColor: "transparent",
           color: primaryColor,
+          bgcolor: "rgba(245, 158, 11, 0.08)",
         },
         filled: {
-          backgroundColor: "rgba(26, 158, 122, 0.1)",
+          backgroundColor: "rgba(245, 158, 11, 0.1)",
           color: primaryColor,
+          border: "none",
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: "16px",
+          borderRadius: "20px",
+          backgroundColor: surfaceColor,
           boxShadow:
-            "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            "0 16px 32px rgba(245, 158, 11, 0.08), 0 8px 16px rgba(0, 0, 0, 0.06)",
         },
       },
     },
@@ -288,6 +307,7 @@ export const muiTheme = createTheme({
         },
         bar: {
           borderRadius: "4px",
+          backgroundColor: primaryColor,
         },
       },
     },
@@ -295,27 +315,23 @@ export const muiTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: "8px",
-          border: `1px solid`,
+          border: "none",
         },
         standardInfo: {
-          backgroundColor: "rgba(59, 130, 246, 0.05)",
-          borderColor: "rgba(59, 130, 246, 0.2)",
-          color: "#1e3a8a",
+          backgroundColor: "rgba(245, 158, 11, 0.05)",
+          color: primaryColor,
         },
         standardWarning: {
-          backgroundColor: "rgba(245, 158, 11, 0.05)",
-          borderColor: "rgba(245, 158, 11, 0.2)",
-          color: "#92400e",
+          backgroundColor: "rgba(245, 158, 11, 0.08)",
+          color: primaryColor,
         },
         standardError: {
-          backgroundColor: "rgba(239, 68, 68, 0.05)",
-          borderColor: "rgba(239, 68, 68, 0.2)",
-          color: "#7f1d1d",
+          backgroundColor: "rgba(245, 158, 11, 0.08)",
+          color: primaryColor,
         },
         standardSuccess: {
-          backgroundColor: "rgba(16, 185, 129, 0.05)",
-          borderColor: "rgba(16, 185, 129, 0.2)",
-          color: "#065f46",
+          backgroundColor: "rgba(26, 158, 122, 0.05)",
+          color: secondaryColor,
         },
       },
     },
