@@ -1,4 +1,4 @@
-import { Drawer, Box, Typography, Divider, Stack } from "@mui/material";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CheckCircle2, Clock, AlertCircle, Zap, TrendingUp, TrendingDown, Sparkles, Building2, Calendar, Timer } from "lucide-react";
 
 type PaymentStatus = "received" | "confirmed" | "pending";
@@ -24,31 +24,31 @@ const PaymentDetailSheet = ({ transaction, open, onOpenChange }: PaymentDetailSh
   if (!transaction) return null;
 
   const amount = transaction.units * transaction.pricePerUnit;
-
+  
   const getStatusConfig = (status: PaymentStatus) => {
     switch (status) {
       case "received":
         return {
           icon: CheckCircle2,
           label: "Payment Received",
-          color: "secondary.main",
-          bg: "rgba(26, 158, 122, 0.1)",
+          color: "text-accent",
+          bg: "bg-accent/10",
           description: "Funds credited to your UPI account"
         };
       case "confirmed":
         return {
           icon: Clock,
           label: "Trade Confirmed",
-          color: "primary.main",
-          bg: "rgba(245, 158, 11, 0.1)",
+          color: "text-primary",
+          bg: "bg-primary/10",
           description: "Settlement pending at month end"
         };
       case "pending":
         return {
           icon: AlertCircle,
           label: "Pending Confirmation",
-          color: "primary.main",
-          bg: "rgba(245, 158, 11, 0.1)",
+          color: "text-amber-600",
+          bg: "bg-amber-500/10",
           description: "Awaiting buyer confirmation"
         };
     }
@@ -57,15 +57,16 @@ const PaymentDetailSheet = ({ transaction, open, onOpenChange }: PaymentDetailSh
   const config = getStatusConfig(transaction.paymentStatus);
   const StatusIcon = config.icon;
 
+  // Generate insights based on trade data
   const avgMarketRate = 6.35;
   const rateVsMarket = ((transaction.pricePerUnit - avgMarketRate) / avgMarketRate) * 100;
   const isAboveAvg = rateVsMarket > 0;
-
+  
   const insights = [
     {
       icon: isAboveAvg ? TrendingUp : TrendingDown,
       title: isAboveAvg ? "Above Market Rate" : "Market Rate",
-      description: isAboveAvg
+      description: isAboveAvg 
         ? `You sold ${Math.abs(rateVsMarket).toFixed(1)}% above the average market rate of ₹${avgMarketRate}/kWh`
         : `Sold at market rate. Peak hours (7-10 AM) often fetch ₹7+/kWh`,
       positive: isAboveAvg
@@ -87,137 +88,114 @@ const PaymentDetailSheet = ({ transaction, open, onOpenChange }: PaymentDetailSh
   ];
 
   return (
-    <Drawer
-      anchor="bottom"
-      open={open}
-      onClose={() => onOpenChange(false)}
-      PaperProps={{
-        sx: {
-          height: "85vh",
-          borderRadius: "16px 16px 0 0",
-          bgcolor: "background.paper",
-        },
-      }}
-    >
-      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>Order Details</Typography>
-        </Box>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle className="text-left">Order Details</SheetTitle>
+        </SheetHeader>
 
-        <Box sx={{ overflowY: "auto", flex: 1, p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="overflow-y-auto h-[calc(85vh-80px)] py-4 space-y-4">
           {/* Amount Header */}
-          <Box sx={{ textAlign: "center", py: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>+₹{Math.round(amount)}</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-              {Math.round(transaction.units)} kWh @ ₹{transaction.pricePerUnit}/kWh
-            </Typography>
-          </Box>
+          <div className="text-center py-4">
+            <p className="text-3xl font-bold text-foreground">+₹{Math.round(amount)}</p>
+            <p className="text-sm text-muted-foreground mt-1">{Math.round(transaction.units)} kWh @ ₹{transaction.pricePerUnit}/kWh</p>
+          </div>
 
           {/* Status Badge */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, p: 1.5, bgcolor: config.bg as string, borderRadius: 1.5 }}>
-            <StatusIcon size={20} style={{ color: config.color as string }} />
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: config.color }}>{config.label}</Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>{config.description}</Typography>
-            </Box>
-          </Box>
+          <div className={`flex items-center gap-3 p-3 rounded-xl ${config.bg}`}>
+            <StatusIcon size={20} className={config.color} />
+            <div>
+              <p className={`text-sm font-semibold ${config.color}`}>{config.label}</p>
+              <p className="text-xs text-muted-foreground">{config.description}</p>
+            </div>
+          </div>
 
           {/* Order Details */}
-          <Box sx={{ bgcolor: "rgba(245, 158, 11, 0.04)", borderRadius: 1.5, p: 1.5 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5 }}>Trade Information</Typography>
-
-            <Stack spacing={1.5}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <div className="bg-card rounded-xl p-4 shadow-card space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Trade Information</h3>
+            
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar size={14} />
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>Date</Typography>
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>{transaction.date}, 2026</Typography>
-              </Box>
+                  <span className="text-xs">Date</span>
+                </div>
+                <span className="text-sm font-medium text-foreground">{transaction.date}, 2026</span>
+              </div>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Timer size={14} />
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>Time Window</Typography>
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>{transaction.timeSlot}</Typography>
-              </Box>
+                  <span className="text-xs">Time Window</span>
+                </div>
+                <span className="text-sm font-medium text-foreground">{transaction.timeSlot}</span>
+              </div>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Building2 size={14} />
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>Buyer</Typography>
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>{transaction.buyer}</Typography>
-              </Box>
+                  <span className="text-xs">Buyer</span>
+                </div>
+                <span className="text-sm font-medium text-foreground">{transaction.buyer}</span>
+              </div>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Zap size={14} />
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>Energy Sold</Typography>
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>{transaction.units} kWh</Typography>
-              </Box>
-            </Stack>
-          </Box>
+                  <span className="text-xs">Energy Sold</span>
+                </div>
+                <span className="text-sm font-medium text-foreground">{transaction.units} kWh</span>
+              </div>
+            </div>
+          </div>
 
           {/* Samai Insights */}
-          <Box sx={{ bgcolor: "rgba(245, 158, 11, 0.05)", borderRadius: 1.5, p: 1.5 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-              <Sparkles size={16} />
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>Samai Insights</Typography>
-            </Box>
-
-            <Stack spacing={1.5}>
+          <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-accent/5 rounded-xl p-4 border border-primary/10">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={16} className="text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Samai Insights</h3>
+            </div>
+            
+            <div className="space-y-3">
               {insights.map((insight, idx) => {
                 const InsightIcon = insight.icon;
                 return (
-                  <Box key={idx} sx={{ display: "flex", gap: 1.5 }}>
-                    <Box sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      bgcolor: insight.positive ? "rgba(245, 158, 11, 0.15)" : "rgba(0, 0, 0, 0.05)"
-                    }}>
-                      <InsightIcon size={12} style={{ color: insight.positive ? "#f59e0b" : "rgba(0, 0, 0, 0.5)" }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 600, display: "block" }}>{insight.title}</Typography>
-                      <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>{insight.description}</Typography>
-                    </Box>
-                  </Box>
+                  <div key={idx} className="flex items-start gap-2.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${insight.positive ? 'bg-accent/15' : 'bg-muted'}`}>
+                      <InsightIcon size={12} className={insight.positive ? 'text-accent' : 'text-muted-foreground'} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-foreground">{insight.title}</p>
+                      <p className="text-2xs text-muted-foreground leading-relaxed">{insight.description}</p>
+                    </div>
+                  </div>
                 );
               })}
-            </Stack>
-          </Box>
+            </div>
+          </div>
 
           {/* Payment Details */}
-          <Box sx={{ bgcolor: "rgba(245, 158, 11, 0.04)", borderRadius: 1.5, p: 1.5 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5 }}>Payment Breakdown</Typography>
-
-            <Stack spacing={1}>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>Energy Value</Typography>
-                <Typography variant="body2">₹{(transaction.units * transaction.pricePerUnit).toFixed(2)}</Typography>
-              </Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>Platform Fee</Typography>
-                <Typography variant="body2">₹0.00</Typography>
-              </Box>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>Net Earnings</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main" }}>₹{Math.round(amount)}</Typography>
-              </Box>
-            </Stack>
-          </Box>
-        </Box>
-      </Box>
-    </Drawer>
+          <div className="bg-card rounded-xl p-4 shadow-card">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Payment Breakdown</h3>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Energy Value</span>
+                <span className="text-foreground">₹{(transaction.units * transaction.pricePerUnit).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Platform Fee</span>
+                <span className="text-foreground">₹0.00</span>
+              </div>
+              <div className="border-t border-border pt-2 mt-2 flex justify-between">
+                <span className="text-sm font-semibold text-foreground">Net Earnings</span>
+                <span className="text-sm font-bold text-accent">₹{Math.round(amount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

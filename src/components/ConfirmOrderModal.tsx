@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Typography, Stack, Alert, CircularProgress } from '@mui/material';
-import { Loader2, AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { EnergyListing } from '@/hooks/useDiscoverListings';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 interface ConfirmOrderModalProps {
   isOpen: boolean;
@@ -38,93 +45,103 @@ export const ConfirmOrderModal = ({
   const showOfferList = offers.length > 0;
 
   return (
-    <Dialog open={isOpen} onClose={onCancel} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>Choose Offer</DialogTitle>
-      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Select one offer from this catalog to get the quotation
-        </Typography>
+    <Dialog open={isOpen} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Choose Offer</DialogTitle>
+          <DialogDescription>
+            Select one offer from this catalog to get the quotation
+          </DialogDescription>
+        </DialogHeader>
 
-        {showOfferList && (
-          <>
-            <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Seller</Typography>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mt: 0.5 }}>{listing.seller_name}</Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                {offers.length} offers available in this catalog
-              </Typography>
-            </Box>
+        <div className="space-y-6">
+          {showOfferList && (
+            <>
+              <div className="border rounded-lg p-4 space-y-2">
+                <p className="text-sm text-gray-600">Seller</p>
+                <p className="text-lg font-semibold">{listing.seller_name}</p>
+                <p className="text-sm text-gray-600">
+                  {offers.length} offers available in this catalog
+                </p>
+              </div>
 
-            <Stack sx={{ maxHeight: 420, overflowY: 'auto', gap: 1.5, pr: 1 }}>
-              {offers.map((offer) => {
-                const offerTotal = offer.price_per_unit * offer.quantity_available;
-                const isSelectingThisOffer = selectingOfferId === offer.id;
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                {offers.map((offer) => {
+                  const offerTotal = offer.price_per_unit * offer.quantity_available;
+                  const isSelectingThisOffer = selectingOfferId === offer.id;
 
-                return (
-                  <Box key={offer.id} sx={{ bgcolor: 'rgba(245, 158, 11, 0.02)', borderRadius: 1.5, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{offer.offer_name}</Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25, display: 'block' }}>
-                        {offer.quantity_available} {offer.quantity_unit} at ₹{offer.price_per_unit.toFixed(2)}/{offer.quantity_unit}
-                      </Typography>
-                    </Box>
+                  return (
+                    <div key={offer.id} className="border rounded-lg p-4 space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{offer.offer_name}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {offer.quantity_available} {offer.quantity_unit} at ₹{offer.price_per_unit.toFixed(2)}/{offer.quantity_unit}
+                        </p>
+                      </div>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                      <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                        {new Date(offer.delivery_start).toLocaleString('en-IN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>→</Typography>
-                      <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                        {new Date(offer.delivery_end).toLocaleString('en-IN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Typography>
-                    </Box>
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>
+                          {new Date(offer.delivery_start).toLocaleString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        <span className="text-gray-400">→</span>
+                        <span>
+                          {new Date(offer.delivery_end).toLocaleString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>₹{offerTotal.toFixed(2)}</Typography>
-                      <Button
-                        onClick={() => handleSelectOffer(offer)}
-                        disabled={status === 'selecting'}
-                        variant="contained"
-                        size="small"
-                        startIcon={isSelectingThisOffer ? <Loader2 size={16} className="animate-spin" /> : undefined}
-                      >
-                        {isSelectingThisOffer ? 'Selecting...' : 'Select'}
-                      </Button>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Stack>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-blue-600">₹{offerTotal.toFixed(2)}</p>
+                        <Button
+                          onClick={() => handleSelectOffer(offer)}
+                          disabled={status === 'selecting'}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isSelectingThisOffer ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Selecting...
+                            </>
+                          ) : (
+                            'Select'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-            {error && (
-              <Alert severity="error" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AlertCircle size={18} />
-                <Typography variant="body2">{error}</Typography>
-              </Alert>
-            )}
-          </>
-        )}
+              {error && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                  <AlertCircle size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  onClick={onCancel}
+                  disabled={status === 'selecting'}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1 }}>
-        <Button
-          onClick={onCancel}
-          disabled={status === 'selecting'}
-          variant="outlined"
-          fullWidth
-        >
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

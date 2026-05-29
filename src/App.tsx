@@ -1,3 +1,6 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {
@@ -46,9 +49,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="app-viewport-min bg-background">
-        <Routes>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <div className="app-viewport-min bg-background">
+          <Routes>
             {/* Public routes - redirects to /home if already logged in */}
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
             <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
@@ -96,6 +102,7 @@ const App = () => (
           </Routes>
         </div>
       </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

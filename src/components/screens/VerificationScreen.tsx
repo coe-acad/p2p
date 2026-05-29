@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { ArrowLeft, Shield, Check, X, CreditCard, Receipt, Loader2, Lock, ShieldCheck, MapPin, AlertTriangle } from "lucide-react";
-import { LinearProgress } from "@mui/material";
+import { Progress } from "@/components/ui/progress";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer } from "@/services/userService";
@@ -939,7 +939,9 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
               </div>
 
               {/* Progress bar */}
-              <LinearProgress variant="determinate" value={fetchingProgress} sx={{ maxWidth: "320px", height: 6, borderRadius: 1 }} />
+              <div className="w-full max-w-xs">
+                <Progress value={fetchingProgress} className="h-1.5" />
+              </div>
 
               {/* Status messages */}
               <div className="w-full space-y-2">

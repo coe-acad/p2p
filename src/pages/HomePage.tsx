@@ -2,7 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun, Shield } from "lucide-react";
-import { Menu, MenuItem } from "@mui/material";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
@@ -53,7 +58,6 @@ const HomePage = () => {
   const { userData, setUserData } = useUserData();
   const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
   const { logout } = useAuth();
-  const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleLogout = async () => {
     try {
@@ -695,56 +699,27 @@ const HomePage = () => {
           </div>
           
           {/* Profile dropdown - mobile/tablet only */}
-          <button
-            onClick={(e) => setProfileMenuAnchorEl(e.currentTarget)}
-            className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-          >
-            <User size={16} className="text-primary" />
-          </button>
-          <Menu
-            anchorEl={profileMenuAnchorEl}
-            open={Boolean(profileMenuAnchorEl)}
-            onClose={() => setProfileMenuAnchorEl(null)}
-            slotProps={{
-              paper: {
-                sx: {
-                  width: 192,
-                  bgcolor: "background.paper",
-                },
-              },
-            }}
-          >
-            <MenuItem
-              onClick={() => {
-                navigate("/profile");
-                setProfileMenuAnchorEl(null);
-              }}
-              sx={{ py: 1 }}
-            >
-              <User size={14} style={{ marginRight: 8 }} />
-              {t("home.profile")}
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                navigate("/today-trades");
-                setProfileMenuAnchorEl(null);
-              }}
-              sx={{ py: 1 }}
-            >
-              <FileText size={14} style={{ marginRight: 8 }} />
-              {t("home.todaysTrades")}
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleLogout();
-                setProfileMenuAnchorEl(null);
-              }}
-              sx={{ py: 1, color: "error.main" }}
-            >
-              <LogOut size={14} style={{ marginRight: 8 }} />
-              {t("home.logout")}
-            </MenuItem>
-          </Menu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
+                <User size={16} className="text-primary" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-lg z-[9998]">
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <User size={14} className="mr-2" />
+                {t("home.profile")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/today-trades")}>
+                <FileText size={14} className="mr-2" />
+                {t("home.todaysTrades")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                <LogOut size={14} className="mr-2" />
+                {t("home.logout")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Compact Language & Weather row */}

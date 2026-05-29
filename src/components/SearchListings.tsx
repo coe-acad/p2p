@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Box, Button, TextField, IconButton, Chip, FormControl, FormLabel, Select, MenuItem } from '@mui/material';
-import { Search as SearchIcon, X as XIcon, Filter as FilterIcon } from 'lucide-react';
 import { SearchFilters } from '@/hooks/useDiscoverListings';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, X, Filter } from 'lucide-react';
 
 interface SearchListingsProps {
   onSearch: (filters: SearchFilters) => void;
@@ -49,172 +50,195 @@ export const SearchListings = ({
     sellerName || minPrice || maxPrice || minQuantity || maxQuantity || sourceType;
 
   return (
-    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3, bgcolor: 'background.paper', p: 2, borderRadius: 1.5, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
+    <div className="w-full space-y-3 bg-white p-4 rounded-lg border border-gray-200">
       {/* Main Search Bar */}
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <TextField
-          placeholder="Search by seller name..."
-          value={sellerName}
-          onChange={(e) => setSellerName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          disabled={isLoading}
-          size="small"
-          fullWidth
-          slotProps={{
-            input: {
-              startAdornment: <SearchIcon size={18} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.3)' }} />,
-            },
-          }}
-        />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            placeholder="Search by seller name..."
+            value={sellerName}
+            onChange={(e) => setSellerName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="pl-10 h-10"
+            disabled={isLoading}
+          />
+        </div>
         <Button
           onClick={handleSearch}
           disabled={isLoading || !sellerName.trim()}
-          variant="contained"
+          className="bg-blue-600 hover:bg-blue-700"
         >
           Search
         </Button>
-        <IconButton
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => setShowFilters(!showFilters)}
-          sx={{
-            bgcolor: showFilters ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
-          }}
+          className={showFilters ? 'bg-blue-100 border-blue-300' : ''}
         >
-          <FilterIcon size={18} />
-        </IconButton>
-      </Box>
+          <Filter size={18} />
+        </Button>
+      </div>
 
       {/* Advanced Filters */}
       {showFilters && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, p: 2, bgcolor: 'rgba(245, 158, 11, 0.02)', borderRadius: 1.5 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
           {/* Price Range */}
-          <TextField
-            label="Min Price (₹)"
-            type="number"
-            placeholder="Min"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            disabled={isLoading}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Max Price (₹)"
-            type="number"
-            placeholder="Max"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            disabled={isLoading}
-            size="small"
-            fullWidth
-          />
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+              Min Price (₹)
+            </label>
+            <Input
+              type="number"
+              placeholder="Min"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="h-8 text-sm"
+              disabled={isLoading}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+              Max Price (₹)
+            </label>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="h-8 text-sm"
+              disabled={isLoading}
+            />
+          </div>
 
           {/* Quantity Range */}
-          <TextField
-            label="Min Quantity (kWh)"
-            type="number"
-            placeholder="Min"
-            value={minQuantity}
-            onChange={(e) => setMinQuantity(e.target.value)}
-            disabled={isLoading}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Max Quantity (kWh)"
-            type="number"
-            placeholder="Max"
-            value={maxQuantity}
-            onChange={(e) => setMaxQuantity(e.target.value)}
-            disabled={isLoading}
-            size="small"
-            fullWidth
-          />
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+              Min Quantity (kWh)
+            </label>
+            <Input
+              type="number"
+              placeholder="Min"
+              value={minQuantity}
+              onChange={(e) => setMinQuantity(e.target.value)}
+              className="h-8 text-sm"
+              disabled={isLoading}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+              Max Quantity (kWh)
+            </label>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={maxQuantity}
+              onChange={(e) => setMaxQuantity(e.target.value)}
+              className="h-8 text-sm"
+              disabled={isLoading}
+            />
+          </div>
 
           {/* Source Type */}
-          <FormControl fullWidth sx={{ gridColumn: { xs: '1 / -1', md: '1 / -1' } }}>
-            <FormLabel>Energy Source</FormLabel>
-            <Select
+          <div className="md:col-span-2">
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+              Energy Source
+            </label>
+            <select
               value={sourceType}
               onChange={(e) => setSourceType(e.target.value)}
+              className="w-full h-8 text-sm border border-gray-300 rounded px-2 py-1"
               disabled={isLoading}
-              size="small"
             >
-              <MenuItem value="">All Sources</MenuItem>
-              <MenuItem value="Solar">Solar</MenuItem>
-              <MenuItem value="Wind">Wind</MenuItem>
-              <MenuItem value="Hydro">Hydro</MenuItem>
-              <MenuItem value="Biomass">Biomass</MenuItem>
-              <MenuItem value="Grid">Grid</MenuItem>
-            </Select>
-          </FormControl>
+              <option value="">All Sources</option>
+              <option value="Solar">Solar</option>
+              <option value="Wind">Wind</option>
+              <option value="Hydro">Hydro</option>
+              <option value="Biomass">Biomass</option>
+              <option value="Grid">Grid</option>
+            </select>
+          </div>
 
           {/* Filter Actions */}
-          <Box sx={{ display: 'flex', gap: 2, gridColumn: { xs: '1 / -1', md: '1 / -1' } }}>
+          <div className="md:col-span-2 flex gap-2">
             <Button
               onClick={handleSearch}
               disabled={isLoading}
-              variant="contained"
-              fullWidth
+              className="flex-1 bg-blue-600 hover:bg-blue-700 h-8 text-sm"
             >
               Apply Filters
             </Button>
             {hasActiveFilters && (
               <Button
                 onClick={handleClear}
-                variant="outlined"
-                fullWidth
-                startIcon={<XIcon size={14} />}
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8"
               >
+                <X size={14} className="mr-1" />
                 Clear
               </Button>
             )}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <div className="flex flex-wrap gap-2">
           {sellerName && (
-            <Chip
-              label={sellerName}
-              onDelete={() => setSellerName('')}
-              color="primary"
-              variant="outlined"
-            />
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              {sellerName}
+              <button
+                onClick={() => setSellerName('')}
+                className="hover:text-blue-900"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
           {(minPrice || maxPrice) && (
-            <Chip
-              label={`₹${minPrice || '0'}-${maxPrice || '∞'}`}
-              onDelete={() => {
-                setMinPrice('');
-                setMaxPrice('');
-              }}
-              color="primary"
-              variant="outlined"
-            />
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              ₹{minPrice || '0'}-{maxPrice || '∞'}
+              <button
+                onClick={() => {
+                  setMinPrice('');
+                  setMaxPrice('');
+                }}
+                className="hover:text-blue-900"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
           {(minQuantity || maxQuantity) && (
-            <Chip
-              label={`${minQuantity || '0'}-${maxQuantity || '∞'} kWh`}
-              onDelete={() => {
-                setMinQuantity('');
-                setMaxQuantity('');
-              }}
-              color="primary"
-              variant="outlined"
-            />
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              {minQuantity || '0'}-{maxQuantity || '∞'} kWh
+              <button
+                onClick={() => {
+                  setMinQuantity('');
+                  setMaxQuantity('');
+                }}
+                className="hover:text-blue-900"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
           {sourceType && (
-            <Chip
-              label={sourceType}
-              onDelete={() => setSourceType('')}
-              color="primary"
-              variant="outlined"
-            />
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              {sourceType}
+              <button
+                onClick={() => setSourceType('')}
+                className="hover:text-blue-900"
+              >
+                <X size={14} />
+              </button>
+            </div>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ArrowLeft, Zap, Leaf, Check, Sun, Sparkles } from "lucide-react";
-import { Box, Button, Typography, Stack, IconButton } from "@mui/material";
 import SamaiLogo from "../SamaiLogo";
 
 interface IntentSelectionScreenProps {
@@ -18,179 +17,148 @@ const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps)
   };
 
   return (
-    <Box sx={{ position: "relative", overflow: "hidden", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", bgcolor: "#fef9f5", py: { xs: 2, sm: 4 } }}>
-      {/* Background effects */}
-      <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        <Box sx={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", height: { xs: "240px", sm: "300px" }, width: { xs: "400px", sm: "500px" }, borderRadius: "50%", background: "radial-gradient(circle, rgba(249, 115, 22, 0.35) 0%, rgba(217, 119, 6, 0.15) 50%, transparent 100%)", filter: "blur(96px)" }} />
-        <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent)", animation: "shimmer 4s ease-in-out infinite" }} />
-        <Box sx={{ position: "absolute", top: "28%", left: { xs: "-96px", sm: "-80px" }, height: { xs: "220px", sm: "250px" }, width: { xs: "220px", sm: "250px" }, borderRadius: "50%", background: "radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)", filter: "blur(96px)", animation: "pulse 4s ease-in-out infinite" }} />
-        <Box sx={{ position: "absolute", top: "46%", right: { xs: "-80px", sm: "-80px" }, height: { xs: "170px", sm: "200px" }, width: { xs: "170px", sm: "200px" }, borderRadius: "50%", background: "radial-gradient(circle, rgba(26, 158, 122, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%)", filter: "blur(96px)", animation: "pulse 5s ease-in-out infinite" }} />
-        <Box sx={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "150px", background: "linear-gradient(to top, rgba(249, 115, 22, 0.2), transparent)" }} />
-        <Box sx={{ position: "absolute", right: "24px", top: "56px", display: { xs: "none", sm: "block" }, color: "rgba(249, 115, 22, 0.2)", animation: "pulse 6s ease-in-out infinite" }}>
-          <Sun size={36} />
-        </Box>
-      </Box>
+    <div className="screen-container !py-4 relative overflow-hidden">
+      {/* Background gradient effects - Vibrant & Warm */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top warm sunlight glow */}
+        <div className="absolute top-0 left-1/2 h-[240px] w-[400px] -translate-x-1/2 rounded-full bg-gradient-to-b from-orange-300/35 via-amber-200/20 to-transparent blur-3xl sm:h-[300px] sm:w-[500px]" />
+        
+        {/* Animated shimmer */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full animate-[shimmer_4s_ease-in-out_infinite]" />
+        
+        {/* Colorful accent orbs */}
+        <div className="absolute top-[28%] -left-24 h-[220px] w-[220px] rounded-full bg-gradient-to-br from-orange-400/20 to-amber-500/10 blur-3xl animate-pulse sm:-left-20 sm:h-[250px] sm:w-[250px]" style={{ animationDuration: "4s" }} />
+        <div className="absolute top-[46%] -right-20 h-[170px] w-[170px] rounded-full bg-gradient-to-bl from-teal-400/15 to-green-400/10 blur-3xl animate-pulse sm:h-[200px] sm:w-[200px]" style={{ animationDuration: "5s" }} />
+        
+        {/* Bottom warm gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-[150px] bg-gradient-to-t from-orange-100/20 to-transparent" />
+        
+        {/* Floating particles */}
+        <div className="absolute top-1/4 left-1/5 w-2 h-2 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full animate-[pulse_4s_ease-in-out_infinite] shadow-lg shadow-orange-400/30" />
+        <div className="absolute top-1/3 right-1/4 w-1.5 h-1.5 bg-gradient-to-br from-teal-400 to-green-500 rounded-full animate-[pulse_3s_ease-in-out_infinite] shadow-lg shadow-teal-400/30" style={{ animationDelay: "1s" }} />
+        <div className="absolute bottom-1/3 left-1/4 w-1.5 h-1.5 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full animate-[pulse_5s_ease-in-out_infinite] shadow-lg shadow-amber-400/30" style={{ animationDelay: "0.5s" }} />
+        
+        {/* Decorative icons */}
+        <div className="absolute right-6 top-14 hidden text-orange-400/20 sm:block">
+          <Sun size={36} className="animate-[pulse_6s_ease-in-out_infinite]" />
+        </div>
+      </div>
 
-      <Stack sx={{ position: "relative", zIndex: 10, width: "100%", maxWidth: "448px", flex: 1, flexDirection: "column", px: 0.5 }}>
-        {/* Header */}
-        <Stack sx={{ mb: { xs: 3, sm: 4 }, flexDirection: "row", alignItems: "center", justifyContent: "space-between", animation: "fadeIn 0.8s ease-in" }}>
-          <Button onClick={onBack} sx={{ borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.6)", bgcolor: "rgba(255, 255, 255, 0.65)", px: 1.5, py: 1, textTransform: "none", color: "#8b7d70", boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)", backdropFilter: "blur(8px)", "&:hover": { color: "#2d2520" } }}>
-            <ArrowLeft size={18} style={{ marginRight: 8 }} />
-            <span style={{ fontSize: "0.875rem" }}>Back</span>
-          </Button>
-          <Box sx={{ borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.6)", bgcolor: "rgba(255, 255, 255, 0.65)", p: 1, boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)", backdropFilter: "blur(8px)" }}>
+      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col px-1 py-2 sm:py-4">
+        {/* Header with Back and Logo */}
+        <div className="mb-6 flex items-center justify-between animate-fade-in sm:mb-8">
+          <button
+            onClick={onBack}
+            className="group flex items-center gap-2 rounded-full border border-white/60 bg-white/65 px-3 py-2 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm">Back</span>
+          </button>
+          <div className="rounded-full border border-white/60 bg-white/65 p-2 shadow-sm backdrop-blur-sm">
             <SamaiLogo size="sm" showText={false} />
-          </Box>
-        </Stack>
+          </div>
+        </div>
 
-        <Stack sx={{ flex: 1, flexDirection: "column", justifyContent: "space-between", gap: { xs: 3, sm: 4 } }}>
-          {/* Title */}
-          <Box sx={{ textAlign: "center", animation: "slideUp 0.8s ease-out" }}>
-            <Box sx={{ mx: "auto", mb: { xs: 1.5, sm: 2 }, width: 48, height: 48, borderRadius: "50%", bgcolor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Sparkles style={{ color: "#f59e0b" }} size={22} />
-            </Box>
-            <Typography variant="caption" sx={{ fontSize: "0.875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.2em", color: "rgba(249, 115, 22, 0.8)" }}>
-              Set up your trade intent
-            </Typography>
-            <Typography variant="h5" sx={{ mx: "auto", mt: 1.5, maxWidth: { xs: "240px", sm: "448px" }, fontWeight: 700, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
+        <div className="flex flex-1 flex-col justify-between gap-6 sm:gap-8">
+          {/* Title with icon */}
+          <div className="text-center animate-slide-up">
+            <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-400/20 to-amber-500/10 sm:mb-4">
+              <Sparkles className="text-primary" size={22} />
+            </div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-orange-500/80">Set up your trade intent</p>
+            <h2 className="mx-auto mt-3 max-w-[15rem] text-xl font-semibold tracking-tight text-foreground sm:max-w-sm sm:text-2xl">
               What would you like Samai to help you do?
-            </Typography>
-            <Typography variant="body2" sx={{ mx: "auto", mt: 1.5, maxWidth: "448px", color: "#8b7d70" }}>
+            </h2>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
               Start with the action you want right now. You can adjust your role later from profile settings.
-            </Typography>
-          </Box>
+            </p>
+          </div>
 
-          {/* Intent Cards */}
-          <Stack sx={{ gap: 1.5, animation: "slideUp 0.8s ease-out 0.1s both" }}>
-            {/* Sell Card */}
-            <Button
+          {/* Cards */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <button
               onClick={() => setSelectedIntent("sell")}
-              sx={{
-                position: "relative",
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 2,
-                p: { xs: 2, sm: 2.5 },
-                borderRadius: 3,
-                textAlign: "left",
-                textTransform: "none",
-                color: "#2d2520",
-                border: selectedIntent === "sell" ? "2px solid #f59e0b" : "2px solid #f5ddc8",
-                bgcolor: selectedIntent === "sell" ? "rgba(249, 115, 22, 0.04)" : "rgba(255, 255, 255, 0.7)",
-                boxShadow: selectedIntent === "sell" ? "0 8px 16px rgba(245, 158, 11, 0.12)" : "0 2px 8px rgba(245, 158, 11, 0.06)",
-                backdropFilter: selectedIntent === "sell" ? "none" : "blur(8px)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.1)",
-                  borderColor: selectedIntent === "sell" ? "#f59e0b" : "rgba(245, 158, 11, 0.3)",
-                },
-              }}
+              className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
+                selectedIntent === "sell"
+                  ? "border-primary bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg shadow-orange-200/30"
+                  : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
+              }`}
             >
-              <Box sx={{
-                mt: 0.25,
-                width: 48,
-                height: 48,
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                bgcolor: selectedIntent === "sell" ? "#f59e0b" : "rgba(249, 115, 22, 0.1)",
-                color: selectedIntent === "sell" ? "white" : "#f59e0b",
-                transition: "all 0.3s ease",
-                boxShadow: selectedIntent === "sell" ? "0 6px 16px rgba(245, 158, 11, 0.2)" : "none",
-              }}>
-                <Zap size={22} />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
-                  <Box>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>Sell excess solar energy</Typography>
-                    <Typography variant="caption" sx={{ color: "#8b7d70", mt: 0.5, display: "block" }}>
+              <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
+                selectedIntent === "sell"
+                  ? "scale-105 bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/40"
+                  : "bg-gradient-to-br from-orange-400/15 to-amber-400/10 group-hover:scale-105"
+              }`}>
+                <Zap className={selectedIntent === "sell" ? "text-white" : "text-primary"} size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-foreground">Sell excess solar energy</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       Share surplus generation when your home is producing more than it needs.
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                   {selectedIntent === "sell" && (
-                    <Box sx={{ mt: 0.25, width: 24, height: 24, borderRadius: "50%", bgcolor: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 8px rgba(245, 158, 11, 0.2)" }}>
-                      <Check size={14} color="white" strokeWidth={3} />
-                    </Box>
+                    <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/30">
+                      <Check size={14} className="text-white" strokeWidth={3} />
+                    </div>
                   )}
-                </Box>
-              </Box>
-            </Button>
+                </div>
+              </div>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </button>
 
-            {/* Buy Card */}
-            <Button
+            <button
               onClick={() => setSelectedIntent("buy")}
-              sx={{
-                position: "relative",
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 2,
-                p: { xs: 2, sm: 2.5 },
-                borderRadius: 3,
-                textAlign: "left",
-                textTransform: "none",
-                color: "#2d2520",
-                border: selectedIntent === "buy" ? "2px solid #1a9e7a" : "2px solid #f5ddc8",
-                bgcolor: selectedIntent === "buy" ? "rgba(26, 158, 122, 0.04)" : "rgba(255, 255, 255, 0.7)",
-                boxShadow: selectedIntent === "buy" ? "0 8px 16px rgba(26, 158, 122, 0.12)" : "0 2px 8px rgba(245, 158, 11, 0.06)",
-                backdropFilter: selectedIntent === "buy" ? "none" : "blur(8px)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  boxShadow: "0 4px 12px rgba(26, 158, 122, 0.1)",
-                  borderColor: selectedIntent === "buy" ? "#1a9e7a" : "rgba(26, 158, 122, 0.3)",
-                },
-              }}
+              className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
+                selectedIntent === "buy"
+                  ? "border-primary bg-gradient-to-r from-teal-50 to-green-50 shadow-lg shadow-teal-200/30"
+                  : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
+              }`}
             >
-              <Box sx={{
-                mt: 0.25,
-                width: 48,
-                height: 48,
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                bgcolor: selectedIntent === "buy" ? "#1a9e7a" : "rgba(26, 158, 122, 0.1)",
-                color: selectedIntent === "buy" ? "white" : "#1a9e7a",
-                transition: "all 0.3s ease",
-                boxShadow: selectedIntent === "buy" ? "0 6px 16px rgba(26, 158, 122, 0.2)" : "none",
-              }}>
-                <Leaf size={22} />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
-                  <Box>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>Buy clean energy</Typography>
-                    <Typography variant="caption" sx={{ color: "#8b7d70", mt: 0.5, display: "block" }}>
+              <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
+                selectedIntent === "buy"
+                  ? "scale-105 bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/40"
+                  : "bg-gradient-to-br from-teal-400/15 to-green-400/10 group-hover:scale-105"
+              }`}>
+                <Leaf className={selectedIntent === "buy" ? "text-white" : "text-teal-600"} size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-foreground">Buy clean energy</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       Source clean energy from local solar producers in your community.
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                   {selectedIntent === "buy" && (
-                    <Box sx={{ mt: 0.25, width: 24, height: 24, borderRadius: "50%", bgcolor: "#1a9e7a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 8px rgba(26, 158, 122, 0.2)" }}>
-                      <Check size={14} color="white" strokeWidth={3} />
-                    </Box>
+                    <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/30">
+                      <Check size={14} className="text-white" strokeWidth={3} />
+                    </div>
                   )}
-                </Box>
-              </Box>
-            </Button>
-          </Stack>
+                </div>
+              </div>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </button>
+          </div>
 
-          {/* Continue Button */}
-          <Stack sx={{ gap: 1.5, pt: 1 }}>
-            <Button onClick={handleContinue} disabled={!selectedIntent} variant="contained" fullWidth sx={{ py: 2, textTransform: "none", fontWeight: 600 }}>
+          {/* Continue button */}
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={handleContinue}
+              disabled={!selectedIntent}
+              className="btn-solar w-full text-sm !py-4 disabled:opacity-50"
+            >
               Continue
-            </Button>
-            <Typography variant="caption" sx={{ textAlign: "center", animation: "fadeIn 0.8s ease-in 0.2s both" }}>
+            </button>
+            <p className="text-center text-xs text-muted-foreground animate-fade-in" style={{ animationDelay: "0.2s" }}>
               You can change this anytime later.
-            </Typography>
-          </Stack>
-        </Stack>
-      </Stack>
-    </Box>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

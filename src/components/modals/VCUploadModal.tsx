@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { Upload, FileCheck, X, Shield } from "lucide-react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Typography } from "@mui/material";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { resolveRequiredEnv } from "@/services/apiClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface VCUploadModalProps {
   isOpen: boolean;
@@ -117,21 +123,21 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600, textAlign: "center", pt: 3 }}>
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-          <Box sx={{ width: 56, height: 56, borderRadius: "50%", bgcolor: "rgba(245, 158, 11, 0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Shield style={{ color: "#f59e0b", width: 28, height: 28 }} />
-          </Box>
-        </Box>
-        Upload your credentials
-      </DialogTitle>
-      <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>
-          Add your electricity meter or solar system credentials to enable trading
-        </Typography>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <Shield className="text-primary" size={28} />
+            </div>
+          </div>
+          <DialogTitle className="text-xl">Upload your credentials</DialogTitle>
+          <DialogDescription className="text-sm">
+            Add your electricity meter or solar system credentials to enable trading
+          </DialogDescription>
+        </DialogHeader>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="space-y-4 mt-2">
           {!uploadedFile ? (
             <>
               <input
@@ -139,108 +145,93 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
                 type="file"
                 accept=".json"
                 onChange={handleFileSelect}
-                style={{ display: "none" }}
+                className="hidden"
                 disabled={isLoading}
               />
 
-              <Button
+              <button
                 onClick={() => document.getElementById("vc-modal-file-input")?.click()}
                 disabled={isLoading}
-                sx={{
-                  width: "100%",
-                  py: 4,
-                  border: "2px dashed",
-                  borderColor: "rgba(245, 158, 11, 0.4)",
-                  bgcolor: "rgba(245, 158, 11, 0.05)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 1.5,
-                  textTransform: "none",
-                  color: "text.primary",
-                  "&:hover": {
-                    bgcolor: "rgba(245, 158, 11, 0.1)",
-                    borderColor: "rgba(245, 158, 11, 0.6)",
-                  },
-                }}
+                className="w-full py-8 rounded-xl border-2 border-dashed border-primary/40 bg-gradient-to-br from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 hover:border-primary/60 transition-all duration-300 flex flex-col items-center gap-3 disabled:opacity-50 group"
               >
-                <Box sx={{ width: 48, height: 48, borderRadius: "50%", bgcolor: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Upload size={24} style={{ color: "#f59e0b" }} />
-                </Box>
-                <Box sx={{ textAlign: "center" }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Upload size={24} className="text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-foreground">
                     Click to upload credential
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>
-                    JSON file only • Max 10 MB
-                  </Typography>
-                </Box>
-              </Button>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">JSON file only • Max 10 MB</p>
+                </div>
+              </button>
             </>
           ) : (
-            <Box sx={{ borderRadius: 1.5, border: "2px solid", borderColor: "rgba(34, 197, 94, 0.2)", bgcolor: "rgba(34, 197, 94, 0.03)", p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0, flex: 1 }}>
-                  <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: "rgba(34, 197, 94, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <FileCheck size={20} style={{ color: "#22c55e" }} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {uploadedFile.name}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>
-                      {(uploadedFile.size / 1024).toFixed(1)} KB
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
+            <>
+              {/* Selected File - Success State */}
+              <div className="rounded-xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-emerald-50/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <FileCheck size={20} className="text-emerald-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {uploadedFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setUploadedFile(null)}
+                    disabled={isLoading}
+                    className="p-2 rounded-lg hover:bg-emerald-100/50 transition-colors flex-shrink-0 disabled:opacity-50"
+                  >
+                    <X size={16} className="text-muted-foreground hover:text-destructive" />
+                  </button>
+                </div>
+
+                {/* Success Message */}
+                <div className="px-3 py-2 bg-emerald-100/40 rounded-lg border border-emerald-200/60">
+                  <p className="text-xs text-emerald-700 font-medium">
+                    ✓ File ready to upload. Your credentials are encrypted and secure.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-2 pt-2">
+            {uploadedFile ? (
+              <>
+                <button
+                  onClick={handleUpload}
+                  disabled={isLoading}
+                  className="flex-1 btn-solar text-sm font-semibold py-2.5 rounded-lg disabled:opacity-50 transition-all"
+                >
+                  {isLoading ? "Uploading..." : "Upload"}
+                </button>
+                <button
                   onClick={() => setUploadedFile(null)}
                   disabled={isLoading}
-                  sx={{ p: 1, minWidth: "auto" }}
+                  className="flex-1 btn-outline-calm text-sm font-semibold py-2.5 rounded-lg disabled:opacity-50 transition-all"
                 >
-                  <X size={16} />
-                </Button>
-              </Box>
-
-              <Box sx={{ px: 1.5, py: 1, bgcolor: "rgba(34, 197, 94, 0.1)", borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ color: "rgba(34, 197, 94, 0.8)", fontWeight: 600 }}>
-                  ✓ File ready to upload. Your credentials are encrypted and secure.
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </Box>
+                  Back
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleClose}
+                className="w-full btn-outline-calm text-sm font-semibold py-2.5 rounded-lg transition-all"
+              >
+                Close
+              </button>
+            )}
+          </div>
+        </div>
       </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1 }}>
-        {uploadedFile ? (
-          <>
-            <Button
-              onClick={handleUpload}
-              disabled={isLoading}
-              variant="contained"
-              fullWidth
-            >
-              {isLoading ? "Uploading..." : "Upload"}
-            </Button>
-            <Button
-              onClick={() => setUploadedFile(null)}
-              disabled={isLoading}
-              variant="outlined"
-              fullWidth
-            >
-              Back
-            </Button>
-          </>
-        ) : (
-          <Button
-            onClick={handleClose}
-            variant="outlined"
-            fullWidth
-          >
-            Close
-          </Button>
-        )}
-      </DialogActions>
     </Dialog>
   );
 };

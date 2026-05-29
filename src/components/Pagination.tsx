@@ -1,4 +1,4 @@
-import { Box, Button, IconButton, Typography } from '@mui/material';
+import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
@@ -28,7 +28,7 @@ export const Pagination = ({
       pages.push(0);
 
       if (currentPage > 2) {
-        pages.push(-1);
+        pages.push(-1); // Ellipsis
       }
 
       const start = Math.max(1, currentPage - 1);
@@ -41,7 +41,7 @@ export const Pagination = ({
       }
 
       if (currentPage < totalPages - 3) {
-        pages.push(-1);
+        pages.push(-1); // Ellipsis
       }
 
       pages.push(totalPages - 1);
@@ -53,45 +53,53 @@ export const Pagination = ({
   const pages = getPageNumbers();
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 3 }}>
-      <IconButton
+    <div className="flex items-center justify-center gap-2 mt-6">
+      <Button
+        variant="outline"
+        size="icon"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0 || isLoading}
-        size="small"
+        className="h-9 w-9"
       >
         <ChevronLeft size={18} />
-      </IconButton>
+      </Button>
 
       {pages.map((page, index) => (
         page === -1 ? (
-          <Typography key={`ellipsis-${index}`} sx={{ px: 1, color: 'text.secondary' }}>
+          <span key={`ellipsis-${index}`} className="px-2 text-gray-400">
             ...
-          </Typography>
+          </span>
         ) : (
           <Button
             key={page}
-            variant={page === currentPage ? 'contained' : 'outlined'}
-            size="small"
+            variant={page === currentPage ? 'default' : 'outline'}
+            size="sm"
             onClick={() => onPageChange(page)}
             disabled={isLoading}
-            sx={{ minWidth: 36, height: 36 }}
+            className={`h-9 w-9 ${
+              page === currentPage
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'hover:bg-gray-100'
+            }`}
           >
             {page + 1}
           </Button>
         )
       ))}
 
-      <IconButton
+      <Button
+        variant="outline"
+        size="icon"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages - 1 || isLoading}
-        size="small"
+        className="h-9 w-9"
       >
         <ChevronRight size={18} />
-      </IconButton>
+      </Button>
 
-      <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
+      <span className="ml-4 text-sm text-gray-600">
         Page {currentPage + 1} of {totalPages}
-      </Typography>
-    </Box>
+      </span>
+    </div>
   );
 };

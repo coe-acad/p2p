@@ -1,7 +1,7 @@
  import { useEffect, useState } from "react";
  import { motion } from "framer-motion";
  import { Sparkles, IndianRupee, Sun, ArrowRight } from "lucide-react";
- import { Button } from "@mui/material";
+ import { Button } from "@/components/ui/button";
  import { useUserData } from "@/hooks/useUserData";
  
  interface EarningsHookScreenProps {
@@ -139,27 +139,11 @@
          >
            <Button
              onClick={onContinue}
-             variant="contained"
-             sx={{
-               background: "linear-gradient(to right, #f59e0b, #f97316)",
-               color: "white",
-               px: 4,
-               py: 1.5,
-               fontSize: "1.125rem",
-               borderRadius: "1rem",
-               boxShadow: "0 20px 25px -5px rgba(245, 158, 11, 0.3)",
-               textTransform: "none",
-               fontWeight: 600,
-               "&:hover": {
-                 background: "linear-gradient(to right, #d97706, #ea580c)",
-               },
-               display: "flex",
-               alignItems: "center",
-               gap: 1,
-             }}
-             endIcon={<ArrowRight style={{ width: 20, height: 20 }} />}
+             size="lg"
+             className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/30 px-8 py-6 text-lg rounded-2xl"
            >
              See tomorrow's plan
+             <ArrowRight className="ml-2 w-5 h-5" />
            </Button>
          </motion.div>
        </motion.div>

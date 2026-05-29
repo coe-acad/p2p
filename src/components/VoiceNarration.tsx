@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Volume2, VolumeX, Globe, ChevronDown } from "lucide-react";
-import { Box, Button, Menu, MenuItem, Typography } from "@mui/material";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface VoiceNarrationProps {
   content: string;
@@ -140,17 +145,6 @@ const VoiceNarration = ({
       // Small delay then restart
       setTimeout(() => startSpeaking(), 100);
     }
-    handleLangMenuClose();
-  };
-
-  const [langAnchorEl, setLangAnchorEl] = useState<null | HTMLElement>(null);
-
-  const handleLangMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setLangAnchorEl(event.currentTarget);
-  };
-
-  const handleLangMenuClose = () => {
-    setLangAnchorEl(null);
   };
 
   if (!isSupported) {
@@ -158,107 +152,60 @@ const VoiceNarration = ({
   }
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: 1.5,
-        p: 1,
-        borderRadius: 2,
-        transition: "all 0.5s ease",
-        bgcolor: showAttention || isSpeaking
-          ? "rgba(245, 158, 11, 0.1)"
-          : "rgba(26, 158, 122, 0.05)",
-        border: showAttention || isSpeaking ? "1px solid" : "none",
-        borderColor: showAttention || isSpeaking ? "primary.main" : "transparent",
-        boxShadow: showAttention || isSpeaking ? "0 0 20px rgba(245, 158, 11, 0.2)" : "none",
-        ...(!className ? {} : { className }),
-      }}
+    <div 
+      className={`relative flex items-center gap-1.5 p-2 rounded-xl transition-all duration-500 ${
+        showAttention || isSpeaking 
+          ? 'bg-primary/10 border border-primary/30 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]' 
+          : 'bg-secondary/50'
+      } ${className}`}
     >
+      {/* Pulsing ring when attention needed */}
+      {showAttention && (
+        <div className="absolute inset-0 rounded-xl border-2 border-primary/50 animate-[pulse_1.5s_ease-in-out_infinite]" />
+      )}
+
       {/* Speaking indicator */}
       {isSpeaking && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mr: 0.5 }}>
-          <Box sx={{ width: 4, height: 12, bgcolor: "primary.main", borderRadius: "50%", animation: "pulse 0.5s ease-in-out infinite" }} />
-          <Box sx={{ width: 4, height: 16, bgcolor: "primary.main", borderRadius: "50%", animation: "pulse 0.5s ease-in-out 0.1s infinite" }} />
-          <Box sx={{ width: 4, height: 8, bgcolor: "primary.main", borderRadius: "50%", animation: "pulse 0.5s ease-in-out 0.2s infinite" }} />
-        </Box>
+        <div className="flex items-center gap-0.5 mr-1">
+          <div className="w-1 h-3 bg-primary rounded-full animate-[pulse_0.5s_ease-in-out_infinite]" />
+          <div className="w-1 h-4 bg-primary rounded-full animate-[pulse_0.5s_ease-in-out_infinite_0.1s]" />
+          <div className="w-1 h-2 bg-primary rounded-full animate-[pulse_0.5s_ease-in-out_infinite_0.2s]" />
+        </div>
       )}
 
       {/* Language Selector */}
-      <Button
-        onClick={handleLangMenuClick}
-        size="small"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          px: 1,
-          py: 0.5,
-          borderRadius: "20px",
-          bgcolor: "rgba(0, 0, 0, 0.05)",
-          color: "text.secondary",
-          fontSize: "0.75rem",
-          textTransform: "none",
-          "&:hover": {
-            bgcolor: "rgba(0, 0, 0, 0.08)",
-          },
-        }}
-      >
-        <Globe size={10} />
-        <span>{selectedLang.flag} {selectedLang.name}</span>
-        <ChevronDown size={10} />
-      </Button>
-
-      <Menu
-        anchorEl={langAnchorEl}
-        open={Boolean(langAnchorEl)}
-        onClose={handleLangMenuClose}
-        slotProps={{
-          paper: {
-            sx: {
-              minWidth: 140,
-              bgcolor: "background.paper",
-            },
-          },
-        }}
-      >
-        {LANGUAGES.map((lang) => (
-          <MenuItem
-            key={lang.code}
-            onClick={() => handleLanguageChange(lang)}
-            sx={{
-              py: 0.75,
-              bgcolor: selectedLang.code === lang.code ? "rgba(245, 158, 11, 0.1)" : "transparent",
-            }}
-          >
-            <span style={{ marginRight: 8 }}>{lang.flag}</span>
-            <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 hover:bg-background text-2xs text-muted-foreground hover:text-foreground transition-colors border border-border/50">
+            <Globe size={10} />
+            <span>{selectedLang.flag} {selectedLang.name}</span>
+            <ChevronDown size={10} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {LANGUAGES.map((lang) => (
+            <DropdownMenuItem
+              key={lang.code}
+              onClick={() => handleLanguageChange(lang)}
+              className={`text-xs cursor-pointer ${selectedLang.code === lang.code ? 'bg-primary/10' : ''}`}
+            >
+              <span className="mr-2">{lang.flag}</span>
               {lang.name}
-            </Typography>
-          </MenuItem>
-        ))}
-      </Menu>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Play/Stop Button */}
-      <Button
+      <button
         onClick={handleSpeak}
-        size="small"
-        variant={isSpeaking || showAttention ? "contained" : "outlined"}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          px: 1.5,
-          py: 0.75,
-          borderRadius: "20px",
-          fontSize: "0.75rem",
-          textTransform: "none",
-          fontWeight: 600,
-          transition: "all 0.3s ease",
-          bgcolor: showAttention && !isSpeaking ? "primary.main" : undefined,
-          animation: showAttention && !isSpeaking ? "pulse 1.5s ease-in-out infinite" : "none",
-        }}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          isSpeaking 
+            ? 'bg-primary text-primary-foreground' 
+            : showAttention
+              ? 'bg-primary text-primary-foreground animate-[pulse_1.5s_ease-in-out_infinite]'
+              : 'bg-primary/15 text-primary hover:bg-primary/25'
+        }`}
         title={isSpeaking ? "Stop narration" : "Listen to explanation"}
       >
         {isSpeaking ? (
@@ -268,19 +215,19 @@ const VoiceNarration = ({
           </>
         ) : (
           <>
-            <Volume2 size={14} sx={{ animation: showAttention ? "bounce 1s infinite" : "none" }} />
+            <Volume2 size={14} className={showAttention ? "animate-bounce" : ""} />
             <span>{showAttention ? "Listening..." : "Listen"}</span>
           </>
         )}
-      </Button>
+      </button>
 
       {/* Helper text on first visit */}
       {showAttention && (
-        <Typography variant="caption" sx={{ fontSize: "0.65rem", fontWeight: 600, color: "primary.main" }}>
+        <span className="text-2xs text-primary font-medium animate-fade-in">
           Samai is explaining...
-        </Typography>
+        </span>
       )}
-    </Box>
+    </div>
   );
 };
 

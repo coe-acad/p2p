@@ -1,6 +1,13 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Typography, Stack, Alert, Grid } from '@mui/material';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EnergyListing } from '@/hooks/useDiscoverListings';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 interface QuoteOrderModalProps {
   isOpen: boolean;
@@ -53,123 +60,138 @@ export const QuoteOrderModal = ({
             : 'Get Quotation';
 
   return (
-    <Dialog open={isOpen} onClose={onBack} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>Quotation</DialogTitle>
-      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Review the on_init quotation before confirming the order
-        </Typography>
+    <Dialog open={isOpen} onOpenChange={onBack}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Quotation</DialogTitle>
+          <DialogDescription>
+            Review the on_init quotation before confirming the order
+          </DialogDescription>
+        </DialogHeader>
 
-        <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Seller</Typography>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{listing.seller_name}</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{listing.offer_name}</Typography>
-        </Box>
+        <div className="space-y-6">
+          <div className="border rounded-lg p-4 space-y-2">
+            <p className="text-sm text-gray-600">Seller</p>
+            <p className="text-lg font-semibold">{listing.seller_name}</p>
+            <p className="text-sm text-gray-600">{listing.offer_name}</p>
+          </div>
 
-        <Grid container spacing={1.5}>
-          <Grid item xs={6}>
-            <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Quoted Quantity</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-600 mb-1">Quoted Quantity</p>
+              <p className="text-lg font-semibold">
                 {quoteQuantity} {listing.quantity_unit}
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={6}>
-            <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Payment Status</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{quotePaymentStatus}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={6}>
-            <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Listed Price</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>₹{listing.price_per_unit.toFixed(2)}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={6}>
-            <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Order Status</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{quoteOrderStatus}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
+              </p>
+            </div>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-600 mb-1">Payment Status</p>
+              <p className="text-lg font-semibold">{quotePaymentStatus}</p>
+            </div>
+          </div>
 
-        <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.04)', borderRadius: 1.5, p: 1.5 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Delivery Window</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-              {new Date(listing.delivery_start).toLocaleString('en-IN', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>→</Typography>
-            <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-              {new Date(listing.delivery_end).toLocaleString('en-IN', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Typography>
-          </Box>
-        </Box>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-600 mb-1">Listed Price</p>
+              <p className="text-lg font-semibold">₹{listing.price_per_unit.toFixed(2)}</p>
+            </div>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs text-gray-600 mb-1">Order Status</p>
+              <p className="text-lg font-semibold">{quoteOrderStatus}</p>
+            </div>
+          </div>
 
-        <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.08)', borderRadius: 1.5, p: 1.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Quotation Amount</Typography>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>₹{quotedAmount.toFixed(2)}</Typography>
-        </Box>
+          <div className="border rounded-lg p-4 space-y-2">
+            <p className="text-sm font-semibold text-gray-900">Delivery Window</p>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">
+                {new Date(listing.delivery_start).toLocaleString('en-IN', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              <span className="text-gray-400">→</span>
+              <span className="text-gray-600">
+                {new Date(listing.delivery_end).toLocaleString('en-IN', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          </div>
 
-        {status === 'selected' && !hasQuote && !error && (
-          <Alert severity="info" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CheckCircle size={18} />
-            <Typography variant="body2">Offer selected. Request the quotation to continue.</Typography>
-          </Alert>
-        )}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-gray-600 mb-1">Quotation Amount</p>
+            <p className="text-3xl font-bold text-blue-600">₹{quotedAmount.toFixed(2)}</p>
+          </div>
 
-        {status === 'quoted' && !error && (
-          <Alert severity="success" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CheckCircle size={18} />
-            <Typography variant="body2">Quotation received successfully. Confirm to place the order.</Typography>
-          </Alert>
-        )}
+          {status === 'selected' && !hasQuote && !error && (
+            <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 p-3 rounded-lg">
+              <CheckCircle size={18} />
+              <span>Offer selected. Request the quotation to continue.</span>
+            </div>
+          )}
 
-        {error && (
-          <Alert severity="error" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AlertCircle size={18} />
-            <Typography variant="body2">{error}</Typography>
-          </Alert>
-        )}
+          {status === 'quoted' && !error && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+              <CheckCircle size={18} />
+              <span>Quotation received successfully. Confirm to place the order.</span>
+            </div>
+          )}
 
-        {status === 'confirmed' && !error && (
-          <Alert severity="success" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CheckCircle size={18} />
-            <Typography variant="body2">Order confirmed successfully.</Typography>
-          </Alert>
-        )}
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {status === 'confirmed' && !error && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+              <CheckCircle size={18} />
+              <span>Order confirmed successfully.</span>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={onBack}
+              disabled={status === 'confirming'}
+              className="flex-1"
+            >
+              Back
+            </Button>
+            <Button
+              onClick={hasQuote ? onConfirm : onGetQuote}
+              disabled={status === 'confirmed' || status === 'selecting' || status === 'quoting' || status === 'confirming'}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {status === 'quoting' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {primaryActionLabel}
+                </>
+              ) : status === 'confirming' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {primaryActionLabel}
+                </>
+              ) : status === 'confirmed' ? (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {primaryActionLabel}
+                </>
+              ) : (
+                primaryActionLabel
+              )}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1 }}>
-        <Button
-          onClick={onBack}
-          disabled={status === 'confirming'}
-          variant="outlined"
-          fullWidth
-        >
-          Back
-        </Button>
-        <Button
-          onClick={hasQuote ? onConfirm : onGetQuote}
-          disabled={status === 'confirmed' || status === 'selecting' || status === 'quoting' || status === 'confirming'}
-          variant="contained"
-          fullWidth
-          startIcon={status === 'quoting' || status === 'confirming' ? <Loader2 size={16} className="animate-spin" /> : status === 'confirmed' ? <CheckCircle size={16} /> : undefined}
-        >
-          {primaryActionLabel}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

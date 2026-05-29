@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Globe, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button, Menu, MenuItem, Typography, Box } from "@mui/material";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const LANGUAGES = [
   { code: "en", name: "English", nativeName: "English" },
@@ -20,91 +25,42 @@ const LANGUAGES = [
 const LanguageToggle = () => {
   const { i18n } = useTranslation();
   const [selectedLang, setSelectedLang] = useState(i18n.language || "en");
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const handleLanguageChange = (langCode: string) => {
     setSelectedLang(langCode);
     i18n.changeLanguage(langCode);
     localStorage.setItem("preferredLanguage", langCode);
-    handleClose();
   };
 
   const currentLang = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
 
   return (
-    <>
-      <Button
-        onClick={handleClick}
-        size="small"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          px: 1,
-          py: 0.5,
-          borderRadius: "20px",
-          bgcolor: "rgba(245, 158, 11, 0.05)",
-          color: "text.primary",
-          textTransform: "none",
-          fontSize: "0.75rem",
-          "&:hover": {
-            bgcolor: "rgba(245, 158, 11, 0.1)",
-          },
-        }}
-      >
-        <Globe size={12} style={{ color: "inherit" }} />
-        <span>{currentLang.name}</span>
-        <ChevronDown size={10} />
-      </Button>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-        slotProps={{
-          paper: {
-            sx: {
-              width: 176,
-              maxHeight: 256,
-              bgcolor: "background.paper",
-            },
-          },
-        }}
-      >
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-card/60 border border-border/30 hover:bg-secondary transition-all">
+          <Globe size={12} className="text-primary" />
+          <span className="text-[10px] text-muted-foreground">{currentLang.name}</span>
+          <ChevronDown size={10} className="text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44 max-h-64 overflow-y-auto bg-card border border-border shadow-lg z-[10000]">
         {LANGUAGES.map((lang) => (
-          <MenuItem
+          <DropdownMenuItem
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code)}
-            sx={{
-              py: 1,
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 1,
-            }}
+            className="flex items-center justify-between cursor-pointer hover:bg-secondary py-1.5 px-2"
           >
-            <Box>
-              <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
-                {lang.nativeName}
-              </Typography>
-              <Typography variant="caption" sx={{ fontSize: "0.7rem", color: "text.secondary" }}>
-                ({lang.name})
-              </Typography>
-            </Box>
+            <span className="flex items-center gap-1.5">
+              <span className="text-xs">{lang.nativeName}</span>
+              <span className="text-[10px] text-muted-foreground">({lang.name})</span>
+            </span>
             {selectedLang === lang.code && (
-              <Check size={12} style={{ color: "inherit" }} />
+              <Check size={12} className="text-primary" />
             )}
-          </MenuItem>
+          </DropdownMenuItem>
         ))}
-      </Menu>
-    </>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
