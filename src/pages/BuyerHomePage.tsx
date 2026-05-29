@@ -92,6 +92,11 @@ const BuyerHomePage = () => {
   const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+
+  // Check if VC is uploaded
+  const vcData = userData?.vc_data as any || {};
+  const hasVC = Object.keys(vcData).length > 0;
+
   const groupedListings = groupListingsByCatalog(listings);
   const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
   const paginatedGroupedListings = groupedListings.slice(
@@ -279,14 +284,37 @@ const BuyerHomePage = () => {
           </div>
 
 
+          {/* VC Required Banner */}
+          {!hasVC && (
+            <div className="bg-cyan-50 border border-cyan-300 rounded-lg p-4 animate-slide-up">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="text-cyan-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-cyan-800">Credentials Required</p>
+                  <p className="text-sm text-cyan-700 mt-1">
+                    Please upload your electricity meter credentials to browse and purchase energy.
+                  </p>
+                  <button
+                    onClick={() => navigate("/settings/profile")}
+                    className="mt-2 text-sm text-cyan-600 hover:text-cyan-700 underline font-medium"
+                  >
+                    Go to profile to upload
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search and Filter Section */}
-          <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <SearchListings
-              onSearch={(filters) => fetchListings(0, filters)}
-              onClearFilters={clearFilters}
-              isLoading={loading}
-            />
-          </div>
+          {hasVC && (
+            <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              <SearchListings
+                onSearch={(filters) => fetchListings(0, filters)}
+                onClearFilters={clearFilters}
+                isLoading={loading}
+              />
+            </div>
+          )}
 
           {/* Error State */}
           {error && (
@@ -305,7 +333,7 @@ const BuyerHomePage = () => {
           )}
 
           {/* Listings Grid */}
-          {!loading && groupedListings.length > 0 && !selectedListing && (
+          {hasVC && !loading && groupedListings.length > 0 && !selectedListing && (
             <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">

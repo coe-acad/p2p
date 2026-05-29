@@ -99,17 +99,86 @@ const HomePage = () => {
   const [displayedKwh, setDisplayedKwh] = useState(getInitialKwh());
   const [celebrationCount, setCelebrationCount] = useState(0);
   const [lastEarningsIncrease, setLastEarningsIncrease] = useState(5);
-  
+
+  // Fetch tomorrow's trades from API
+  const [tomorrowTrades, setTomorrowTrades] = useState<any>(null);
+  const [fetchedTomorrowData, setFetchedTomorrowData] = useState(false);
+
+  const { user: authUser } = useAuth();
+
+  // Check if VC is verified
+  const vcData = userData?.vc_data as any || {};
+  const hasVC = Object.keys(vcData).length > 0;
+
+  useEffect(() => {
+    const fetchTomorrowTrades = async () => {
+      if (!userData?.phone || !authUser || !hasVC) return;
+
+      try {
+        const token = await authUser.getIdToken();
+
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+        const encodedPhone = encodeURIComponent(userData.phone);
+
+        console.log("Fetching tomorrow trades for:", encodedPhone, "with token:", !!token);
+
+        const response = await fetch(`${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("Tomorrow trades response:", response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Tomorrow trades data:", data);
+          setTomorrowTrades(data);
+          setFetchedTomorrowData(true);
+        } else {
+          const errorText = await response.text();
+          console.error("Failed to fetch tomorrow trades:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+            requestUrl: `${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`,
+            hasToken: !!token,
+          });
+          setFetchedTomorrowData(true);
+        }
+      } catch (err) {
+        console.error("Error fetching tomorrow trades:", err);
+        setFetchedTomorrowData(true);
+      }
+    };
+
+    fetchTomorrowTrades();
+  }, [userData?.phone, authUser, hasVC]);
+
+  // Calculate tomorrow data from actual trades
+  const calculateTomorrowData = () => {
+    if (!tomorrowTrades?.trades || tomorrowTrades.trades.length === 0) {
+      return { units: 0, earnings: 0, avgRate: 0 };
+    }
+
+    const totalKwh = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + (Number(trade.kWh) || 0), 0);
+    const totalEarnings = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + ((Number(trade.kWh) || 0) * (Number(trade.price) || 0)), 0);
+    const avgRate = totalKwh > 0 ? totalEarnings / totalKwh : 0;
+
+    return { units: totalKwh, earnings: totalEarnings, avgRate };
+  };
+
+  const tomorrowDataFromAPI = calculateTomorrowData();
+
   // Tomorrow status based on published trades OR justPublished flag from navigation
   const isPublished = tradesData.isPublished || justPublished;
-  const tomorrowStatus: TomorrowStatus = isPublished 
+  const tomorrowStatus: TomorrowStatus = isPublished
     ? (tradesData.showConfirmedTrades ? "published_confirmed" : "published_pending")
     : "not_published";
-  const tomorrowData = { 
-    units: totalUnits, 
-    earnings: totalEarnings, 
-    avgRate: avgRate 
-  };
+  // Use API data if fetched, otherwise fallback to hardcoded values
+  const tomorrowData = fetchedTomorrowData ? tomorrowDataFromAPI : tomorrowExpected;
   // Only show confirmed trades if explicitly flagged
   const hasConfirmedTrades = tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
 
@@ -570,12 +639,12 @@ const HomePage = () => {
                 <p className="text-[10px] text-white/80 mb-0.5">{t("home.sellingTomorrow")}</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl font-black text-white">
-                    ₹{tomorrowData.earnings || tomorrowExpected.earnings}
+                    ₹{Math.round(tomorrowData.earnings)}
                   </span>
                 </div>
-                <p className="text-[10px] text-white/70 mt-0.5">{tomorrowData.units || tomorrowExpected.units} kWh</p>
+                <p className="text-[10px] text-white/70 mt-0.5">{(tomorrowData.units || 0).toFixed(2)} kWh</p>
               </div>
-              
+
               {/* Right side - Published status */}
               <div className="text-right">
                 {isPublished ? (
@@ -585,7 +654,7 @@ const HomePage = () => {
                       <span className="text-[10px] font-semibold text-white uppercase">{t("home.published")}</span>
                     </div>
                     <p className="text-[10px] text-white/70 uppercase">{t("home.avgRate")}</p>
-                    <p className="text-sm font-bold text-white">₹{tomorrowData.avgRate || 6.3}/kWh</p>
+                    <p className="text-sm font-bold text-white">₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh</p>
                   </>
                 ) : (
                   <>

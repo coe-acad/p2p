@@ -40,12 +40,73 @@ const TomorrowTradesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshCountdown, setRefreshCountdown] = useState<string>("Calculating...");
+
+  // Check if VC is verified
+  const vcData = userData?.vc_data as any || {};
+  const hasVC = Object.keys(vcData).length > 0;
+
+  // Calculate time until next 7:00 PM IST
+  const calculateRefreshCountdown = () => {
+    const now = new Date();
+
+    // Get UTC components (timezone-independent)
+    let istHours = now.getUTCHours() + 5;
+    let istMinutes = now.getUTCMinutes() + 30;
+    const istSeconds = now.getUTCSeconds();
+
+    // Handle minute overflow
+    if (istMinutes >= 60) {
+      istMinutes -= 60;
+      istHours += 1;
+    }
+
+    // Handle hour overflow (only affects day, not our calculation)
+    if (istHours >= 24) {
+      istHours -= 24;
+    }
+
+    // Calculate milliseconds into the current IST day
+    const msInDay = istHours * 60 * 60 * 1000 + istMinutes * 60 * 1000 + istSeconds * 1000;
+
+    // 7 PM = 19:00 = 19 * 3600 * 1000 milliseconds into the day
+    const refreshTimeMs = 19 * 60 * 60 * 1000;
+
+    // Calculate milliseconds until refresh
+    let msDiff = refreshTimeMs - msInDay;
+    if (msDiff <= 0) {
+      // Already past 7 PM today, calculate to tomorrow's 7 PM
+      msDiff += 24 * 60 * 60 * 1000;
+    }
+
+    const diffHours = Math.floor(msDiff / (60 * 60 * 1000));
+    const diffMinutes = Math.floor((msDiff % (60 * 60 * 1000)) / (60 * 1000));
+
+    return `Refreshes in ${diffHours}h ${diffMinutes}m`;
+  };
+
+  // Update refresh countdown every minute
+  useEffect(() => {
+    setRefreshCountdown(calculateRefreshCountdown());
+    const interval = setInterval(() => {
+      setRefreshCountdown(calculateRefreshCountdown());
+    }, 60000); // Update every 60 seconds (1 minute)
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch tomorrow's catalog from API
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
       if (!profileHydrated) {
         console.log("Profile not hydrated yet");
+        return;
+      }
+
+      if (!hasVC) {
+        console.log("VC not uploaded");
+        setLoading(false);
+        setError("Please upload your credentials to access tomorrow's catalog");
         return;
       }
 
@@ -285,17 +346,19 @@ const TomorrowTradesPage = () => {
 
         {/* Error State */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className={`rounded-lg border p-4 mb-6 ${!hasVC ? "bg-cyan-50 border-cyan-200" : "bg-red-50 border-red-200"}`}>
             <div className="flex items-start gap-3">
-              <AlertCircle size={20} className="flex-shrink-0 mt-0.5 text-red-600" />
+              <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${!hasVC ? "text-cyan-600" : "text-red-600"}`} />
               <div>
-                <p className="font-semibold text-red-800">Unable to load offers</p>
-                <p className="text-sm text-red-700">{error}</p>
+                <p className={`font-semibold ${!hasVC ? "text-cyan-800" : "text-red-800"}`}>
+                  {!hasVC ? "Credentials Required" : "Unable to load offers"}
+                </p>
+                <p className={`text-sm ${!hasVC ? "text-cyan-700" : "text-red-700"}`}>{error}</p>
                 <button
-                  onClick={() => window.location.reload()}
-                  className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+                  onClick={() => navigate("/settings/profile")}
+                  className={`mt-2 text-sm ${!hasVC ? "text-cyan-600 hover:text-cyan-700" : "text-red-600 hover:text-red-700"} underline`}
                 >
-                  Refresh page
+                  {!hasVC ? "Go to profile to upload" : "Refresh page"}
                 </button>
               </div>
             </div>
@@ -334,7 +397,7 @@ const TomorrowTradesPage = () => {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Planned Trades</h2>
-                <p className="text-xs text-muted-foreground">Refreshes in 2h 49m</p>
+                <p className="text-xs text-muted-foreground">{refreshCountdown}</p>
               </div>
 
               <div className="space-y-3">
