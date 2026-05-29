@@ -62,7 +62,7 @@ const SidebarContent = () => {
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        background: `linear-gradient(180deg, rgba(26, 158, 122, 0.02) 0%, rgba(245, 158, 11, 0.01) 100%)`,
+        background: `linear-gradient(180deg, rgba(245, 158, 11, 0.02) 0%, rgba(26, 158, 122, 0.01) 100%)`,
         bgcolor: "background.paper",
       }}
     >
@@ -80,12 +80,12 @@ const SidebarContent = () => {
             justifyContent: "flex-start",
             p: 1.5,
             borderRadius: 1.5,
-            background: `linear-gradient(135deg, rgba(26, 158, 122, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%)`,
+            background: `linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(26, 158, 122, 0.05) 100%)`,
             border: "none",
             transition: "all 0.2s ease",
             "&:hover": {
-              background: `linear-gradient(135deg, rgba(26, 158, 122, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)`,
-              boxShadow: "0 4px 12px rgba(26, 158, 122, 0.12)",
+              background: `linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(26, 158, 122, 0.08) 100%)`,
+              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.12)",
             },
           }}
         >
@@ -130,15 +130,15 @@ const SidebarContent = () => {
                 borderRadius: 1.5,
                 border: "none",
                 background: isActive
-                  ? `linear-gradient(135deg, rgba(26, 158, 122, 0.08) 0%, rgba(245, 158, 11, 0.04) 100%)`
+                  ? `linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(26, 158, 122, 0.04) 100%)`
                   : "transparent",
                 color: isActive ? "primary.main" : "text.primary",
                 transition: "all 0.2s ease",
                 "&:hover": {
                   background: isActive
-                    ? `linear-gradient(135deg, rgba(26, 158, 122, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%)`
-                    : "rgba(26, 158, 122, 0.06)",
-                  boxShadow: isActive ? "0 2px 8px rgba(26, 158, 122, 0.12)" : "none",
+                    ? `linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(26, 158, 122, 0.08) 100%)`
+                    : "rgba(245, 158, 11, 0.06)",
+                  boxShadow: isActive ? "0 2px 8px rgba(245, 158, 11, 0.12)" : "none",
                 },
               }}
             >
@@ -147,8 +147,8 @@ const SidebarContent = () => {
                   width: 44,
                   height: 44,
                   background: isActive
-                    ? `linear-gradient(135deg, #2fb88a 0%, #1a9e7a 100%)`
-                    : "rgba(26, 158, 122, 0.1)",
+                    ? `linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)`
+                    : "rgba(245, 158, 11, 0.1)",
                   color: isActive ? "#fff" : "primary.main",
                 }}
               >
@@ -188,16 +188,16 @@ const SidebarContent = () => {
             p: 1.5,
             borderRadius: 1.5,
             border: "none",
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, rgba(26, 158, 122, 0.02) 100%)",
+            background: "linear-gradient(135deg, rgba(26, 158, 122, 0.04) 0%, rgba(245, 158, 11, 0.02) 100%)",
             color: "text.primary",
             transition: "all 0.2s ease",
             "&:hover": {
-              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(26, 158, 122, 0.06) 100%)",
-              boxShadow: "0 2px 8px rgba(245, 158, 11, 0.1)",
+              background: "linear-gradient(135deg, rgba(26, 158, 122, 0.08) 0%, rgba(245, 158, 11, 0.06) 100%)",
+              boxShadow: "0 2px 8px rgba(26, 158, 122, 0.1)",
             },
           }}
         >
-          <Avatar sx={{ width: 44, height: 44, background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)" }}>
+          <Avatar sx={{ width: 44, height: 44, background: "linear-gradient(135deg, #2fb88a 0%, #1a9e7a 100%)" }}>
             <User size={18} color="#fff" />
           </Avatar>
           <Box sx={{ textAlign: "left" }}>

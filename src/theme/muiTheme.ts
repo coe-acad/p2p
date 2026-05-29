@@ -1,7 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 
-const primaryColor = "#1a9e7a"; // teal
-const secondaryColor = "#f59e0b"; // amber
+const primaryColor = "#f59e0b"; // amber
+const secondaryColor = "#1a9e7a"; // teal
 const backgroundColor = "#fafbfc";
 const surfaceColor = "#ffffff";
 const borderColor = "#e5e7eb";
@@ -12,14 +12,14 @@ export const muiTheme = createTheme({
   palette: {
     primary: {
       main: primaryColor,
-      light: "#2fb88a",
-      dark: "#0d8a6a",
+      light: "#fbbf24",
+      dark: "#d97706",
       contrastText: "#ffffff",
     },
     secondary: {
       main: secondaryColor,
-      light: "#fbbf24",
-      dark: "#d97706",
+      light: "#2fb88a",
+      dark: "#0d8a6a",
       contrastText: "#ffffff",
     },
     background: {
