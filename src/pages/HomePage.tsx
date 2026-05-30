@@ -3,11 +3,18 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun, Shield } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Box,
+  Stack,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  IconButton,
+  Menu,
+  MenuItem,
+  LinearProgress,
+  Container,
+} from "@mui/material";
 import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
 import MarioCoin from "@/components/MarioCoin";
@@ -193,12 +200,22 @@ const HomePage = () => {
       title: t("home.tradesConfirmed"),
       description: `7 ${t("home.kwhMatchedBuyers")}`,
       action: (
-        <button
+        <Button
           onClick={() => navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: true, showConfirmed: true } })}
-          className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            color: "primary.main",
+            textTransform: "none",
+            whiteSpace: "nowrap",
+            "&:hover": { color: "primary.dark" },
+          }}
         >
           {t("common.viewDetails")}
-        </button>
+        </Button>
       ),
     });
     sessionStorage.setItem(NOTIFICATION_SHOWN_KEY, "true");
@@ -339,146 +356,259 @@ const HomePage = () => {
   const incompleteSteps = getIncompleteSteps();
 
   const renderHomeContent = () => (
-    <div className="flex-1 flex flex-col gap-2 overflow-hidden relative">
-      {/* Background gradient effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Top warm glow */}
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent rounded-full blur-3xl" />
-        
-        {/* Accent glow */}
-        <div className="absolute top-1/3 -right-32 w-[250px] h-[250px] bg-gradient-to-bl from-accent/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
-        
-        {/* Floating particles */}
-        <div className="absolute top-20 left-8 w-1.5 h-1.5 bg-primary/30 rounded-full animate-[pulse_3s_ease-in-out_infinite]" />
-        <div className="absolute top-40 right-12 w-1 h-1 bg-accent/40 rounded-full animate-[pulse_4s_ease-in-out_infinite]" style={{ animationDelay: "1s" }} />
-        <div className="absolute bottom-32 left-16 w-1 h-1 bg-primary/25 rounded-full animate-[pulse_5s_ease-in-out_infinite]" style={{ animationDelay: "0.5s" }} />
-      </div>
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden", position: "relative" }}>
+      {/* Minimal background effects */}
+      <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", opacity: 0.5 }}>
+        {/* Subtle top glow */}
+        <Box sx={{
+          position: "absolute",
+          top: -100,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 400,
+          height: 300,
+          background: "radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 100%)",
+          borderRadius: "50%",
+          filter: "blur(60px)",
+        }} />
+      </Box>
 
       {/* Content with relative z-index */}
-      <div className="relative z-10 flex flex-col gap-2">
+      <Stack sx={{ position: "relative", zIndex: 10, gap: { xs: 1, sm: 2 }, overflow: "auto" }}>
         {/* Incomplete Onboarding Card - Collapsible */}
         {incompleteSteps.length > 0 && !hideSetupBanner && (
-          <div className="bg-gradient-to-r from-orange-100 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/10 border border-orange-300/40 dark:border-orange-700/30 rounded-xl animate-slide-up backdrop-blur-sm overflow-hidden">
-            <button 
+          <Card sx={{
+            background: "linear-gradient(135deg, rgba(254,196,62,0.1) 0%, rgba(254,175,24,0.05) 100%)",
+            border: "1px solid rgba(245,158,11,0.2)",
+            borderRadius: "12px",
+            animation: "slideUp 0.5s ease-out",
+            overflow: "hidden",
+          }}>
+            <Button
               onClick={() => setSetupExpanded(!setupExpanded)}
-              className="w-full flex items-center justify-between p-3"
+              sx={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 2,
+                textTransform: "none",
+                color: "inherit",
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" },
+              }}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-orange-200 dark:bg-orange-800/40 flex items-center justify-center">
-                  <AlertTriangle size={10} className="text-orange-600 dark:text-orange-400" />
-                </div>
-                <p className="text-xs font-medium text-foreground">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(254,175,24,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <AlertTriangle size={10} sx={{ color: "#f59e0b" }} />
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {t("home.completeSetup")} ({incompleteSteps.length} {incompleteSteps.length > 1 ? t("home.stepsLeftPlural") : t("home.stepsLeft")})
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 {setupExpanded ? (
-                  <ChevronUp size={14} className="text-orange-500" />
+                  <ChevronUp size={14} sx={{ color: "#f59e0b" }} />
                 ) : (
-                  <ChevronDown size={14} className="text-orange-500" />
+                  <ChevronDown size={14} sx={{ color: "#f59e0b" }} />
                 )}
-              </div>
-            </button>
-            
+              </Box>
+            </Button>
+
             {setupExpanded && (
-              <div className="px-3 pb-3 space-y-1.5">
+              <Box sx={{ px: 2, pb: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
                 {incompleteSteps.map((step) => (
-                  <button
+                  <Button
                     key={step.id}
                     onClick={() => navigate(step.route)}
-                    className="w-full flex items-center justify-between p-2 bg-white/60 dark:bg-background/60 backdrop-blur-sm rounded-lg text-left hover:bg-white/80 dark:hover:bg-background/80 transition-all duration-200 group"
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      background: "rgba(255,255,255,0.6)",
+                      borderRadius: "8px",
+                      textAlign: "left",
+                      textTransform: "none",
+                      color: "text.primary",
+                      "&:hover": { background: "rgba(255,255,255,0.8)" },
+                      transition: "all 0.2s",
+                    }}
                   >
-                    <span className="text-xs text-foreground">{step.title}</span>
-                    <ArrowRight size={12} className="text-orange-500 group-hover:translate-x-1 transition-transform" />
-                  </button>
+                    <Typography variant="body2">{step.title}</Typography>
+                    <ArrowRight size={12} sx={{ color: "#f59e0b" }} />
+                  </Button>
                 ))}
                 {/* Dev hide option */}
-                <button
+                <Button
                   onClick={toggleHideSetupBanner}
-                  className="w-full flex items-center justify-center gap-1 p-1.5 text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1,
+                    p: 1.5,
+                    fontSize: "0.7rem",
+                    color: "text.secondary",
+                    textTransform: "none",
+                    "&:hover": { color: "text.primary" },
+                  }}
                 >
                   <EyeOff size={9} />
                   <span>[Dev] Hide banner</span>
-                </button>
-              </div>
+                </Button>
+              </Box>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Dev button to show hidden setup banner */}
         {hideSetupBanner && incompleteSteps.length > 0 && (
-          <button
+          <Button
             onClick={toggleHideSetupBanner}
-            className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 self-end"
+            sx={{
+              fontSize: "0.7rem",
+              color: "text.secondary",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              alignSelf: "flex-end",
+              textTransform: "none",
+              "&:hover": { color: "text.primary" },
+            }}
           >
             <EyeOff size={9} />
             <span>[Dev] Show setup banner</span>
-          </button>
+          </Button>
         )}
 
         {/* VC Verification Banner - Shown if not verified and not hidden */}
         {!isVCVerified && !hideVCBanner && (
-          <div className="bg-gradient-to-r from-cyan-100 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/10 border border-cyan-300/40 dark:border-cyan-700/30 rounded-xl animate-slide-up backdrop-blur-sm overflow-hidden">
-            <button
+          <Card sx={{
+            background: "linear-gradient(135deg, rgba(34,197,233,0.1) 0%, rgba(26,158,122,0.05) 100%)",
+            border: "1px solid rgba(26,158,122,0.2)",
+            borderRadius: "12px",
+            animation: "slideUp 0.5s ease-out",
+            overflow: "hidden",
+          }}>
+            <Button
               onClick={() => setShowVCModal(true)}
-              className="w-full flex items-center justify-between p-3 text-left hover:bg-white/30 dark:hover:bg-background/30 transition-colors"
+              sx={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 2,
+                textAlign: "left",
+                textTransform: "none",
+                color: "inherit",
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" },
+              }}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-cyan-200 dark:bg-cyan-800/40 flex items-center justify-center">
-                  <Shield size={10} className="text-cyan-600 dark:text-cyan-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-foreground">
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(34,197,233,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Shield size={10} sx={{ color: "#1a9e7a" }} />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     Verify your credentials to start trading
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>
                     Upload your electricity meter or solar system credentials
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <ArrowRight size={14} className="text-cyan-500" />
-              </div>
-            </button>
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <ArrowRight size={14} sx={{ color: "#1a9e7a" }} />
+              </Box>
+            </Button>
 
             {/* Hide option */}
-            <div className="px-3 pb-2">
-              <button
+            <Box sx={{ px: 2, pb: 1.5 }}>
+              <Button
                 onClick={toggleHideVCBanner}
-                className="w-full flex items-center justify-center gap-1 p-1 text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                sx={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  p: 1,
+                  fontSize: "0.7rem",
+                  color: "text.secondary",
+                  textTransform: "none",
+                  "&:hover": { color: "text.primary" },
+                }}
               >
                 <EyeOff size={9} />
                 <span>[Dev] Hide banner</span>
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Box>
+          </Card>
         )}
 
         {/* Dev button to show hidden VC banner */}
         {hideVCBanner && !isVCVerified && (
-          <button
+          <Button
             onClick={toggleHideVCBanner}
-            className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 self-end"
+            sx={{
+              fontSize: "0.7rem",
+              color: "text.secondary",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              alignSelf: "flex-end",
+              textTransform: "none",
+              "&:hover": { color: "text.primary" },
+            }}
           >
             <EyeOff size={9} />
             <span>[Dev] Show VC banner</span>
-          </button>
+          </Button>
         )}
 
-        {/* Section 1: Earnings Snapshot - Green gradient card matching reference */}
-        <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-accent/20" 
-          style={{ background: "linear-gradient(135deg, hsl(35 90% 95%) 0%, hsl(45 85% 92%) 50%, hsl(140 45% 92%) 100%)" }}>
-          
-          <div className="relative">
-            {/* Header with toggle */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{t("home.earnings")}</p>
-              </div>
+        {/* Earnings and Tomorrow Side by Side */}
+        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+          {/* Section 1: Earnings Snapshot */}
+          <Card sx={{
+            background: "#ffffff",
+            border: "1px solid rgba(0,0,0,0.05)",
+            borderRadius: "12px",
+            p: { xs: 1, sm: 2.5 },
+            animation: "slideUp 0.5s ease-out",
+            overflow: "hidden",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}>
+          {/* Header with toggle */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: { xs: 1, sm: 1.5 } }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
+                  {t("home.earnings")}
+                </Typography>
+              </Box>
               {/* Toggle buttons */}
-              <div className="flex bg-card/80 backdrop-blur-sm rounded-lg p-0.5 border border-border/50">
-                <button
+              <Box sx={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: "8px", p: 0.5, border: "1px solid rgba(0,0,0,0.05)" }}>
+                <Button
                   onClick={() => {
                     setEarningsView("today");
                     if (!isNewUser) {
@@ -486,15 +616,22 @@ const HomePage = () => {
                       setDisplayedKwh(initialTodayData.actualKwh);
                     }
                   }}
-                  className={`px-3 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 ${
-                    earningsView === "today" 
-                      ? "bg-primary text-primary-foreground shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  sx={{
+                    px: 2,
+                    py: 0.5,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    transition: "all 0.2s",
+                    textTransform: "none",
+                    ...(earningsView === "today"
+                      ? { background: "#f59e0b", color: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+                      : { color: "text.secondary", "&:hover": { color: "text.primary" } }),
+                  }}
                 >
                   {t("home.today")}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => {
                     setEarningsView("month");
                     if (!isNewUser) {
@@ -502,251 +639,460 @@ const HomePage = () => {
                       setDisplayedKwh(initialTodayData.actualKwh * 30);
                     }
                   }}
-                  className={`px-3 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 ${
-                    earningsView === "month" 
-                      ? "bg-primary text-primary-foreground shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  sx={{
+                    px: 2,
+                    py: 0.5,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    transition: "all 0.2s",
+                    textTransform: "none",
+                    ...(earningsView === "month"
+                      ? { background: "#f59e0b", color: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+                      : { color: "text.secondary", "&:hover": { color: "text.primary" } }),
+                  }}
                 >
                   {t("home.month")}
-                </button>
-              </div>
-            </div>
-            
-            {/* Green inner card - Today's Earnings */}
-            <button 
-              onClick={() => isVCVerified && navigate("/today-trades")}
-              disabled={!isVCVerified}
-              className="w-full text-left rounded-lg p-3 mb-2 relative overflow-hidden"
-              style={{ background: "linear-gradient(135deg, hsl(145 55% 42%) 0%, hsl(155 50% 38%) 100%)" }}
-            >
-              {/* Coin Shower Animation for celebrations */}
-              {showCelebration && !showMegaCelebration && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                </Button>
+              </Box>
+            </Box>
+
+          {/* Orange earnings card */}
+          <Button
+            onClick={() => isVCVerified && navigate("/today-trades")}
+            disabled={!isVCVerified}
+            sx={{
+              width: "100%",
+              textAlign: "left",
+              borderRadius: "8px",
+              p: { xs: 1.25, sm: 2 },
+              flex: 1,
+              position: "relative",
+              overflow: "hidden",
+              background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
+              "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
+              "&:disabled": { background: "linear-gradient(135deg, rgba(245,158,11,0.5) 0%, rgba(217,119,6,0.5) 100%)" },
+              textTransform: "none",
+            }}
+          >
+            {/* Coin Shower Animation for celebrations */}
+            {showCelebration && !showMegaCelebration && (
+                <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
                   {[...Array(8)].map((_, i) => (
-                    <div
+                    <Box
                       key={i}
-                      className="absolute animate-bounce"
-                      style={{
+                      sx={{
+                        position: "absolute",
                         left: `${10 + i * 12}%`,
-                        top: `-20px`,
+                        top: "-20px",
                         animation: `fall ${1 + Math.random() * 0.5}s ease-in forwards`,
                         animationDelay: `${i * 0.1}s`,
                       }}
                     >
                       <MarioCoin size={16 + Math.random() * 8} />
-                    </div>
+                    </Box>
                   ))}
-                </div>
+                </Box>
               )}
 
               {/* MEGA Celebration Overlay with more coins */}
               {showMegaCelebration && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none overflow-hidden">
+                <Box sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 20,
+                  pointerEvents: "none",
+                  overflow: "hidden",
+                }}>
                   {/* Coin shower for mega celebration */}
                   {[...Array(15)].map((_, i) => (
-                    <div
+                    <Box
                       key={i}
-                      className="absolute"
-                      style={{
+                      sx={{
+                        position: "absolute",
                         left: `${5 + i * 6}%`,
-                        top: `-30px`,
+                        top: "-30px",
                         animation: `fall ${1.5 + Math.random() * 1}s ease-in infinite`,
                         animationDelay: `${i * 0.15}s`,
                       }}
                     >
-                      <MarioCoin size={20 + Math.random() * 12} className="animate-spin" />
-                    </div>
+                      <Box sx={{ animation: "spin 1s linear infinite" }}>
+                        <MarioCoin size={20 + Math.random() * 12} />
+                      </Box>
+                    </Box>
                   ))}
-                  <div className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-amber-900 px-4 py-2 rounded-full font-bold text-sm animate-bounce shadow-lg z-30">
+                  <Box sx={{
+                    background: "linear-gradient(135deg, #fcd34d 0%, #fef3c7 50%, #fcd34d 100%)",
+                    color: "#b45309",
+                    px: 2,
+                    py: 1,
+                    borderRadius: "9999px",
+                    fontWeight: 700,
+                    fontSize: "0.875rem",
+                    animation: "bounce 1s ease-in-out infinite",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    zIndex: 30,
+                  }}>
                     🎉 100% {t("home.projected")}! 🎉
-                  </div>
-                </div>
+                  </Box>
+                </Box>
               )}
-              
-              <div className="flex items-start justify-between relative z-10">
-                <div>
-                  <p className="text-[10px] text-white/80 mb-0.5">{earningsView === "today" ? t("home.todayEarnings") : t("home.monthEarnings")}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">
-                      ₹<RollingNumber value={displayedEarnings} />
-                    </span>
-                    {showCelebration && !showMegaCelebration && (
-                      <span className="text-xs font-bold text-amber-300 animate-bounce ml-1">
-                        +₹{lastEarningsIncrease}!
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-white/70 mt-0.5">{displayedKwh} kWh {t("trades.kwhSold")}</p>
-                </div>
-                
-                {/* LIVE indicator */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full">
-                  <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-                  <span className="text-[10px] font-semibold text-white uppercase">Live</span>
-                </div>
-              </div>
-            </button>
-            
-            {/* Predicted row with progress bar - includes kWh */}
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">{t("home.projected")}</span>
-                <span className="text-base font-bold text-foreground">
-                  ₹{earningsView === "today" ? initialTodayData.expected : monthData.expected}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({earningsView === "today" ? initialTodayData.expectedKwh : monthData.expectedKwh} kWh)
-                </span>
-              </div>
-              <div className="px-2.5 py-1 bg-card/80 rounded-lg border border-border/50">
-                <span className="text-sm font-bold text-foreground">
-                  {Math.round((displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}%
-                </span>
-              </div>
-            </div>
-            
-            {/* Two-tone progress bar */}
-            <div className="w-full h-2 bg-accent/30 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-1000"
-                style={{ 
-                  width: `${Math.min(100, (displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}%` 
-                }}
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Section 2: Tomorrow Card - Blue/teal gradient matching reference */}
-        <div className="relative rounded-xl p-3 shadow-card animate-slide-up overflow-hidden border border-sky-200/50" 
-          style={{ animationDelay: "0.05s", background: "linear-gradient(135deg, hsl(45 85% 95%) 0%, hsl(180 40% 94%) 50%, hsl(200 50% 92%) 100%)" }}>
-          
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="w-2 h-2 rounded-full bg-sky-500" />
-            <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{t("home.tomorrow")}</p>
-          </div>
-          
-          <button
-            onClick={() => {
-              navigate("/tomorrow-trades");
+              <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative", zIndex: 10, width: "100%" }}>
+                <Box sx={{ display: "flex", flexDirection: "column" }}>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
+                    {earningsView === "today" ? t("home.todayEarnings") : t("home.monthEarnings")}
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1 }}>
+                    <Typography sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, fontWeight: 900, color: "white", lineHeight: 1 }}>
+                      ₹<RollingNumber value={displayedEarnings} />
+                    </Typography>
+                    {showCelebration && !showMegaCelebration && (
+                      <Typography variant="caption" sx={{
+                        fontWeight: 700,
+                        color: "#fde047",
+                        animation: "bounce 1s ease-in-out infinite",
+                      }}>
+                        +₹{lastEarningsIncrease}!
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>
+                    {displayedKwh} kWh {t("trades.kwhSold")}
+                  </Typography>
+                </Box>
+
+                {/* LIVE indicator */}
+                <Box sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 2,
+                  py: 0.75,
+                  background: "rgba(255,255,255,0.2)",
+                  borderRadius: "9999px",
+                  flexShrink: 0,
+                }}>
+                  <Box sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "#86efac",
+                    animation: "pulse 2s ease-in-out infinite",
+                  }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: "white", textTransform: "uppercase", fontSize: "0.65rem" }}>
+                    Live
+                  </Typography>
+                </Box>
+              </Box>
+          </Button>
+
+          {/* Projected row with progress bar */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: { xs: 0.75, sm: 1.5 } }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                {t("home.projected")}
+              </Typography>
+              <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
+                ₹{earningsView === "today" ? initialTodayData.expected : monthData.expected}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                ({earningsView === "today" ? initialTodayData.expectedKwh : monthData.expectedKwh} kWh)
+              </Typography>
+            </Box>
+            <Box sx={{ px: 2, py: 1, background: "rgba(255,255,255,0.6)", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.05)" }}>
+              <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
+                {Math.round((displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}%
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Progress bar */}
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(100, (displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}
+            sx={{
+              height: 8,
+              borderRadius: "9999px",
+              background: "rgba(26,158,122,0.3)",
+              "& .MuiLinearProgress-bar": {
+                background: "linear-gradient(90deg, #fcd34d 0%, #fbbf24 100%)",
+                borderRadius: "9999px",
+                transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)",
+              },
             }}
-            className="w-full text-left rounded-lg p-3"
-            style={{ background: "linear-gradient(135deg, hsl(175 50% 42%) 0%, hsl(185 45% 38%) 100%)" }}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[10px] text-white/80 mb-0.5">{t("home.sellingTomorrow")}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-white">
+          />
+          </Card>
+
+          {/* Section 2: Tomorrow Card */}
+          <Card sx={{
+            background: "#ffffff",
+            border: "1px solid rgba(0,0,0,0.05)",
+            borderRadius: "12px",
+            p: { xs: 1, sm: 2.5 },
+            animation: "slideUp 0.5s ease-out",
+            animationDelay: "0.05s",
+            overflow: "hidden",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
+                {t("home.tomorrow")}
+              </Typography>
+            </Box>
+
+            <Button
+              onClick={() => navigate("/tomorrow-trades")}
+              sx={{
+                width: "100%",
+                textAlign: "left",
+                borderRadius: "8px",
+                p: { xs: 1.25, sm: 2 },
+                flex: 1,
+                background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
+                "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
+                textTransform: "none",
+                color: "white",
+              }}
+            >
+            <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", width: "100%" }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
+                  {t("home.sellingTomorrow")}
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+                  <Typography sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" }, fontWeight: 900, color: "white" }}>
                     ₹{Math.round(tomorrowData.earnings)}
-                  </span>
-                </div>
-                <p className="text-[10px] text-white/70 mt-0.5">{(tomorrowData.units || 0).toFixed(2)} kWh</p>
-              </div>
+                  </Typography>
+                </Box>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5, display: "block" }}>
+                  {(tomorrowData.units || 0).toFixed(2)} kWh
+                </Typography>
+              </Box>
 
               {/* Right side - Published status */}
-              <div className="text-right">
+              <Box sx={{ textAlign: "right" }}>
                 {isPublished ? (
                   <>
-                    <div className="flex items-center gap-1 justify-end mb-1">
-                      <Check size={12} className="text-white" />
-                      <span className="text-[10px] font-semibold text-white uppercase">{t("home.published")}</span>
-                    </div>
-                    <p className="text-[10px] text-white/70 uppercase">{t("home.avgRate")}</p>
-                    <p className="text-sm font-bold text-white">₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh</p>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mb: 1 }}>
+                      <Check size={12} sx={{ color: "white" }} />
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: "white", textTransform: "uppercase" }}>
+                        {t("home.published")}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", display: "block" }}>
+                      {t("home.avgRate")}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
+                      ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
+                    </Typography>
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] text-white/70 uppercase mb-1">{t("home.avgRate")}</p>
-                    <p className="text-sm font-bold text-white">₹{tomorrowData.avgRate || 6.3}/kWh</p>
+                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", mb: 1, display: "block" }}>
+                      {t("home.avgRate")}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
+                      ₹{tomorrowData.avgRate || 6.3}/kWh
+                    </Typography>
                   </>
                 )}
-                <div className="flex items-center gap-1 justify-end mt-2">
-                  <span className="text-xs text-white/90">{t("home.viewTrades")}</span>
-                  <ArrowRight size={12} className="text-white/90" />
-                </div>
-              </div>
-            </div>
-          </button>
-        </div>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mt: 2 }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.9)" }}>
+                    {t("home.viewTrades")}
+                  </Typography>
+                  <ArrowRight size={12} sx={{ color: "rgba(255,255,255,0.9)" }} />
+                </Box>
+              </Box>
+            </Box>
+          </Button>
+        </Card>
+        </Box>
 
         {/* Nudge cards removed as requested */}
 
         {/* Chat Input Bar - Always visible */}
-        <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
+        <Card sx={{
+          background: "#ffffff",
+          border: "1px solid rgba(0,0,0,0.05)",
+          borderRadius: "12px",
+          p: { xs: 1, sm: 2.5 },
+          animation: "slideUp 0.5s ease-out",
+          animationDelay: "0.15s",
+          flexShrink: 0,
+        }}>
           <ChatInputBar />
-        </div>
-      </div>
-    </div>
+        </Card>
+      </Stack>
+    </Box>
   );
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   return (
     <MainAppShell contentClassName="lg:py-6">
-      <div className="mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden bg-background lg:rounded-[2rem] lg:border lg:border-border/50 lg:bg-white/55 lg:shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)] lg:backdrop-blur-sm">
-      {/* Scrollable Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden px-3 pt-3 sm:px-5 sm:pt-5 lg:px-8 lg:pt-6">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-1 animate-fade-in flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <SamaiLogo size="sm" showText={false} />
-            <div>
-              <p className="text-sm font-semibold text-foreground">{getGreeting(t)}, {firstName}!</p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Profile dropdown - mobile/tablet only */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
-                <User size={16} className="text-primary" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-lg z-[9998]">
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                <User size={14} className="mr-2" />
-                {t("home.profile")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/today-trades")}>
-                <FileText size={14} className="mr-2" />
-                {t("home.todaysTrades")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                <LogOut size={14} className="mr-2" />
-                {t("home.logout")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <Box sx={{
+        mx: "auto",
+        display: "flex",
+        height: "100%",
+        width: "100%",
+        maxWidth: "80rem",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: "background.default",
+        borderRadius: { xs: 0, lg: "2rem" },
+        border: { xs: "none", lg: "1px solid rgba(0,0,0,0.05)" },
+        boxShadow: { xs: "none", lg: "0 24px 80px -48px rgba(15,23,42,0.35)" },
+        backdropFilter: { xs: "none", lg: "blur(8px)" },
+        backgroundColor: { xs: "background.default", lg: "rgba(255,255,255,0.55)" },
+      }}>
+        {/* Scrollable Content Area */}
+        <Box sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          px: { xs: 1.5, sm: 2.5, lg: 4 },
+          pt: { xs: 1.5, sm: 2.5, lg: 3 },
+          pb: 0,
+        }}>
+          {/* Header */}
+          <Box sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            pb: 1,
+            animation: "fadeIn 0.6s ease-out",
+            flexShrink: 0,
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <SamaiLogo size="sm" showText={false} />
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 600, color: "text.primary" }}>
+                  {getGreeting(t)}, {firstName}!
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
 
-        {/* Compact Language & Weather row */}
-        <div className="flex items-center gap-2 pb-1 animate-fade-in flex-shrink-0">
-          <LanguageToggle />
-          <div className="flex items-center gap-1 px-2 py-0.5 bg-card/60 rounded-full border border-border/30">
-            <CloudSun size={12} className="text-primary" />
-            <span className="text-[10px] text-muted-foreground">32°C</span>
-          </div>
-        </div>
+            {/* Profile dropdown - mobile/tablet only */}
+            <Box sx={{ display: { lg: "none" } }}>
+              <IconButton
+                onClick={handleMenuOpen}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "rgba(245,158,11,0.1)",
+                  "&:hover": { background: "rgba(245,158,11,0.2)" },
+                  color: "primary.main",
+                }}
+              >
+                <User size={16} />
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+              >
+                <MenuItem onClick={() => {
+                  navigate("/profile");
+                  handleMenuClose();
+                }}>
+                  <User size={14} style={{ marginRight: 8 }} />
+                  {t("home.profile")}
+                </MenuItem>
+                <MenuItem onClick={() => {
+                  navigate("/today-trades");
+                  handleMenuClose();
+                }}>
+                  <FileText size={14} style={{ marginRight: 8 }} />
+                  {t("home.todaysTrades")}
+                </MenuItem>
+                <MenuItem onClick={() => {
+                  handleLogout();
+                  handleMenuClose();
+                }} sx={{ color: "error.main" }}>
+                  <LogOut size={14} style={{ marginRight: 8 }} />
+                  {t("home.logout")}
+                </MenuItem>
+              </Menu>
+            </Box>
+          </Box>
 
-        {/* Main Content - fills remaining space */}
-        <div className="flex-1 min-h-0 overflow-auto">
-          {renderHomeContent()}
-        </div>
-      </div>
-      
-      {/* Powered by AU x TEC */}
-      <div className="flex items-center justify-center gap-2 px-3 pb-3 pt-1 sm:px-5 lg:px-8 lg:pb-5">
-        <span className="text-[10px] text-muted-foreground">Powered by</span>
-        <div className="flex items-center gap-1.5">
-          <img src={auLogo} alt="AU" className="h-4 w-auto" />
-          <span className="text-[10px] text-muted-foreground">×</span>
-          <img src={tecLogo} alt="TEC" className="h-4 w-auto" />
-        </div>
-      </div>
-      </div>
+          {/* Compact Language & Weather row */}
+          <Box sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            pb: 1,
+            animation: "fadeIn 0.6s ease-out",
+            animationDelay: "0.1s",
+            flexShrink: 0,
+          }}>
+            <LanguageToggle />
+            <Box sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 2,
+              py: 0.5,
+              background: "rgba(255,255,255,0.6)",
+              borderRadius: "9999px",
+              border: "1px solid rgba(0,0,0,0.05)",
+            }}>
+              <CloudSun size={12} sx={{ color: "primary.main" }} />
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>32°C</Typography>
+            </Box>
+          </Box>
+
+          {/* Main Content - fills remaining space */}
+          <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            {renderHomeContent()}
+          </Box>
+        </Box>
+
+        {/* Powered by AU x TEC */}
+        <Box sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1,
+          px: { xs: 1.5, sm: 2.5, lg: 4 },
+          pb: { xs: 1.5, lg: 2.5 },
+          pt: 1.5,
+          flexShrink: 0,
+        }}>
+          <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>
+            Powered by
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box component="img" src={auLogo} alt="AU" sx={{ height: 16, width: "auto" }} />
+            <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>×</Typography>
+            <Box component="img" src={tecLogo} alt="TEC" sx={{ height: 16, width: "auto" }} />
+          </Box>
+        </Box>
+      </Box>
 
       {/* VC Upload Modal */}
       <VCUploadModal
@@ -781,48 +1127,67 @@ const ChatInputBar = () => {
   };
 
   return (
-    <button 
-      onClick={handleOpenAskSamai}
-      className="w-full text-left relative rounded-xl p-2.5 shadow-card overflow-hidden border border-primary/20 hover:shadow-lg transition-shadow" 
-      style={{ background: "linear-gradient(135deg, hsl(35 90% 95%) 0%, hsl(40 85% 93%) 50%, hsl(45 80% 91%) 100%)" }}>
-      
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-primary" />
-          <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">{t("home.quickspeak")}</p>
-        </div>
-        <span className="text-xs text-primary font-medium">भाषिणी</span>
-      </div>
-      
-      {/* Inner cream card with mic and input */}
-      <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2 mb-2 flex items-center gap-2">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-          <Mic size={18} className="text-primary-foreground" />
-        </div>
-        
-        <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">{t("home.askSamai")}</p>
-          <p className="text-[10px] text-muted-foreground">{t("home.speakAnyLanguage")}</p>
-        </div>
-        
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-          <Send size={14} className="text-primary-foreground" />
-        </div>
-      </div>
-      
-      {/* Suggested prompts - pill style */}
-      <div className="flex flex-wrap gap-1.5">
-        {suggestions.map((s, i) => (
-          <span
-            key={i}
-            className="px-2.5 py-1 bg-card/80 border border-primary/20 rounded-full text-[10px] text-foreground"
-          >
-            {s.text}
-          </span>
-        ))}
-      </div>
-    </button>
+    <Box>
+      {/* Title - matching earnings/tomorrow card style */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
+        <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
+          {t("home.quickspeak")}
+        </Typography>
+      </Box>
+
+      {/* Input button with mic and send */}
+      <Button
+        onClick={handleOpenAskSamai}
+        sx={{
+          width: "100%",
+          textAlign: "left",
+          position: "relative",
+          borderRadius: "8px",
+          p: { xs: 1.25, sm: 2 },
+          background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
+          "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
+          overflow: "hidden",
+          textTransform: "none",
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        <Box sx={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.2)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Mic size={14} sx={{ color: "white" }} />
+        </Box>
+
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 500, color: "white" }}>
+            {t("home.askSamai")}
+          </Typography>
+        </Box>
+
+        <Box sx={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.2)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Send size={14} sx={{ color: "white" }} />
+        </Box>
+      </Button>
+    </Box>
   );
 };
 
