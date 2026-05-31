@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Zap, Battery, Gauge, User, Check, ChevronDown, ChevronUp, ChevronLeft, Sun, Sparkles, Cpu } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
-import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { useUserData } from "@/hooks/useUserData";
 
 interface LocationData {
   address?: string;
@@ -16,14 +16,13 @@ interface DeviceProfileScreenProps {
 }
 
 const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfileScreenProps) => {
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
   const [confirmed, setConfirmed] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   // Use location data from route state (step 1) or fallback to userData
-  const address = locationData?.address || userData.address;
-  const city = locationData?.city || userData.city;
-  const locality = extractLocality(address);
+  const address = locationData?.address || "";
+  const city = locationData?.city || "";
 
   const devices = [
     { 
@@ -62,15 +61,14 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
         phase: "Single Phase"
       }
     },
-    { 
-      icon: User, 
-      title: "Profile", 
-      detail: `${userData.name}, ${locality}`,
+    {
+      icon: User,
+      title: "Profile",
+      detail: `${displayName}, ${city || address || "Location"}`,
       expanded: {
-        name: userData.name,
+        name: displayName,
         address: address,
         city: city,
-        consumerId: userData.consumerId,
         tariff: "LT-2 Domestic"
       }
     },
@@ -149,7 +147,7 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
               </div>
               <div>
                 <p className="text-xs font-semibold text-foreground">Solar System Detected</p>
-                <p className="text-2xs text-muted-foreground">{locality}</p>
+                <p className="text-2xs text-muted-foreground">{city || address || "Location"}</p>
               </div>
               <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-teal-500/15 to-green-500/10 px-2 py-1 rounded-full border border-accent/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />

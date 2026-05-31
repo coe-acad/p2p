@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Upload, FileCheck, X, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserData } from "@/hooks/useUserData";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import {
   Dialog,
@@ -22,6 +23,8 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { userData } = useUserData();
+  const userIntent = userData?.intent;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -39,33 +42,75 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   };
 
   const detectVCType = (credential: any): "consumption" | "generation" | null => {
+    // Try multiple field names for credential type
     const types = credential.type || [];
     const subjectType = credential.credentialSubject?.type;
+    const credentialType = credential.credentialType || "";
+    const credentialTypeString = JSON.stringify(credential).toLowerCase();
 
+    console.log("🔎 Checking for consumption indicators...");
     if (
       types.includes("ConsumptionProfileCredential") ||
-      subjectType === "ConsumptionProfileCredential"
+      subjectType === "ConsumptionProfileCredential" ||
+      credentialType.includes("Consumption") ||
+      credentialTypeString.includes("consumption")
     ) {
+      console.log("✅ Found: Consumption");
       return "consumption";
-    } else if (
+    }
+
+    console.log("🔎 Checking for generation indicators...");
+    if (
       types.includes("GenerationProfileCredential") ||
-      subjectType === "GenerationProfileCredential"
+      subjectType === "GenerationProfileCredential" ||
+      credentialType.includes("Generation") ||
+      credentialTypeString.includes("generation")
     ) {
+      console.log("✅ Found: Generation");
       return "generation";
     }
+
+    console.log("⚠️ Could not determine type from:", {
+      types,
+      subjectType,
+      credentialType,
+      allKeys: Object.keys(credential).slice(0, 5),
+    });
     return null;
   };
 
   const handleUpload = async () => {
-    if (!uploadedFile) return;
+    console.log("🔵 Upload button clicked, file:", uploadedFile?.name);
+    if (!uploadedFile) {
+      console.log("❌ No file selected");
+      return;
+    }
 
     setIsLoading(true);
     try {
+      console.log("📖 Reading file content...");
       const content = await uploadedFile.text();
-      const credential = JSON.parse(content);
+      console.log("📝 File content read, parsing JSON...");
+      let parsedData = JSON.parse(content);
+      console.log("✅ JSON parsed successfully");
 
+      // Extract credential if it's wrapped in { credential: {...}, credentialSchemaId: ..., createdAt: ... }
+      let credential = parsedData;
+      if (parsedData.credential && !parsedData.type) {
+        // If top level has 'credential' key but no 'type' (meaning this is the wrapper), extract it
+        console.log("📦 Detected wrapped format, extracting credential from wrapper");
+        credential = parsedData.credential;
+      }
+      console.log("🔐 Extracted credential keys:", Object.keys(credential).slice(0, 8));
+      console.log("🔐 Credential type array:", credential.type);
+
+      console.log("🔍 Detecting VC type from credential...");
       const detectedType = detectVCType(credential);
+      console.log("📌 Detected type:", detectedType);
+
       if (!detectedType) {
+        console.log("❌ VC type not recognized. Credential types:", credential.type);
+        console.log("Credential subject type:", credential.credentialSubject?.type);
         toast({
           title: "Unsupported VC type",
           description: "Please upload a ConsumptionProfileCredential or GenerationProfileCredential",
@@ -74,29 +119,66 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
         setIsLoading(false);
         return;
       }
+      console.log("✅ VC type recognized:", detectedType);
+
+      // Validate VC type matches user intent
+      if (userIntent === "sell" && detectedType !== "generation") {
+        toast({
+          title: "Wrong credential type",
+          description: "As a seller, you can only upload Generation Profile credentials",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (userIntent === "buy" && detectedType !== "consumption") {
+        toast({
+          title: "Wrong credential type",
+          description: "As a buyer, you can only upload Consumption Profile credentials",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       // Get fresh Firebase token
+      console.log("🔐 Getting Firebase token...");
       const token = await user?.getIdToken();
       if (!token) {
         throw new Error("Unable to get authentication token");
       }
+      console.log("✅ Token obtained");
 
       // Call the backend API
       const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+      console.log("🚀 Uploading to:", `${BACKEND_URL}/api/vc/upload`);
+      console.log("📤 Sending credential to backend:", {
+        hasType: !!credential.type,
+        typeValue: credential.type,
+        credentialKeys: Object.keys(credential).slice(0, 5),
+      });
+      const requestBody = JSON.stringify({ credential });
+      console.log("📦 Request body size:", requestBody.length, "bytes");
+
       const response = await fetch(`${BACKEND_URL}/api/vc/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ credential }),
+        body: requestBody,
       });
 
+      console.log("📍 Response status:", response.status);
       if (!response.ok) {
         const error = await response.json();
+        console.error("❌ API error:", error);
         throw new Error(error.detail || "Failed to upload VC");
       }
+      console.log("✅ Upload successful");
 
+      console.log("🎉 Success! VC uploaded successfully");
       toast({
         title: "VC uploaded successfully",
         description: `${detectedType === "consumption" ? "Consumption" : "Generation"} credential saved`,
@@ -106,13 +188,16 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("❌ Upload error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Please try again";
+      console.log("📢 Showing toast with error:", errorMsg);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
+      console.log("🔄 Setting isLoading to false");
       setIsLoading(false);
     }
   };

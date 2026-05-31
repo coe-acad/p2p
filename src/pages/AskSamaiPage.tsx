@@ -6,12 +6,12 @@ import MainAppShell from "@/components/layout/MainAppShell";
 
 const AskSamaiPage = () => {
   const { t } = useTranslation();
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
   const [inputValue, setInputValue] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
 
-  const userName = userData.name?.split(" ")[0] || "User";
+  const userName = displayName?.split(" ")[0] || "User";
 
   // Suggestion pills matching the screenshot
   const suggestions = [

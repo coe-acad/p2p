@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, CheckCircle2, AlertCircle, Timer, Zap, Search } from "lucide-react";
+import { Box, Alert, Button, CircularProgress } from "@mui/material";
 import SamaiLogo from "@/components/SamaiLogo";
 import MainAppShell from "@/components/layout/MainAppShell";
+import { useVCStatus } from "@/hooks/useVCStatus";
 
 type TradeStatus = "searching" | "confirmed" | "completed" | "expired";
 
@@ -35,6 +37,7 @@ const priceCatalog: Record<string, number> = {
 const TodayTradesPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
 
   // Demo data with 1-hour windows - amounts calculated from units * price
   // Total completed: 2.0 + 2.0 + 2.0 + 2.5 = 8.5 kWh, earning ~₹55
@@ -157,6 +160,49 @@ const TodayTradesPage = () => {
       </div>
     );
   };
+
+  // VC Guard: Sellers must have generation profile
+  if (!vcLoading && !hasGenerationVC) {
+    return (
+      <MainAppShell>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 3, maxWidth: 600, mx: "auto" }}>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <strong>Generation Profile VC Required</strong>
+            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+              To view your daily trades, you need to upload your Generation Profile VC first. This verifies your solar generation capacity.
+            </Box>
+          </Alert>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate("/settings/vc-documents")}
+            sx={{ alignSelf: "flex-start", mt: 2 }}
+          >
+            Upload Generation Profile VC
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/home")}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Go Back Home
+          </Button>
+        </Box>
+      </MainAppShell>
+    );
+  }
+
+  if (vcLoading) {
+    return (
+      <MainAppShell>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+          <CircularProgress />
+        </Box>
+      </MainAppShell>
+    );
+  }
 
   return (
     <MainAppShell>

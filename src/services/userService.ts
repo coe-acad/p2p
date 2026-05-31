@@ -14,10 +14,32 @@ const backendClient = createApiClient(BACKEND_URL);
 export const saveUser = async (data: UserData): Promise<void> => {
   if (!data.phone) return;
   const userRef = doc(db, COLLECTION, data.phone);
-  // Filter out undefined values - Firestore doesn't allow them
+
+  // Whitelist: Only these fields can be saved to Firestore
+  const FIELDS_TO_SAVE = new Set([
+    "name",
+    "phone",
+    "phone_number",
+    "discom",
+    "intent",
+    "vc_data",
+    "is_vc_verified",
+    "aadhaarVerified",
+    "vcVerifiedAt",
+    "email",
+    "isReturningUser",
+    "uid",
+    "created_at",
+    "updated_at",
+  ]);
+
+  // Only save whitelisted fields that have values
   const cleanData = Object.fromEntries(
-    Object.entries(data).filter(([, value]) => value !== undefined)
+    Object.entries(data).filter(
+      ([key, value]) => value !== undefined && FIELDS_TO_SAVE.has(key)
+    )
   );
+
   await setDoc(
     userRef,
     { ...cleanData, updatedAt: serverTimestamp() },

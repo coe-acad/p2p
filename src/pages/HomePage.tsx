@@ -14,6 +14,8 @@ import {
   MenuItem,
   LinearProgress,
   Container,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import SamaiLogo from "@/components/SamaiLogo";
 import RollingNumber from "@/components/RollingNumber";
@@ -25,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useAuth } from "@/hooks/useAuth";
+import { useVCStatus } from "@/hooks/useVCStatus";
 import LanguageToggle from "@/components/LanguageToggle";
 import MainAppShell from "@/components/layout/MainAppShell";
 import VCUploadModal from "@/components/modals/VCUploadModal";
@@ -48,21 +51,13 @@ const getGreeting = (t: (key: string) => string) => {
   return t("home.greeting.evening");
 };
 
-// Earnings data with animation states - for returning users only
-// Varied projected values with proportional kWh: ₹6.15 per kWh rate
-// Today: ₹178 → 29 kWh, Tomorrow: ₹185 → 30 kWh
-// this is the dummy data
-// Month = 30x of today's values
-const initialTodayData = { actual: 56, expected: 178, actualKwh: 9, expectedKwh: 29 };
-const tomorrowExpected = { earnings: 185, units: 30 }; // Different from today's projection
-const monthData = { actual: 56 * 30, expected: 178 * 30, actualKwh: 9 * 30, expectedKwh: 29 * 30 }; // 30x ratio
 
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, displayName: vcDisplayName } = useUserData();
   const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
   const { logout } = useAuth();
 
@@ -83,7 +78,7 @@ const HomePage = () => {
   // Determine if user is new (based on userData flag)
   const isNewUser = !userData.isReturningUser;
   
-  const displayName = (userData.name || "").trim();
+  const displayName = vcDisplayName.trim();
   const firstName = displayName.split(" ")[0] || "User";
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
   const [setupExpanded, setSetupExpanded] = useState(false);
@@ -96,26 +91,26 @@ const HomePage = () => {
   const [showVCModal, setShowVCModal] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showMegaCelebration, setShowMegaCelebration] = useState(false);
-  const [earningsView, setEarningsView] = useState<"today" | "month">("today");
-  
-  // Animated earnings values - only for returning users
-  // Both actual (earned) and expected scale 30x for month view
-  const getInitialEarnings = () => isNewUser ? 0 : initialTodayData.actual;
-  const getInitialKwh = () => isNewUser ? 0 : initialTodayData.actualKwh;
-  const [displayedEarnings, setDisplayedEarnings] = useState(getInitialEarnings());
-  const [displayedKwh, setDisplayedKwh] = useState(getInitialKwh());
+
   const [celebrationCount, setCelebrationCount] = useState(0);
-  const [lastEarningsIncrease, setLastEarningsIncrease] = useState(5);
 
   // Fetch tomorrow's trades from API
   const [tomorrowTrades, setTomorrowTrades] = useState<any>(null);
-  const [fetchedTomorrowData, setFetchedTomorrowData] = useState(false);
 
   const { user: authUser } = useAuth();
+  const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
 
   // Check if VC is verified
   const vcData = userData?.vc_data as any || {};
   const hasVC = Object.keys(vcData).length > 0;
+
+  // NOTE: Auto-redirect disabled to prevent navigation loops
+  // Users can still manually navigate to /tomorrow-trades from the home page
+  // useEffect(() => {
+  //   if (hasGenerationVC && !vcLoading) {
+  //     navigate("/tomorrow-trades");
+  //   }
+  // }, [hasGenerationVC, vcLoading, navigate]);
 
   useEffect(() => {
     const fetchTomorrowTrades = async () => {
@@ -143,7 +138,6 @@ const HomePage = () => {
           const data = await response.json();
           console.log("Tomorrow trades data:", data);
           setTomorrowTrades(data);
-          setFetchedTomorrowData(true);
         } else {
           const errorText = await response.text();
           console.error("Failed to fetch tomorrow trades:", {
@@ -153,11 +147,9 @@ const HomePage = () => {
             requestUrl: `${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`,
             hasToken: !!token,
           });
-          setFetchedTomorrowData(true);
         }
       } catch (err) {
         console.error("Error fetching tomorrow trades:", err);
-        setFetchedTomorrowData(true);
       }
     };
 
@@ -184,8 +176,8 @@ const HomePage = () => {
   const tomorrowStatus: TomorrowStatus = isPublished
     ? (tradesData.showConfirmedTrades ? "published_confirmed" : "published_pending")
     : "not_published";
-  // Use API data if fetched, otherwise fallback to hardcoded values
-  const tomorrowData = fetchedTomorrowData ? tomorrowDataFromAPI : tomorrowExpected;
+  // Use API data only (no fallback)
+  const tomorrowData = tomorrowDataFromAPI;
   // Only show confirmed trades if explicitly flagged
   const hasConfirmedTrades = tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
 
@@ -237,47 +229,6 @@ const HomePage = () => {
     }
   }, [hasConfirmedTrades, isVCVerified, notificationShown]);
 
-  // Celebration animation effect - trigger every 10 seconds with value increase
-  // Only for returning users (not new users who have no earnings yet)
-  // Stops at 100% progress with MEGA celebration, then resets and restarts for prototype demo
-  useEffect(() => {
-    // Skip celebration logic for new users
-    if (isVCVerified && !isNewUser) {
-      const interval = setInterval(() => {
-        setDisplayedEarnings(prev => {
-          const expected = earningsView === "today" ? initialTodayData.expected : monthData.expected;
-          
-          // Check if we've reached 100%
-          if (prev >= expected) {
-            // Trigger MEGA celebration at 100%!
-            setShowMegaCelebration(true);
-            setTimeout(() => {
-              setShowMegaCelebration(false);
-              // Reset to initial values for prototype loop
-              setDisplayedKwh(earningsView === "today" ? initialTodayData.actualKwh : monthData.actualKwh);
-              setDisplayedEarnings(earningsView === "today" ? initialTodayData.actual : monthData.actual);
-            }, 5000);
-            return prev;
-          }
-          
-          // Trigger normal celebration if not at max
-          setShowCelebration(true);
-          setCelebrationCount(c => c + 1);
-          setTimeout(() => setShowCelebration(false), 3000);
-          
-          // Animate values increasing
-          const earningsIncrease = Math.floor(Math.random() * 8) + 3; // 3-10 rupees
-          const kwhIncrease = Math.round((Math.random() * 1.5 + 0.5) * 10) / 10; // 0.5-2 kWh
-          
-          setLastEarningsIncrease(earningsIncrease);
-          setDisplayedKwh(k => Math.min(Math.round((k + kwhIncrease) * 10) / 10, earningsView === "today" ? initialTodayData.expectedKwh : monthData.expectedKwh));
-          
-          return Math.min(prev + earningsIncrease, expected);
-        });
-      }, 10000); // Every 10 seconds
-      return () => clearInterval(interval);
-    }
-  }, [isVCVerified, earningsView, isNewUser]);
 
   const toggleHideSetupBanner = () => {
     const newValue = !hideSetupBanner;
@@ -584,7 +535,27 @@ const HomePage = () => {
           </Button>
         )}
 
-        {/* Earnings and Tomorrow Side by Side */}
+        {/* Earnings and Tomorrow Side by Side - with VC Guard */}
+        {!vcLoading && !hasGenerationVC ? (
+          <Alert severity="warning" sx={{ flex: 1 }}>
+            <strong>Generation Profile VC Required</strong>
+            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+              To view your earnings and trading projections, you need to upload your Generation Profile VC first.
+            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate("/settings/vc-documents")}
+              sx={{ mt: 2, alignSelf: "flex-start" }}
+            >
+              Upload Generation Profile VC
+            </Button>
+          </Alert>
+        ) : vcLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, flex: 1 }}>
+            <CircularProgress size={40} />
+          </Box>
+        ) : (
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 1, sm: 2 }, flexShrink: 0 }}>
           {/* Section 1: Earnings Snapshot */}
           <Card sx={{
@@ -607,54 +578,6 @@ const HomePage = () => {
                 </Typography>
               </Box>
               {/* Toggle buttons */}
-              <Box sx={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: "8px", p: 0.5, border: "1px solid rgba(0,0,0,0.05)" }}>
-                <Button
-                  onClick={() => {
-                    setEarningsView("today");
-                    if (!isNewUser) {
-                      setDisplayedEarnings(initialTodayData.actual);
-                      setDisplayedKwh(initialTodayData.actualKwh);
-                    }
-                  }}
-                  sx={{
-                    px: 2,
-                    py: 0.5,
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    borderRadius: "6px",
-                    transition: "all 0.2s",
-                    textTransform: "none",
-                    ...(earningsView === "today"
-                      ? { background: "#f59e0b", color: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-                      : { color: "text.secondary", "&:hover": { color: "text.primary" } }),
-                  }}
-                >
-                  {t("home.today")}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setEarningsView("month");
-                    if (!isNewUser) {
-                      setDisplayedEarnings(initialTodayData.actual * 30);
-                      setDisplayedKwh(initialTodayData.actualKwh * 30);
-                    }
-                  }}
-                  sx={{
-                    px: 2,
-                    py: 0.5,
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    borderRadius: "6px",
-                    transition: "all 0.2s",
-                    textTransform: "none",
-                    ...(earningsView === "month"
-                      ? { background: "#f59e0b", color: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-                      : { color: "text.secondary", "&:hover": { color: "text.primary" } }),
-                  }}
-                >
-                  {t("home.month")}
-                </Button>
-              </Box>
             </Box>
 
           {/* Orange earnings card */}
@@ -744,24 +667,15 @@ const HomePage = () => {
               <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative", zIndex: 10, width: "100%" }}>
                 <Box sx={{ display: "flex", flexDirection: "column" }}>
                   <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
-                    {earningsView === "today" ? t("home.todayEarnings") : t("home.monthEarnings")}
+                    {t("home.earnings")}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1 }}>
                     <Typography sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, fontWeight: 900, color: "white", lineHeight: 1 }}>
-                      ₹<RollingNumber value={displayedEarnings} />
+                      ₹{Math.round(totalEarnings)}
                     </Typography>
-                    {showCelebration && !showMegaCelebration && (
-                      <Typography variant="caption" sx={{
-                        fontWeight: 700,
-                        color: "#fde047",
-                        animation: "bounce 1s ease-in-out infinite",
-                      }}>
-                        +₹{lastEarningsIncrease}!
-                      </Typography>
-                    )}
                   </Box>
                   <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>
-                    {displayedKwh} kWh {t("trades.kwhSold")}
+                    {Math.round(totalUnits * 100) / 100} kWh {t("trades.kwhSold")}
                   </Typography>
                 </Box>
 
@@ -790,130 +704,126 @@ const HomePage = () => {
               </Box>
           </Button>
 
-          {/* Projected row with progress bar */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: { xs: 0.75, sm: 1.5 } }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                {t("home.projected")}
-              </Typography>
-              <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
-                ₹{earningsView === "today" ? initialTodayData.expected : monthData.expected}
-              </Typography>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                ({earningsView === "today" ? initialTodayData.expectedKwh : monthData.expectedKwh} kWh)
-              </Typography>
-            </Box>
-            <Box sx={{ px: 2, py: 1, background: "rgba(255,255,255,0.6)", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.05)" }}>
-              <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
-                {Math.round((displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}%
-              </Typography>
-            </Box>
+          {/* Average rate info */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              {t("home.avgRate")}
+            </Typography>
+            <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
+              ₹{avgRate}/kWh
+            </Typography>
           </Box>
-
-          {/* Progress bar */}
-          <LinearProgress
-            variant="determinate"
-            value={Math.min(100, (displayedEarnings / (earningsView === "today" ? initialTodayData.expected : monthData.expected)) * 100)}
-            sx={{
-              height: 8,
-              borderRadius: "9999px",
-              background: "rgba(26,158,122,0.3)",
-              "& .MuiLinearProgress-bar": {
-                background: "linear-gradient(90deg, #fcd34d 0%, #fbbf24 100%)",
-                borderRadius: "9999px",
-                transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)",
-              },
-            }}
-          />
           </Card>
 
-          {/* Section 2: Tomorrow Card */}
-          <Card sx={{
-            background: "#ffffff",
-            border: "1px solid rgba(0,0,0,0.05)",
-            borderRadius: "12px",
-            p: { xs: 1, sm: 2.5 },
-            animation: "slideUp 0.5s ease-out",
-            animationDelay: "0.05s",
-            overflow: "hidden",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-          }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
-                {t("home.tomorrow")}
-              </Typography>
+          {/* Section 2: Tomorrow Card with VC Guard */}
+          {!vcLoading && !hasGenerationVC ? (
+            <Alert severity="warning" sx={{ mt: 2, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <strong>Generation Profile VC Required</strong>
+              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+                To see your tomorrow's trading projections, you need to upload your Generation Profile VC first.
+              </Box>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => navigate("/settings/vc-documents")}
+                sx={{ mt: 2, alignSelf: "flex-start" }}
+              >
+                Upload Generation Profile VC
+              </Button>
+            </Alert>
+          ) : vcLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, flex: 1 }}>
+              <CircularProgress size={40} />
             </Box>
-
-            <Button
-              onClick={() => navigate("/tomorrow-trades")}
-              sx={{
-                width: "100%",
-                textAlign: "left",
-                borderRadius: "8px",
-                p: { xs: 1.25, sm: 2 },
-                flex: 1,
-                background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
-                "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
-                textTransform: "none",
-                color: "white",
-              }}
-            >
-            <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", width: "100%" }}>
-              <Box>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
-                  {t("home.sellingTomorrow")}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                  <Typography sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" }, fontWeight: 900, color: "white" }}>
-                    ₹{Math.round(tomorrowData.earnings)}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5, display: "block" }}>
-                  {(tomorrowData.units || 0).toFixed(2)} kWh
+          ) : (
+            <Card sx={{
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.05)",
+              borderRadius: "12px",
+              p: { xs: 1, sm: 2.5 },
+              animation: "slideUp 0.5s ease-out",
+              animationDelay: "0.05s",
+              overflow: "hidden",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
+                  {t("home.tomorrow")}
                 </Typography>
               </Box>
 
-              {/* Right side - Published status */}
-              <Box sx={{ textAlign: "right" }}>
-                {isPublished ? (
-                  <>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mb: 1 }}>
-                      <Check size={12} sx={{ color: "white" }} />
-                      <Typography variant="caption" sx={{ fontWeight: 600, color: "white", textTransform: "uppercase" }}>
-                        {t("home.published")}
+              <Button
+                onClick={() => navigate("/tomorrow-trades")}
+                sx={{
+                  width: "100%",
+                  textAlign: "left",
+                  borderRadius: "8px",
+                  p: { xs: 1.25, sm: 2 },
+                  flex: 1,
+                  background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
+                  "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
+                  textTransform: "none",
+                  color: "white",
+                }}
+              >
+              <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", width: "100%" }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
+                    {t("home.sellingTomorrow")}
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+                    <Typography sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" }, fontWeight: 900, color: "white" }}>
+                      ₹{Math.round(tomorrowData.earnings)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5, display: "block" }}>
+                    {(tomorrowData.units || 0).toFixed(2)} kWh
+                  </Typography>
+                </Box>
+
+                {/* Right side - Published status */}
+                <Box sx={{ textAlign: "right" }}>
+                  {isPublished ? (
+                    <>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mb: 1 }}>
+                        <Check size={12} sx={{ color: "white" }} />
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "white", textTransform: "uppercase" }}>
+                          {t("home.published")}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", display: "block" }}>
+                        {t("home.avgRate")}
                       </Typography>
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", display: "block" }}>
-                      {t("home.avgRate")}
+                      <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
+                        ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", mb: 1, display: "block" }}>
+                        {t("home.avgRate")}
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
+                        ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
+                      </Typography>
+                    </>
+                  )}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mt: 2 }}>
+                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.9)" }}>
+                      {t("home.viewTrades")}
                     </Typography>
-                    <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
-                      ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", mb: 1, display: "block" }}>
-                      {t("home.avgRate")}
-                    </Typography>
-                    <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
-                      ₹{tomorrowData.avgRate || 6.3}/kWh
-                    </Typography>
-                  </>
-                )}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mt: 2 }}>
-                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.9)" }}>
-                    {t("home.viewTrades")}
-                  </Typography>
-                  <ArrowRight size={12} sx={{ color: "rgba(255,255,255,0.9)" }} />
+                    <ArrowRight size={12} sx={{ color: "rgba(255,255,255,0.9)" }} />
+                  </Box>
                 </Box>
               </Box>
-            </Box>
-          </Button>
-        </Card>
+            </Button>
+          </Card>
+          )}
         </Box>
+        )}
 
         {/* Nudge cards removed as requested */}
 

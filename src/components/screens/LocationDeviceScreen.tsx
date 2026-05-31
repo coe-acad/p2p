@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Zap, Battery, Gauge, User, ChevronUp, FileCheck, Shield } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
-import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { useUserData } from "@/hooks/useUserData";
 import { parseVCJson, parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
 
 interface LocationDeviceScreenProps {
@@ -44,7 +44,7 @@ const DISCOMS = [
 ];
 
 const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps) => {
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, displayName } = useUserData();
   const [location, setLocation] = useState(userData.address || "");
   const [selectedDiscom, setSelectedDiscom] = useState<typeof DISCOMS[0] | null>(
     userData.discom ? DISCOMS.find(d => d.name === userData.discom) || null : null
@@ -74,9 +74,8 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
   const [preparingVC, setPreparingVC] = useState(false);
 
   const isFormValid = location.trim() !== "" && selectedDiscom !== null && deviceConfirmed;
-  const locality = extractLocality(location);
 
-  const formattedDevices = vcData ? formatDevicesFromVC(vcData, locality) : null;
+  const formattedDevices = vcData ? formatDevicesFromVC(vcData, location) : null;
 
   const devices = formattedDevices ? [
     { icon: Zap, title: "Solar Inverter", detail: formattedDevices.inverter.detail, expanded: formattedDevices.inverter.expanded },
@@ -87,7 +86,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
     { icon: Zap, title: "Solar Inverter", detail: "Solar • 5 kW", expanded: { type: "Solar", capacity: "5 kW" } },
     { icon: Battery, title: "Battery", detail: "Storage • 10 kWh", expanded: { capacity: "10 kWh", type: "Lithium-ion" } },
     { icon: Gauge, title: "Smart Meter", detail: "DISCOM • Bi-directional", expanded: { type: "Bi-directional" } },
-    { icon: User, title: "Profile", detail: `${userData.name}, ${locality || "Location"}`, expanded: { name: userData.name, address: location } },
+    { icon: User, title: "Profile", detail: `${displayName}, ${location || "Location"}`, expanded: { name: displayName, address: location } },
   ];
 
   const autoSelectDiscom = (stateName: string) => {

@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, AlertCircle, Zap } from "lucide-react";
+import { Box, Alert, Button, CircularProgress } from "@mui/material";
 import { useUserData } from "@/hooks/useUserData";
+import { useVCStatus } from "@/hooks/useVCStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -34,6 +36,7 @@ const TomorrowTradesPage = () => {
   const { toast } = useToast();
   const { userData, profileHydrated } = useUserData();
   const { user } = useAuth();
+  const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
   const backendUrl = resolveBackendUrl(import.meta.env.VITE_BACKEND_URL);
 
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
@@ -41,10 +44,6 @@ const TomorrowTradesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [refreshCountdown, setRefreshCountdown] = useState<string>("Calculating...");
-
-  // Check if VC is verified
-  const vcData = userData?.vc_data as any || {};
-  const hasVC = Object.keys(vcData).length > 0;
 
   // Calculate time until next 7:00 PM IST
   const calculateRefreshCountdown = () => {
@@ -95,6 +94,31 @@ const TomorrowTradesPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Refetch VC status on page load to ensure we have latest data
+  useEffect(() => {
+    const refetchVCStatus = async () => {
+      try {
+        const token = await user?.getIdToken();
+        if (!token) return;
+
+        const response = await fetch(`${backendUrl}/api/vc/status`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("✅ VC status refreshed:", data);
+        }
+      } catch (err) {
+        console.error("Error refreshing VC status:", err);
+      }
+    };
+
+    refetchVCStatus();
+  }, [user, backendUrl]);
+
   // Fetch tomorrow's catalog from API
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
@@ -103,7 +127,7 @@ const TomorrowTradesPage = () => {
         return;
       }
 
-      if (!hasVC) {
+      if (!hasGenerationVC) {
         console.log("VC not uploaded");
         setLoading(false);
         setError("Please upload your credentials to access tomorrow's catalog");
@@ -187,7 +211,7 @@ const TomorrowTradesPage = () => {
     };
 
     fetchTomorrowCatalog();
-  }, [userData.phone, profileHydrated]);
+  }, [userData.phone, profileHydrated, hasGenerationVC]);
 
   // Convert UTC timestamp to IST display format
   const formatTimeInIST = (utcTimestamp: unknown): string => {
@@ -317,6 +341,49 @@ const TomorrowTradesPage = () => {
     }
   };
 
+  // VC Guard: Sellers must have generation profile
+  if (!vcLoading && !hasGenerationVC) {
+    return (
+      <MainAppShell>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 3, maxWidth: 600, mx: "auto" }}>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <strong>Generation Profile VC Required</strong>
+            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+              To view and publish your energy trades for tomorrow, you need to upload your Generation Profile VC first. This verifies your solar generation capacity.
+            </Box>
+          </Alert>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate("/settings/vc-documents")}
+            sx={{ alignSelf: "flex-start", mt: 2 }}
+          >
+            Upload Generation Profile VC
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/home")}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Go Back Home
+          </Button>
+        </Box>
+      </MainAppShell>
+    );
+  }
+
+  if (vcLoading) {
+    return (
+      <MainAppShell>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+          <CircularProgress />
+        </Box>
+      </MainAppShell>
+    );
+  }
+
   return (
     <MainAppShell contentClassName="lg:py-6">
       <PageContainer>
@@ -346,19 +413,19 @@ const TomorrowTradesPage = () => {
 
         {/* Error State */}
         {error && !loading && (
-          <div className={`rounded-lg border p-4 mb-6 ${!hasVC ? "bg-cyan-50 border-cyan-200" : "bg-red-50 border-red-200"}`}>
+          <div className={`rounded-lg border p-4 mb-6 ${!hasGenerationVC ? "bg-cyan-50 border-cyan-200" : "bg-red-50 border-red-200"}`}>
             <div className="flex items-start gap-3">
-              <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${!hasVC ? "text-cyan-600" : "text-red-600"}`} />
+              <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${!hasGenerationVC ? "text-cyan-600" : "text-red-600"}`} />
               <div>
-                <p className={`font-semibold ${!hasVC ? "text-cyan-800" : "text-red-800"}`}>
-                  {!hasVC ? "Credentials Required" : "Unable to load offers"}
+                <p className={`font-semibold ${!hasGenerationVC ? "text-cyan-800" : "text-red-800"}`}>
+                  {!hasGenerationVC ? "Credentials Required" : "Unable to load offers"}
                 </p>
-                <p className={`text-sm ${!hasVC ? "text-cyan-700" : "text-red-700"}`}>{error}</p>
+                <p className={`text-sm ${!hasGenerationVC ? "text-cyan-700" : "text-red-700"}`}>{error}</p>
                 <button
                   onClick={() => navigate("/settings/profile")}
-                  className={`mt-2 text-sm ${!hasVC ? "text-cyan-600 hover:text-cyan-700" : "text-red-600 hover:text-red-700"} underline`}
+                  className={`mt-2 text-sm ${!hasGenerationVC ? "text-cyan-600 hover:text-cyan-700" : "text-red-600 hover:text-red-700"} underline`}
                 >
-                  {!hasVC ? "Go to profile to upload" : "Refresh page"}
+                  {!hasGenerationVC ? "Go to profile to upload" : "Refresh page"}
                 </button>
               </div>
             </div>

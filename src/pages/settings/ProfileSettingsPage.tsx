@@ -6,19 +6,17 @@ import PageContainer from "@/components/layout/PageContainer";
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, displayName } = useUserData();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(userData.name || "");
   const [meterId, setMeterId] = useState(userData.consumerId || "");
   const [error, setError] = useState("");
 
   const handleSave = () => {
-    if (!name.trim() || !meterId.trim()) {
-      setError("Name and Meter Number are required");
+    if (!displayName.trim() || !meterId.trim()) {
+      setError("Your VC and Meter Number are required");
       return;
     }
     setUserData({
-      name: name.trim(),
       consumerId: meterId.trim(),
     });
     setIsEditing(false);
@@ -39,24 +37,11 @@ const ProfileSettingsPage = () => {
           <h1 className="text-lg font-bold text-foreground">Profile</h1>
         </div>
 
-        {/* Name Section */}
+        {/* Name Section - Read Only (comes from VC) */}
         <div className="bg-card rounded-xl p-4 shadow-card animate-slide-up">
-          <p className="text-xs text-muted-foreground mb-2">Full Name</p>
-          {isEditing ? (
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (error) setError("");
-              }}
-              placeholder="Enter your full name"
-              className="w-full text-lg font-medium text-foreground bg-transparent border-b border-primary focus:outline-none pb-1"
-              autoFocus
-            />
-          ) : (
-            <p className="text-lg font-medium text-foreground">{name || "Not set"}</p>
-          )}
+          <p className="text-xs text-muted-foreground mb-2">Full Name (from your VC)</p>
+          <p className="text-lg font-medium text-foreground">{displayName || "Upload your VC to set your name"}</p>
+          <p className="text-xs text-muted-foreground mt-2">Your name is taken from your Verifiable Credential and cannot be changed here.</p>
         </div>
 
         {/* Meter Number Section */}
@@ -92,7 +77,6 @@ const ProfileSettingsPage = () => {
               <button
                 onClick={() => {
                   setIsEditing(false);
-                  setName(userData.name || "");
                   setMeterId(userData.consumerId || "");
                   setError("");
                 }}
@@ -103,7 +87,7 @@ const ProfileSettingsPage = () => {
               <button
                 onClick={handleSave}
                 className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                disabled={!name.trim() || !meterId.trim()}
+                disabled={!displayName.trim() || !meterId.trim()}
               >
                 Save
               </button>

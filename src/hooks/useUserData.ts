@@ -9,48 +9,21 @@ const isIntentValue = (value: unknown): value is "sell" | "buy" =>
 export interface UserData {
   name: string;
   phone: string;
-  address: string;
-  city: string;
   discom: string;
-  consumerId: string;
-  automationLevel: "recommend" | "auto";
-  // Vacation/holiday preferences for personalized nudges
-  schoolHolidays?: string;
-  summerVacationStart?: string;
-  summerVacationEnd?: string;
-  upcomingEvents?: string;
-  // Payment settings
   email?: string;
-  upiId?: string;
   // Verification status
-  isVCVerified?: boolean;
   aadhaarVerified?: boolean;
   vcVerifiedAt?: string;
-  // Utility Customer VC fields
-  utilityCustomer?: {
-    fullName?: string;
-    address?: string;
-    consumerNumber?: string;
-    meterNumber?: string;
-    serviceConnectionDate?: string;
-    issuerName?: string;
+  // VC data from Firestore
+  is_vc_verified?: boolean;
+  vc_data?: {
+    consumption?: { fullName?: string };
+    generation?: { fullName?: string };
   };
-  // Generation Profile VC fields
-  generationProfile?: {
-    generationType?: string;
-    generationCapacity?: string;
-    commissioningDate?: string;
-    manufacturer?: string;
-    modelNumber?: string;
-  };
-  // User context from "Talk to Samai"
-  userContext?: string;
   // Demo mode: returning user with 30 days of trading history
   isReturningUser?: boolean;
   // User role: seller or buyer
   intent?: "sell" | "buy";
-  // Onboarding completion flag - locks all user details except automationLevel
-  onboardingComplete?: boolean;
 }
 
 const normalizeName = (name?: string) => {
@@ -58,43 +31,37 @@ const normalizeName = (name?: string) => {
   return name.trim();
 };
 
-const normalizeAddress = (address?: string) => {
-  if (!address) return "";
-  return address.trim();
+const getDisplayName = (userData: UserData): string => {
+  // Use fullName from VC if available (seller's generation or buyer's consumption)
+  if (userData.vc_data?.generation?.fullName) {
+    return userData.vc_data.generation.fullName;
+  }
+  if (userData.vc_data?.consumption?.fullName) {
+    return userData.vc_data.consumption.fullName;
+  }
+  // Fallback to name field
+  return userData.name || "";
 };
 
 const DEFAULT_USER_DATA: UserData = {
   name: "",
   phone: "",
-  address: "",
-  city: "",
   discom: "",
-  consumerId: "",
-  automationLevel: "recommend",
-  schoolHolidays: "",
-  summerVacationStart: "",
-  summerVacationEnd: "",
-  upcomingEvents: "",
   email: "",
-  upiId: "",
-  isVCVerified: false,
   aadhaarVerified: false,
   vcVerifiedAt: undefined,
-  utilityCustomer: undefined,
-  generationProfile: undefined,
-  userContext: "",
+  is_vc_verified: false,
   isReturningUser: false,
+  intent: undefined,
 };
 
 const LEGACY_STORAGE_KEY = "samai_user_data";
 const SESSION_STORAGE_KEY = "samai_user_data_session";
-const PREFS_STORAGE_KEY = "samai_user_prefs";
 
 /** Persisted to localStorage — intent is intentionally omitted (Firestore is the source of truth when signed in). */
-type UserPrefs = Pick<UserData, "automationLevel" | "isReturningUser">;
+type UserPrefs = Pick<UserData, "isReturningUser">;
 
 const getUserPrefs = (data: UserData): UserPrefs => ({
-  automationLevel: data.automationLevel,
   isReturningUser: data.isReturningUser,
 });
 
@@ -106,11 +73,9 @@ export const useUserData = () => {
   const [userData, setUserDataState] = useState<UserData>(() => {
     const sessionStored = sessionStorage.getItem(SESSION_STORAGE_KEY);
     const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
-    const prefsStored = localStorage.getItem(PREFS_STORAGE_KEY);
 
     let parsedSession = {};
     let parsedLegacy = {};
-    let parsedPrefs = {};
 
     try {
       parsedSession = sessionStored ? JSON.parse(sessionStored) : {};
@@ -124,20 +89,13 @@ export const useUserData = () => {
       parsedLegacy = {};
     }
 
-    try {
-      parsedPrefs = prefsStored ? JSON.parse(prefsStored) : {};
-    } catch {
-      parsedPrefs = {};
-    }
-
-    const parsed = { ...parsedLegacy, ...parsedSession, ...parsedPrefs } as Record<string, unknown>;
-    const { intent: _staleIntent, ...parsedWithoutIntent } = parsed;
+    const parsed = { ...parsedLegacy, ...parsedSession } as Record<string, unknown>;
+    const { intent: _staleIntent, name: _oldName, ...parsedWithoutIntent } = parsed;
 
     return {
       ...DEFAULT_USER_DATA,
       ...(parsedWithoutIntent as Partial<UserData>),
-      name: normalizeName((parsedWithoutIntent as UserData)?.name),
-      address: normalizeAddress((parsedWithoutIntent as UserData)?.address),
+      name: "", // Name comes from vc_data, not from old name field
     };
   });
 
@@ -167,15 +125,14 @@ export const useUserData = () => {
       try {
         const remote = await loadUser(phone);
         if (remote && Object.keys(remote).length > 0) {
-          const { intent: _remoteIntentField, ...remoteRest } = remote as Record<string, unknown>;
+          const { intent: _remoteIntentField, name: _oldName, ...remoteRest } = remote as Record<string, unknown>;
           setUserDataState((prev) => ({
             ...prev,
             ...(remoteRest as Partial<UserData>),
             intent: isIntentValue(remote.intent) ? remote.intent : undefined,
-            name: normalizeName(remote.name ?? prev.name),
-            address: normalizeAddress(remote.address ?? prev.address),
+            // Don't use the old "name" field - it will come from vc_data
+            name: "",
             phone: remote.phone || phone || prev.phone,
-            onboardingComplete: (remoteRest as Partial<UserData>).onboardingComplete ?? prev.onboardingComplete,
           }));
         }
       } catch (err) {
@@ -190,71 +147,34 @@ export const useUserData = () => {
   useEffect(() => {
     const { intent: _omitIntent, ...persistWithoutIntent } = userData;
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persistWithoutIntent));
-    localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(getUserPrefs(userData)));
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, [userData]);
 
-  // Fields that are locked after onboarding (read-only)
+  // All fields are locked after onboarding - profile is immutable
+  // User data is fully controlled by Firestore and read-only after initial setup
   const LOCKED_FIELDS = [
-    "name", "phone", "address", "city", "discom", "consumerId",
-    "aadhaarVerified", "intent", "vcVerifiedAt", "utilityCustomer",
-    "generationProfile", "userContext", "isReturningUser", "email", "upiId", "isVCVerified"
+    "name", "phone", "discom", "email", "aadhaarVerified",
+    "vcVerifiedAt", "is_vc_verified", "intent", "isReturningUser"
   ] as const;
-
-  // Only these fields can be updated after onboarding
-  const EDITABLE_AFTER_ONBOARDING = ["automationLevel", "schoolHolidays", "summerVacationStart", "summerVacationEnd", "upcomingEvents"] as const;
 
   const setUserData = (updates: Partial<UserData>) => {
     setUserDataState(prev => {
-      // If onboarding is complete, only allow updates to specific fields
-      if (prev.onboardingComplete) {
-        const allowedUpdates: Partial<UserData> = {};
-        for (const [key, value] of Object.entries(updates)) {
-          if ((EDITABLE_AFTER_ONBOARDING as readonly string[]).includes(key)) {
-            (allowedUpdates as Record<string, unknown>)[key] = value;
-          } else if (key === "onboardingComplete") {
-            // Allow setting onboardingComplete to true (locking), but not to false
-            if (value === true) {
-              allowedUpdates.onboardingComplete = true;
-            }
-          }
-        }
-
-        if (Object.keys(allowedUpdates).length === 0) {
-          console.warn("⚠️ Attempted to modify locked user fields after onboarding:",
-            Object.keys(updates).filter(k => !((EDITABLE_AFTER_ONBOARDING as readonly string[]).includes(k))));
-          return prev; // No changes allowed
-        }
-
-        updates = allowedUpdates;
-      }
-
       const next: UserData = {
         ...prev,
         ...updates,
         name: updates.name ? normalizeName(updates.name) : prev.name,
-        address: updates.address ? normalizeAddress(updates.address) : prev.address,
       };
       saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });
   };
 
-  return { userData, setUserData, profileHydrated };
-};
-
-// Helper to extract locality from full address
-export const extractLocality = (fullAddress: string): string => {
-  if (!fullAddress) return "";
-  const parts = fullAddress.split(",").map(p => p.trim());
-  if (parts.length >= 2) {
-    const startsWithNumber = /^\d/.test(parts[0]);
-    if (startsWithNumber && parts.length >= 3) {
-      return parts.slice(1, 3).join(", ");
-    }
-    return parts.slice(0, 2).join(", ");
-  }
-  return fullAddress;
+  return {
+    userData,
+    setUserData,
+    profileHydrated,
+    displayName: getDisplayName(userData),
+  };
 };
 
 // Re-export loadUser for components that need to fetch by phone (e.g. login flow)
