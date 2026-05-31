@@ -370,7 +370,7 @@ const BuyerHomePage = () => {
           )}
 
           {/* Listings Grid */}
-          {hasVC && !loading && groupedListings.length > 0 && !selectedListing && (
+          {hasConsumptionVC && !loading && groupedListings.length > 0 && !selectedListing && (
             <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">

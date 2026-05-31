@@ -273,9 +273,9 @@ const PreparedTomorrowScreen = ({
   const handlePublish = async () => {
   if (isPublishing) return;
 
-  if (!displayName || !userData.consumerId) {
-    alert("Please complete your profile (Name and Meter Number) before publishing trades.");
-    navigate("/settings/profile");
+  if (!displayName) {
+    alert("Please upload your Generation Profile VC before publishing trades.");
+    navigate("/settings/vc-documents");
     return;
   }
 
