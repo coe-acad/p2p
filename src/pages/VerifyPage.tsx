@@ -11,7 +11,7 @@ const VerifyPage = () => {
   // Intent from IntentPage selection (only present for new-user flow)
   const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
   const isReturningUser = location.state?.isReturningUser || false;
-  const { userData: currentUserData, setUserData } = useUserData();
+  const { setUserData } = useUserData();
 
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
@@ -103,12 +103,6 @@ const VerifyPage = () => {
         phone: phoneWithCountry,
         aadhaarVerified: true,
         intent: newUserIntent,
-        name: currentUserData.name || "",
-        consumerId: currentUserData.consumerId || "",
-        address: currentUserData.address || "",
-        city: currentUserData.city || "",
-        discom: currentUserData.discom || "",
-        automationLevel: "recommend" as const,
         onboardingComplete: false, // New users must complete onboarding first
       };
 
@@ -123,16 +117,16 @@ const VerifyPage = () => {
       localStorage.setItem("samai_aadhaar_verified", "true");
 
       // Save to Firestore BEFORE navigating to ensure intent is persisted
-      await saveUser(newUserData as any).catch((err) =>
+      // Name will be added from VC after upload during onboarding
+      await saveUser({
+        phone: newUserData.phone,
+        intent: newUserData.intent,
+      } as any).catch((err) =>
         console.error("Failed to save user intent to Firestore:", err)
       );
 
-      ensureUserOnServer({
-        name: newUserData.name,
-        meter_number: newUserData.consumerId,
-        discom: newUserData.discom,
-        consumerId: newUserData.consumerId,
-      }).catch((err) => console.error("Failed to ensure user on server:", err));
+      // User data (name, meter number, discom) will be synced after VC upload during onboarding
+      // No need to ensure user on server at this point
 
       // New sellers go to devices setup (skip intro), new buyers go directly to buyer-home
       const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/onboarding/devices";

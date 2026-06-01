@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Alert, Button, Box } from "@mui/material";
 import { useUserData } from "@/hooks/useUserData";
+import { useVCStatus } from "@/hooks/useVCStatus";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
@@ -71,7 +73,8 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
 
 const BuyerHomePage = () => {
   const navigate = useNavigate();
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
+  const { consumption: hasConsumptionVC, loading: vcLoading } = useVCStatus();
   const {
     listings,
     loading,
@@ -92,10 +95,7 @@ const BuyerHomePage = () => {
   const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
-
-  // Check if VC is uploaded
-  const vcData = userData?.vc_data as any || {};
-  const hasVC = Object.keys(vcData).length > 0;
+  const [showVCMissingAlert, setShowVCMissingAlert] = useState(false);
 
   const groupedListings = groupListingsByCatalog(listings);
   const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
@@ -126,6 +126,12 @@ const BuyerHomePage = () => {
   };
 
   const handleSelectOffer = async (listing: EnergyListing) => {
+    // VC Guard: Buyers must have consumption profile to purchase
+    if (!hasConsumptionVC) {
+      setShowVCMissingAlert(true);
+      return;
+    }
+
     setSelectedOffer(listing);
     setOrderStatus('selecting');
     setOrderError(null);
@@ -246,7 +252,7 @@ const BuyerHomePage = () => {
           {/* Header */}
           <div className="flex items-center justify-between animate-fade-in">
             <h1 className="text-lg font-bold text-foreground">
-              {getGreeting()} {userData.name || "Buyer"}!
+              {getGreeting()} {displayName || "Buyer"}!
             </h1>
             <div className="flex items-center gap-2">
               <button
@@ -284,29 +290,60 @@ const BuyerHomePage = () => {
           </div>
 
 
-          {/* VC Required Banner */}
-          {!hasVC && (
-            <div className="bg-cyan-50 border border-cyan-300 rounded-lg p-4 animate-slide-up">
-              <div className="flex items-start gap-3">
-                <AlertCircle size={20} className="text-cyan-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-cyan-800">Credentials Required</p>
-                  <p className="text-sm text-cyan-700 mt-1">
-                    Please upload your electricity meter credentials to browse and purchase energy.
-                  </p>
-                  <button
-                    onClick={() => navigate("/settings/profile")}
-                    className="mt-2 text-sm text-cyan-600 hover:text-cyan-700 underline font-medium"
-                  >
-                    Go to profile to upload
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Consumption Profile VC Required Alert */}
+          {!vcLoading && !hasConsumptionVC && (
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              <strong>Consumption Profile VC Required</strong>
+              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+                To purchase energy, you need to upload your Consumption Profile VC first. This verifies your electricity meter and allows you to buy clean energy.
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => navigate("/settings/vc-documents")}
+                  sx={{ mr: 1 }}
+                >
+                  Upload Consumption Profile VC
+                </Button>
+              </Box>
+            </Alert>
+          )}
+
+          {/* VC Missing Modal Alert */}
+          {showVCMissingAlert && (
+            <Alert severity="error" onClose={() => setShowVCMissingAlert(false)} sx={{ borderRadius: 2, mb: 2 }}>
+              <strong>Consumption Profile VC Required</strong>
+              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+                You need to upload your Consumption Profile VC before you can purchase energy. Please upload it in your settings.
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  onClick={() => {
+                    setShowVCMissingAlert(false);
+                    navigate("/settings/vc-documents");
+                  }}
+                  sx={{ mr: 1 }}
+                >
+                  Upload VC Now
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => setShowVCMissingAlert(false)}
+                >
+                  Dismiss
+                </Button>
+              </Box>
+            </Alert>
           )}
 
           {/* Search and Filter Section */}
-          {hasVC && (
+          {!vcLoading && hasConsumptionVC && (
             <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
               <SearchListings
                 onSearch={(filters) => fetchListings(0, filters)}
@@ -333,7 +370,7 @@ const BuyerHomePage = () => {
           )}
 
           {/* Listings Grid */}
-          {hasVC && !loading && groupedListings.length > 0 && !selectedListing && (
+          {hasConsumptionVC && !loading && groupedListings.length > 0 && !selectedListing && (
             <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">

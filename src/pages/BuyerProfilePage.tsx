@@ -12,7 +12,7 @@ import VCDetailsView from "@/components/VCDetailsView";
 const BuyerProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
   const { logout } = useAuth();
   const [showVCModal, setShowVCModal] = useState(false);
   const [showVCDetails, setShowVCDetails] = useState(false);
@@ -33,7 +33,7 @@ const BuyerProfilePage = () => {
     {
       title: "Account",
       items: [
-        { icon: User, label: "Personal Details", sublabel: userData.name || "Set your name", route: "/buyer-profile" },
+        { icon: User, label: "Personal Details", sublabel: displayName || "Set your name", route: "/buyer-profile" },
         {
           icon: FileText,
           label: "VC Documents",
@@ -84,7 +84,7 @@ const BuyerProfilePage = () => {
             <User size={24} className="text-teal-600" />
           </div>
           <div>
-            <p className="text-base font-bold text-foreground">{userData.name}</p>
+            <p className="text-base font-bold text-foreground">{displayName}</p>
             <p className="text-xs text-muted-foreground">{userData.phone}</p>
           </div>
         </div>

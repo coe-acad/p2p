@@ -59,7 +59,7 @@ const isValidGSTIN = (gstin: string): boolean => {
 
 const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selectedIntent }: VerificationScreenProps) => {
   const { setUserData } = useUserData();
-  const [step, setStep] = useState<"phone" | "otp" | "profile" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "aadhaar" | "aadhaar-otp" | "fetching" | "location">("phone");
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -68,10 +68,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAlreadyRegisteredModal, setShowAlreadyRegisteredModal] = useState(false);
 
-  // Profile step state
-  const [profileName, setProfileName] = useState("");
-  const [profileMeterId, setProfileMeterId] = useState("");
-  const [profileError, setProfileError] = useState("");
 
   // Aadhaar manual entry state
   const [aadhaarMethod, setAadhaarMethod] = useState<"digilocker" | "manual" | "pan" | "gstin" | null>(null);
@@ -337,8 +333,8 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
           phone: `+91${phoneNumber}`,
           ...(flowIntent ? { intent: flowIntent } : {}),
         });
-        // New users proceed with verification steps
-        setStep("profile");
+        // New users proceed with verification steps (skip profile - name will come from VC)
+        setStep("aadhaar");
       } else {
         // Returning users skip verification steps and go directly to home
         // Don't save here - let VerifyPage load the complete data from database
@@ -351,28 +347,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     }
   };
 
-  const handleProfileSubmit = async () => {
-    if (!profileName.trim() || !profileMeterId.trim()) {
-      setProfileError("Name and Meter Number are required");
-      return;
-    }
-    const name = profileName.trim();
-    const meter_number = profileMeterId.trim();
-    setUserData({
-      name,
-      consumerId: meter_number,
-    });
-    try {
-      await ensureUserOnServer({
-        name,
-        meter_number,
-        consumerId: meter_number,
-      });
-    } catch (err) {
-      logger.error("Failed to sync user profile", err);
-    }
-    setStep("aadhaar");
-  };
 
   const handleResendOtp = async () => {
     resetRecaptchaVerifier();
@@ -472,9 +446,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   const ctaLabel =
     step === "phone"
       ? "Send OTP"
-      : step === "profile"
-        ? "Continue"
-        : step === "aadhaar" && aadhaarMethod === "digilocker"
+      : step === "aadhaar" && aadhaarMethod === "digilocker"
           ? "Verify via DigiLocker"
           : step === "aadhaar" && aadhaarMethod === "manual"
             ? "Send OTP to Aadhaar Mobile"
@@ -489,9 +461,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   const ctaAction =
     step === "phone"
       ? handlePhoneSubmit
-      : step === "profile"
-        ? handleProfileSubmit
-        : step === "aadhaar" && aadhaarMethod === "digilocker"
+      : step === "aadhaar" && aadhaarMethod === "digilocker"
           ? handleDigiLockerVerify
           : step === "aadhaar" && aadhaarMethod === "manual"
             ? handleAadhaarSubmit
@@ -506,9 +476,7 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
   const ctaDisabled =
     step === "phone"
       ? phoneNumber.length !== 10 || !!phoneError || isSendingOtp
-      : step === "profile"
-        ? !profileName.trim() || !profileMeterId.trim()
-        : step === "aadhaar" && aadhaarMethod === "digilocker"
+      : step === "aadhaar" && aadhaarMethod === "digilocker"
           ? !consentChecked
           : step === "aadhaar" && aadhaarMethod === "manual"
             ? aadhaarNumber.length !== 12
@@ -666,57 +634,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
               <button onClick={handleResendOtp} className="text-2xs text-muted-foreground hover:text-primary text-center">
                 Resend OTP
               </button>
-            </div>
-          )}
-
-          {/* Profile Step */}
-          {step === "profile" && (
-            <div className="flex flex-col gap-3 animate-slide-up">
-              <div className="flex items-center gap-2 p-2.5 bg-accent/8 rounded-lg">
-                <Check className="text-accent" size={14} />
-                <span className="text-xs text-foreground">Phone verified: +91 {phoneNumber}</span>
-              </div>
-
-              <div className="rounded-xl border border-orange-200/70 bg-white/92 p-3 shadow-card">
-                <h3 className="text-sm font-medium text-foreground mb-0.5">Complete Your Profile</h3>
-                <p className="text-2xs text-muted-foreground mb-3">This information will be used in your energy trades.</p>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1.5">Full Name</label>
-                    <input
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => {
-                        setProfileName(e.target.value);
-                        if (profileError) setProfileError("");
-                      }}
-                      placeholder="Enter your full name"
-                      className={`w-full px-3 py-2.5 rounded-lg border bg-card text-foreground text-sm focus:outline-none focus:ring-1 transition-all ${
-                        profileError ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1.5">Meter Number</label>
-                    <input
-                      type="text"
-                      value={profileMeterId}
-                      onChange={(e) => {
-                        setProfileMeterId(e.target.value);
-                        if (profileError) setProfileError("");
-                      }}
-                      placeholder="Enter your utility meter number"
-                      className={`w-full px-3 py-2.5 rounded-lg border bg-card text-foreground text-sm focus:outline-none focus:ring-1 transition-all ${
-                        profileError ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
-                      }`}
-                    />
-                  </div>
-
-                  {profileError && <p className="text-2xs text-destructive">{profileError}</p>}
-                </div>
-              </div>
             </div>
           )}
 
