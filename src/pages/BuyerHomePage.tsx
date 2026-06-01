@@ -198,6 +198,9 @@ const BuyerHomePage = () => {
       await orderService.waitForConfirmation(currentTransactionId);
       setOrderStatus('confirmed');
 
+      // Refresh listings to show updated inventory
+      await fetchListings();
+
       // Close modal after 2 seconds
       setTimeout(() => {
         setShowQuoteModal(false);
