@@ -10,6 +10,7 @@ import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
+import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
 import VCUploadModal from "@/components/modals/VCUploadModal";
@@ -91,6 +92,7 @@ const BuyerHomePage = () => {
   const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showSelectedModal, setShowSelectedModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
@@ -164,7 +166,7 @@ const BuyerHomePage = () => {
       setCurrentOrderData(selectedOrderState.order);
 
       setShowOfferModal(false);
-      setShowQuoteModal(true);
+      setShowSelectedModal(true);
       setOrderStatus('selected');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
@@ -203,6 +205,9 @@ const BuyerHomePage = () => {
       // Wait for on_init callback from BPP
       const initiatedOrderState = await orderService.waitForInitialization(currentTransactionId);
       setCurrentOrderData(initiatedOrderState.order);
+
+      setShowSelectedModal(false);
+      setShowQuoteModal(true);
       setOrderStatus('quoted');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to initialize order');
@@ -267,10 +272,20 @@ const BuyerHomePage = () => {
   };
 
   const handleBackToOfferModal = () => {
-    setShowQuoteModal(false);
+    setShowSelectedModal(false);
     setShowOfferModal(true);
     setOrderError(null);
-    setOrderStatus(selectedOffer ? 'selected' : 'idle');
+    setOrderStatus('idle');
+  };
+
+  const handleCloseSelectedModal = () => {
+    setShowSelectedModal(false);
+    setSelectedListing(null);
+    setSelectedOffer(null);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
   };
 
   const handleCloseQuoteModal = () => {
@@ -466,6 +481,14 @@ const BuyerHomePage = () => {
           status={orderStatus}
           onSelectOffer={handleSelectOffer}
           onCancel={handleCloseOfferModal}
+        />
+        <SelectedOrderModal
+          isOpen={showSelectedModal}
+          listing={selectedOffer}
+          error={orderError}
+          status={orderStatus}
+          onRequestInit={handleInitOrder}
+          onBack={handleCloseSelectedModal}
         />
         <QuoteOrderModal
           isOpen={showQuoteModal}
