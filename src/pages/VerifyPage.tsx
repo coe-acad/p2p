@@ -18,6 +18,9 @@ const VerifyPage = () => {
 
     const phoneWithCountry = `+91${phone}`;
 
+    // Clear all old user data from context immediately
+    setUserData({});
+
     // Check if user already exists via backend API (doesn't require auth)
     let isReturning = false;
     let existingUser = null;
@@ -95,12 +98,17 @@ const VerifyPage = () => {
 
       setUserData(newUserData);
 
+      // Clear ALL user-related cache and localStorage to ensure fresh start
       localStorage.removeItem("samai_selected_intent");
-      // Clear onboarding flags for new users - they need to complete these steps
       localStorage.removeItem("samai_onboarding_complete");
       localStorage.removeItem("samai_onboarding_location_done");
       localStorage.removeItem("samai_onboarding_devices_done");
       localStorage.removeItem("samai_onboarding_talk_done");
+      localStorage.removeItem("samai_aadhaar_verified");
+      localStorage.removeItem("samai_published_trades");
+      localStorage.removeItem("samai_hide_setup_banner");
+      localStorage.removeItem("samai_user_data");
+      localStorage.removeItem("samai_onboarding_vc_done");
 
       // Save phone to Firestore first
       await saveUser({
