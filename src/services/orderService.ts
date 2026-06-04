@@ -288,7 +288,31 @@ export const orderService = {
 
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
     console.log('[orderService] getOrderState:', transactionId);
-    throw new Error('getOrderState endpoint not implemented - use waitFor* methods instead');
+    try {
+      const headers = await getAuthHeaders();
+      const response = await requestWithRetry<any>(
+        bapClient,
+        {
+          url: `/orderstate?transactionId=${encodeURIComponent(transactionId)}`,
+          method: 'GET',
+          headers,
+        },
+        {
+          timeoutMs: 5000,
+          retries: 1,
+        }
+      );
+
+      console.log('[orderService] getOrderState response:', response);
+      return {
+        order_state: response.message?.order?.['beckn:state'] || null,
+        context: response.context || {},
+        order: response.message?.order || {},
+      };
+    } catch (error) {
+      console.error('[orderService] getOrderState failed:', error);
+      throw error;
+    }
   },
 
   async waitForQuotation(
