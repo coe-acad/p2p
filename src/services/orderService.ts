@@ -293,7 +293,7 @@ export const orderService = {
       const response = await requestWithRetry<any>(
         bapClient,
         {
-          url: `/orderstate?transactionId=${encodeURIComponent(transactionId)}`,
+          url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,
           method: 'GET',
           headers,
         },
@@ -305,9 +305,9 @@ export const orderService = {
 
       console.log('[orderService] getOrderState response:', response);
       return {
-        order_state: response.message?.order?.['beckn:state'] || null,
+        order_state: response.order_state || response.message?.order?.['beckn:state'] || null,
         context: response.context || {},
-        order: response.message?.order || {},
+        order: response.order || response.message?.order || {},
       };
     } catch (error) {
       console.error('[orderService] getOrderState failed:', error);
