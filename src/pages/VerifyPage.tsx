@@ -87,18 +87,9 @@ const VerifyPage = () => {
         navigate(targetRoute, { replace: true });
       }
     } else {
-      // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
-      const intentFromStorage = localStorage.getItem("samai_selected_intent");
-      const newUserIntent: "sell" | "buy" | undefined =
-        (isIntentValue(selectedIntent) ? selectedIntent : undefined) ||
-        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined);
-      if (!newUserIntent) {
-        navigate("/intent", { replace: true });
-        return;
-      }
+      // New user: needs to select intent first
       const newUserData = {
         phone: phoneWithCountry,
-        intent: newUserIntent,
         onboardingComplete: false, // New users must complete onboarding first
       };
 
@@ -111,20 +102,15 @@ const VerifyPage = () => {
       localStorage.removeItem("samai_onboarding_devices_done");
       localStorage.removeItem("samai_onboarding_talk_done");
 
-      // Save to Firestore BEFORE navigating to ensure intent is persisted
-      // Name will be added from VC after upload during onboarding
+      // Save phone to Firestore first
       await saveUser({
         phone: newUserData.phone,
-        intent: newUserData.intent,
       } as any).catch((err) =>
-        console.error("Failed to save user intent to Firestore:", err)
+        console.error("Failed to save user phone to Firestore:", err)
       );
 
-      // User data (name, meter number, discom) will be synced after VC upload during onboarding
-      // No need to ensure user on server at this point
-
-      // All new users go to VC upload first
-      navigate("/onboarding/vc", { replace: true });
+      // New users go to intent selection first
+      navigate("/intent", { replace: true, state: { fromVerification: true } });
     }
   };
 
