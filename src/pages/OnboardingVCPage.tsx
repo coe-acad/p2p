@@ -81,23 +81,6 @@ const OnboardingVCPage = () => {
     }
   };
 
-  const detectVCType = (credential: any): "consumption" | "generation" | null => {
-    const types = credential.type || [];
-    const subjectType = credential.credentialSubject?.type;
-
-    if (
-      types.includes("ConsumptionProfileCredential") ||
-      subjectType === "ConsumptionProfileCredential"
-    ) {
-      return "consumption";
-    } else if (
-      types.includes("GenerationProfileCredential") ||
-      subjectType === "GenerationProfileCredential"
-    ) {
-      return "generation";
-    }
-    return null;
-  };
 
   const handleUpload = async () => {
     if (!uploadedFile) return;
