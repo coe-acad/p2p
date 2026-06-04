@@ -12,14 +12,18 @@ const bapClient = createApiClient(BAP_URL);
 // Submit planned trades to the backend for Beckn catalog publish
 export const submitTrades = async (trades: PlannedTrade[], options?: RequestOptions): Promise<void> => {
   try {
+    console.log('[tradeService.submitTrades] Submitting', trades.length, 'trades');
     const tradeSubmissions = convertTradesToSchema(trades);
     const headers = await getAuthHeaders();
+    console.log('[tradeService.submitTrades] Converted trades, sending to /api/create');
     await requestWithRetry(
       bppClient,
       { url: "/api/create", method: "POST", data: { trades: tradeSubmissions }, headers },
       { ...options, retries: 1 }
     );
+    console.log('[tradeService.submitTrades] Success');
   } catch (error) {
+    console.error('[tradeService.submitTrades] Failed:', error);
     throw toApiError(error, "Failed to submit trades");
   }
 };
@@ -30,13 +34,16 @@ export const getTradeStatus = async (
   options?: RequestOptions
 ): Promise<{ status: boolean; price: number | null; state?: string | null }> => {
   try {
+    console.log('[tradeService.getTradeStatus] Fetching status for transaction:', transactionId);
     const data = await requestWithRetry<{ status: boolean; price: number | null; state?: string | null }>(
       bppClient,
       { url: "/api/trade-status", method: "GET", params: { transaction_id: transactionId } },
       options
     );
+    console.log('[tradeService.getTradeStatus] Success, state:', data.state);
     return TradeStatusSchema.parse(data);
   } catch (error) {
+    console.error('[tradeService.getTradeStatus] Failed:', error);
     throw toApiError(error, "Failed to fetch trade status");
   }
 };

@@ -17,18 +17,24 @@ export const verifyVC = async (
   options?: RequestOptions
 ): Promise<VCVerificationResult> => {
   try {
+    console.log('[vcService.verifyVC] Parsing VC credential');
     const credential = JSON.parse(jsonContent);
+    const credType = credential.credential?.type?.[0] || 'unknown';
+    console.log('[vcService.verifyVC] Credential type:', credType);
 
     // Verify with backend
     const headers = await getAuthHeaders();
+    console.log('[vcService.verifyVC] Sending to /api/vc/verify');
     const data = await requestWithRetry<VCVerificationResult>(
       backendClient,
       { url: "/api/vc/verify", method: "POST", data: { credential }, headers },
       { ...options, retries: 1 }
     );
 
+    console.log('[vcService.verifyVC] Verification result:', data.verified);
     return data;
   } catch (error: unknown) {
+    console.error('[vcService.verifyVC] Failed:', error);
     const apiError = toApiError(error, "Failed to verify VC");
     return {
       verified: false,
