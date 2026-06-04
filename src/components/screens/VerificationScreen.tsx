@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ArrowLeft, Shield, Check } from "lucide-react";
+import { ArrowLeft, Shield, Check, Loader2 } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { resolveRequiredEnv } from "@/services/apiClient";
