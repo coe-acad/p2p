@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ArrowLeft, Shield, Check, X } from "lucide-react";
+import { ArrowLeft, Shield, Check } from "lucide-react";
 import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { resolveRequiredEnv } from "@/services/apiClient";
@@ -431,54 +431,6 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
               >
                 I understand
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Already Registered Modal - for new users who enter existing phone number */}
-      {showAlreadyRegisteredModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full animate-fade-in">
-            <div className="p-6">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
-                <AlertTriangle size={24} className="text-amber-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground text-center mb-2">
-                Number Already Registered
-              </h3>
-              <p className="text-sm text-muted-foreground text-center mb-6">
-                This phone number is already registered with Samai. You can continue as a returning user with just OTP verification.
-              </p>
-
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setShowAlreadyRegisteredModal(false);
-                    setIsUserReturning(true);
-                    setOtp(["", "", "", "", "", ""]);
-                    setPhoneError("");
-                    setOtpError("");
-                    setStep("otp");
-                  }}
-                  className="w-full btn-solar !py-2.5 text-sm"
-                >
-                  Continue as Returning User
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAlreadyRegisteredModal(false);
-                    setPhoneNumber("");
-                    setPhoneError("");
-                    setOtpError("");
-                    setOtp(["", "", "", "", "", ""]);
-                    setStep("phone");
-                  }}
-                  className="w-full border border-border rounded-lg px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                >
-                  Try Different Number
-                </button>
-              </div>
             </div>
           </div>
         </div>
