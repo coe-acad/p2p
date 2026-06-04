@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, ChevronLeft, Upload, FileCheck, X } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
+import { useAuth } from "@/hooks/useAuth";
 import SamaiLogo from "@/components/SamaiLogo";
 import { useToast } from "@/hooks/use-toast";
 import { resolveRequiredEnv } from "@/services/apiClient";
@@ -12,6 +13,7 @@ const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 const OnboardingVCPage = () => {
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +21,49 @@ const OnboardingVCPage = () => {
 
   const getHomeRoute = () => {
     return userData?.intent === "buy" ? "/buyer-home" : "/home";
+  };
+
+  const detectVCType = (credential: any): "consumption" | "generation" | null => {
+    const types = credential.type || [];
+    const subjectType = credential.credentialSubject?.type;
+    const credentialType = credential.credentialType || "";
+
+    if (
+      types.includes("ConsumptionProfileCredential") ||
+      subjectType === "ConsumptionProfileCredential" ||
+      credentialType.includes("Consumption")
+    ) {
+      return "consumption";
+    } else if (
+      types.includes("GenerationProfileCredential") ||
+      subjectType === "GenerationProfileCredential" ||
+      credentialType.includes("Generation")
+    ) {
+      return "generation";
+    }
+    return null;
+  };
+
+  const validateRequiredFields = (credential: any, type: "consumption" | "generation"): string[] => {
+    const errors: string[] = [];
+    const subject = credential.credentialSubject || {};
+
+    // Common required fields for both types
+    if (!subject.fullName) errors.push("Full name is missing");
+    if (!subject.issuerName) errors.push("Issuer name is missing");
+
+    if (type === "consumption") {
+      if (!subject.meterNumber) errors.push("Meter number is missing");
+      if (!subject.consumerNumber) errors.push("Consumer number is missing");
+    } else if (type === "generation") {
+      if (!subject.inverterNumber && !subject.systemId) errors.push("System ID or Inverter number is missing");
+    }
+
+    return errors;
+  };
+
+  const extractUserName = (credential: any): string | null => {
+    return credential.credentialSubject?.fullName || null;
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +105,13 @@ const OnboardingVCPage = () => {
     setIsLoading(true);
     try {
       const content = await uploadedFile.text();
-      const credential = JSON.parse(content);
+      let parsedData = JSON.parse(content);
+
+      // Extract credential if wrapped
+      let credential = parsedData;
+      if (parsedData.credential && !parsedData.type) {
+        credential = parsedData.credential;
+      }
 
       const detectedType = detectVCType(credential);
       if (!detectedType) {
@@ -73,11 +124,61 @@ const OnboardingVCPage = () => {
         return;
       }
 
+      // Validate VC type matches user intent
+      if (userData?.intent === "sell" && detectedType !== "generation") {
+        toast({
+          title: "Wrong credential type",
+          description: "As a seller, you can only upload Generation Profile credentials",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (userData?.intent === "buy" && detectedType !== "consumption") {
+        toast({
+          title: "Wrong credential type",
+          description: "As a buyer, you can only upload Consumption Profile credentials",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate required fields
+      const validationErrors = validateRequiredFields(credential, detectedType);
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Missing required information",
+          description: validationErrors.join(". ") + ". Please upload a valid credential.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Extract user name from credential
+      const userName = extractUserName(credential);
+      if (!userName) {
+        toast({
+          title: "Invalid credential",
+          description: "Cannot extract name from credential. Please upload a valid credential.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       setVcType(detectedType);
+
+      // Get fresh Firebase token
+      const token = await user?.getIdToken();
+      if (!token) {
+        throw new Error("Unable to get authentication token");
+      }
 
       // Call the backend API
       const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
-      const token = localStorage.getItem("firebaseToken");
       const response = await fetch(`${BACKEND_URL}/api/vc/upload`, {
         method: "POST",
         headers: {
@@ -92,7 +193,6 @@ const OnboardingVCPage = () => {
         throw new Error(error.detail || "Failed to upload VC");
       }
 
-      const result = await response.json();
       toast({
         title: "VC uploaded successfully",
         description: `${detectedType === "consumption" ? "Consumption" : "Generation"} credential saved`,
@@ -102,18 +202,20 @@ const OnboardingVCPage = () => {
       localStorage.setItem(ONBOARDING_VC_KEY, "true");
       localStorage.setItem("samai_onboarding_complete", "true");
 
-      // Update user data with onboarding complete
+      // Update user data with onboarding complete and extracted name
       setUserData({
         isVCVerified: false,
-        onboardingComplete: true
+        onboardingComplete: true,
+        name: userName
       });
 
-      // Save onboarding completion to Firestore
+      // Save onboarding completion and user name to Firestore
       if (userData?.phone && userData?.intent) {
         await saveUser({
           phone: userData.phone,
           intent: userData.intent,
           onboardingComplete: true,
+          name: userName,
         } as any).catch(err => console.error("Failed to save onboarding completion:", err));
       }
 
