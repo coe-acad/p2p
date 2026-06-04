@@ -323,9 +323,14 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
-        return state;
+      try {
+        const state = await this.getOrderState(transactionId);
+        if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
+          return state;
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForQuotation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -344,9 +349,14 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if (state.order_state === 'SELECTED' && state.order) {
-        return state;
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'SELECTED' && state.order) {
+          return state;
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForSelectedOrder] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -365,13 +375,18 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if (state.order_state === 'CONFIRMED' && state.order) {
-        return {
-          status: true,
-          price: extractOrderAmount(state.order),
-          state: state.order_state,
-        };
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'CONFIRMED' && state.order) {
+          return {
+            status: true,
+            price: extractOrderAmount(state.order),
+            state: state.order_state,
+          };
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForConfirmation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -379,13 +394,17 @@ export const orderService = {
       }
     }
 
-    const finalState = await this.getOrderState(transactionId);
-    if (finalState.order_state === 'CONFIRMED' && finalState.order) {
-      return {
-        status: true,
-        price: extractOrderAmount(finalState.order),
-        state: finalState.order_state,
-      };
+    try {
+      const finalState = await this.getOrderState(transactionId);
+      if (finalState.order_state === 'CONFIRMED' && finalState.order) {
+        return {
+          status: true,
+          price: extractOrderAmount(finalState.order),
+          state: finalState.order_state,
+        };
+      }
+    } catch (error) {
+      console.log('[waitForConfirmation] Final state check failed');
     }
 
     throw new Error('Confirmation is still pending or failed validation');
