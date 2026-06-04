@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { saveUser, loadUser } from "@/services/userService";
+import { saveUser, loadUser, subscribeToUser } from "@/services/userService";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" =>
   value === "sell" || value === "buy";
@@ -100,8 +100,17 @@ export const useUserData = () => {
   });
 
   // After login, intent and profile must come from Firestore when available (never infer "sell" by default).
+  // Set up real-time listener to catch any changes to user data
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubUser: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Clean up previous user listener
+      if (unsubUser) {
+        unsubUser();
+        unsubUser = null;
+      }
+
       if (!firebaseUser) {
         if (hadFirebaseUserRef.current) {
           setUserDataState({ ...DEFAULT_USER_DATA });
@@ -121,10 +130,16 @@ export const useUserData = () => {
         setProfileHydrated(true);
         return;
       }
+
       const phone = firebaseUser.phoneNumber;
-      try {
-        const remote = await loadUser(phone);
-        if (remote && Object.keys(remote).length > 0) {
+
+      // Set up REAL-TIME listener for user data changes
+      unsubUser = subscribeToUser(phone, (remote) => {
+        if (remote === null) {
+          // User document was deleted from Firestore
+          console.warn("User document deleted from Firestore");
+          setUserDataState({ ...DEFAULT_USER_DATA });
+        } else if (Object.keys(remote).length > 0) {
           const { intent: _remoteIntentField, name: _oldName, ...remoteRest } = remote as Record<string, unknown>;
           setUserDataState((prev) => ({
             ...prev,
@@ -135,13 +150,16 @@ export const useUserData = () => {
             phone: remote.phone || phone || prev.phone,
           }));
         }
-      } catch (err) {
-        console.error("Failed to hydrate user profile from Firestore:", err);
-      } finally {
         setProfileHydrated(true);
-      }
+      });
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubUser) {
+        unsubUser();
+      }
+    };
   }, []);
 
   useEffect(() => {
