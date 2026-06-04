@@ -57,7 +57,7 @@ export interface OrderStateResponse {
 const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
 const DEFAULT_BAP_URI = resolveRequiredEnv(
   import.meta.env.VITE_ORDER_BAP_URI,
-  'https://atria-bap.atriauniversity.ai/bap/receiver',
+  'https://stage.samai.atriauniversity.ai/bap/receiver',
   'VITE_ORDER_BAP_URI'
 );
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
