@@ -52,7 +52,6 @@ const VerifyPage = () => {
         setUserData({
           ...existingWithoutIntent,
           phone: phoneWithCountry,
-          aadhaarVerified: true,
           ...(resolvedIntent ? { intent: resolvedIntent } : {}),
           onboardingComplete: true, // Lock all user details for returning users
         });
@@ -67,7 +66,6 @@ const VerifyPage = () => {
           discom: existingUser.discom || "",
           consumerId: existingUser.consumerId || "",
           automationLevel: existingUser.automationLevel || "recommend",
-          aadhaarVerified: true,
           onboardingComplete: true,
         } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
 
@@ -80,7 +78,6 @@ const VerifyPage = () => {
 
         // Mark all onboarding steps as complete
         localStorage.setItem("samai_onboarding_complete", "true");
-        localStorage.setItem("samai_aadhaar_verified", "true");
         localStorage.setItem("samai_onboarding_location_done", "true");
         localStorage.setItem("samai_onboarding_devices_done", "true");
         localStorage.setItem("samai_onboarding_talk_done", "true");
@@ -101,7 +98,6 @@ const VerifyPage = () => {
       }
       const newUserData = {
         phone: phoneWithCountry,
-        aadhaarVerified: true,
         intent: newUserIntent,
         onboardingComplete: false, // New users must complete onboarding first
       };
@@ -114,7 +110,6 @@ const VerifyPage = () => {
       localStorage.removeItem("samai_onboarding_location_done");
       localStorage.removeItem("samai_onboarding_devices_done");
       localStorage.removeItem("samai_onboarding_talk_done");
-      localStorage.setItem("samai_aadhaar_verified", "true");
 
       // Save to Firestore BEFORE navigating to ensure intent is persisted
       // Name will be added from VC after upload during onboarding
@@ -128,9 +123,8 @@ const VerifyPage = () => {
       // User data (name, meter number, discom) will be synced after VC upload during onboarding
       // No need to ensure user on server at this point
 
-      // New sellers go to devices setup (skip intro), new buyers go directly to buyer-home
-      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/onboarding/devices";
-      navigate(targetRoute, { replace: true });
+      // All new users go to VC upload first
+      navigate("/onboarding/vc", { replace: true });
     }
   };
 
