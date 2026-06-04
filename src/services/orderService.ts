@@ -133,6 +133,7 @@ const buildSelectedOrderFallback = (orderDetails: OrderDetails) => ({
 
 export const orderService = {
   async select(orderDetails: OrderDetails): Promise<SelectResponse> {
+    console.log('[orderService.select] Starting select for offer:', orderDetails.offer_id);
     const context = createContext(orderDetails);
 
     const payload: any = {
@@ -148,6 +149,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.select] Sending payload, transactionId:', (context as any).transaction_id);
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -162,12 +164,13 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.select] Success, response:', response);
       return {
         transactionId: (context as any).transaction_id,
         order: response.message?.order || {},
       };
     } catch (error) {
-      console.error('Select failed:', error);
+      console.error('[orderService.select] Failed:', error);
       throw error;
     }
   },
@@ -177,6 +180,7 @@ export const orderService = {
     orderDetails: OrderDetails,
     orderData?: any
   ): Promise<InitResponse> {
+    console.log('[orderService.init] Starting init for transactionId:', transactionId);
     const context = createContext(orderDetails);
     (context as any).transaction_id = transactionId;
     (context as any).action = 'init';
@@ -201,6 +205,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.init] Sending init payload');
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -215,12 +220,13 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.init] Success, order state:', response.message?.order?.['beckn:state']);
       return {
         transactionId,
         order: response.message?.order || {},
       };
     } catch (error) {
-      console.error('Init failed:', error);
+      console.error('[orderService.init] Failed:', error);
       throw error;
     }
   },
@@ -230,6 +236,7 @@ export const orderService = {
     orderDetails: OrderDetails,
     orderData: any
   ): Promise<ConfirmResponse> {
+    console.log('[orderService.confirm] Starting confirm for transactionId:', transactionId);
     const context = createContext(orderDetails);
     (context as any).transaction_id = transactionId;
     (context as any).action = 'confirm';
@@ -243,6 +250,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.confirm] Sending confirm payload');
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -257,13 +265,14 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.confirm] Success, orderId:', response.message?.order?.['beckn:id']);
       return {
         transactionId,
         order: response.message?.order || {},
         orderId: response.message?.order?.['beckn:id'] || 'unknown',
       };
     } catch (error) {
-      console.error('Confirm failed:', error);
+      console.error('[orderService.confirm] Failed:', error);
       throw error;
     }
   },
@@ -278,19 +287,8 @@ export const orderService = {
   },
 
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
-    const headers = await getAuthHeaders();
-    return requestWithRetry<OrderStateResponse>(
-      bapClient,
-      {
-        url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,
-        method: 'GET',
-        headers,
-      },
-      {
-        timeoutMs: 10000,
-        retries: 1,
-      }
-    );
+    console.log('[orderService] getOrderState:', transactionId);
+    throw new Error('getOrderState endpoint not implemented - use waitFor* methods instead');
   },
 
   async waitForQuotation(

@@ -98,6 +98,9 @@ const BuyerHomePage = () => {
   const [showVCMissingAlert, setShowVCMissingAlert] = useState(false);
 
   const groupedListings = groupListingsByCatalog(listings);
+  console.log("Raw listings count:", listings.length);
+  console.log("Grouped listings count:", groupedListings.length);
+  console.log("First grouped listing:", groupedListings[0]);
   const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
   const paginatedGroupedListings = groupedListings.slice(
     currentPage * CATALOGS_PER_PAGE,
