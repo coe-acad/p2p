@@ -63,7 +63,7 @@ const App = () => (
             {/* Onboarding Steps - Seller only */}
             <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
             <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
-            <Route path="/onboarding/vc" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingVCPage /></RoleProtectedRoute>} />
+            <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
 
             {/* Seller Main App */}
             <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
