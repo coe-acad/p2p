@@ -315,6 +315,31 @@ export const orderService = {
     }
   },
 
+  async waitForInitialization(
+    transactionId: string,
+    options?: { maxAttempts?: number; delayMs?: number }
+  ): Promise<OrderStateResponse> {
+    const maxAttempts = options?.maxAttempts ?? 20;
+    const delayMs = options?.delayMs ?? 1000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'INITIATED' && state.order) {
+          return state;
+        }
+      } catch (error) {
+        console.log(`[waitForInitialization] Attempt ${attempt + 1}/${maxAttempts}: Order not initialized yet, retrying...`);
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw new Error('Initialization is still pending');
+  },
+
   async waitForQuotation(
     transactionId: string,
     options?: { maxAttempts?: number; delayMs?: number }

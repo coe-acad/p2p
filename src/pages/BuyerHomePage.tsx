@@ -159,17 +159,54 @@ const BuyerHomePage = () => {
       });
 
       setCurrentTransactionId(selectResult.transactionId);
-      // init fires automatically on the BAP after on_select — wait for INITIATED directly
-      const quotedOrderState = await orderService.waitForQuotation(selectResult.transactionId);
-      setCurrentOrderData(quotedOrderState.order);
+      // Wait for on_select callback from BPP
+      const selectedOrderState = await orderService.waitForSelectedOrder(selectResult.transactionId);
+      setCurrentOrderData(selectedOrderState.order);
 
       setShowOfferModal(false);
       setShowQuoteModal(true);
-      setOrderStatus('quoted');
+      setOrderStatus('selected');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
       setSelectedOffer(null);
       setOrderStatus('idle');
+    }
+  };
+
+  const handleInitOrder = async () => {
+    if (!selectedOffer || !currentTransactionId) return;
+
+    setOrderStatus('quoting');
+    setOrderError(null);
+
+    try {
+      await orderService.init(
+        currentTransactionId,
+        {
+          offer_id: selectedOffer.offer_id,
+          bpp_id: selectedOffer.bpp_id,
+          bpp_uri: selectedOffer.bpp_uri,
+          offer_item_ids: selectedOffer.offer_item_ids,
+          offer_provider: selectedOffer.offer_provider,
+          offer_descriptor: selectedOffer.offer_descriptor,
+          offer_price: selectedOffer.offer_price,
+          offer_attributes: selectedOffer.offer_attributes,
+          quantity: selectedOffer.quantity_available,
+          price_per_unit: selectedOffer.price_per_unit,
+          seller_name: selectedOffer.seller_name,
+          delivery_start: selectedOffer.delivery_start,
+          delivery_end: selectedOffer.delivery_end,
+        },
+        currentOrderData
+      );
+
+      // Wait for on_init callback from BPP
+      const initiatedOrderState = await orderService.waitForInitialization(currentTransactionId);
+      setCurrentOrderData(initiatedOrderState.order);
+      setOrderStatus('quoted');
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Failed to initialize order');
+      setOrderStatus('selected');
     }
   };
 
@@ -436,7 +473,7 @@ const BuyerHomePage = () => {
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
-          onGetQuote={async () => {}}
+          onGetQuote={handleInitOrder}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
         />
