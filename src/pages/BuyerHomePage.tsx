@@ -12,6 +12,7 @@ import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
+import VCUploadModal from "@/components/modals/VCUploadModal";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
@@ -96,6 +97,7 @@ const BuyerHomePage = () => {
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
   const [showVCMissingAlert, setShowVCMissingAlert] = useState(false);
+  const [showVCUploadModal, setShowVCUploadModal] = useState(false);
 
   const groupedListings = groupListingsByCatalog(listings);
   console.log("Raw listings count:", listings.length);
@@ -307,7 +309,7 @@ const BuyerHomePage = () => {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => navigate("/onboarding/vc")}
+                  onClick={() => setShowVCUploadModal(true)}
                   sx={{ mr: 1 }}
                 >
                   Upload Consumption Profile VC
@@ -437,6 +439,16 @@ const BuyerHomePage = () => {
           onGetQuote={async () => {}}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
+        />
+
+        {/* VC Upload Modal */}
+        <VCUploadModal
+          isOpen={showVCUploadModal}
+          onClose={() => setShowVCUploadModal(false)}
+          onSuccess={() => {
+            setShowVCUploadModal(false);
+            fetchListings();
+          }}
         />
       </div>
     </MainAppShell>
