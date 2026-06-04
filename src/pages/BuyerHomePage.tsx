@@ -307,7 +307,7 @@ const BuyerHomePage = () => {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => navigate("/settings/vc-documents")}
+                  onClick={() => navigate("/onboarding/vc")}
                   sx={{ mr: 1 }}
                 >
                   Upload Consumption Profile VC
