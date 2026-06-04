@@ -18,6 +18,8 @@ const OnboardingVCPage = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [vcType, setVcType] = useState<"consumption" | "generation" | null>(null);
+  const [wrongVCModal, setWrongVCModal] = useState(false);
+  const [wrongVCMessage, setWrongVCMessage] = useState("");
 
   const getHomeRoute = () => {
     return userData?.intent === "buy" ? "/buyer-home" : "/home";
@@ -109,21 +111,17 @@ const OnboardingVCPage = () => {
 
       // Validate VC type matches user intent
       if (userData?.intent === "sell" && detectedType !== "generation") {
-        toast({
-          title: "Wrong credential type",
-          description: "As a seller, you can only upload Generation Profile credentials",
-          variant: "destructive",
-        });
+        setWrongVCMessage("As a seller, you can only upload Generation Profile credentials. Please choose a valid credential file.");
+        setWrongVCModal(true);
+        setUploadedFile(null);
         setIsLoading(false);
         return;
       }
 
       if (userData?.intent === "buy" && detectedType !== "consumption") {
-        toast({
-          title: "Wrong credential type",
-          description: "As a buyer, you can only upload Consumption Profile credentials",
-          variant: "destructive",
-        });
+        setWrongVCMessage("As a buyer, you can only upload Consumption Profile credentials. Please choose a valid credential file.");
+        setWrongVCModal(true);
+        setUploadedFile(null);
         setIsLoading(false);
         return;
       }
@@ -358,6 +356,53 @@ const OnboardingVCPage = () => {
           )}
         </div>
       </div>
+
+      {/* Wrong VC Type Modal */}
+      {wrongVCModal && (
+        <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-card w-full max-w-sm rounded-xl shadow-lg animate-slide-up">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-base font-semibold text-foreground">Wrong Credential Type</h3>
+              <button onClick={() => setWrongVCModal(false)}>
+                <X size={18} className="text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+
+            <div className="p-6 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <Shield className="text-destructive" size={32} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-foreground mb-2">Invalid Credential</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {wrongVCMessage}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border space-y-2">
+              <button
+                onClick={() => {
+                  setWrongVCModal(false);
+                  document.getElementById("vc-file-input")?.click();
+                }}
+                className="btn-solar w-full text-sm !py-2.5"
+              >
+                Upload Different Credential
+              </button>
+              <button
+                onClick={() => setWrongVCModal(false)}
+                className="btn-outline-calm w-full text-sm !py-2.5"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
