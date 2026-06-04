@@ -5,16 +5,21 @@ import { useUserData } from "@/hooks/useUserData";
 import SamaiLogo from "@/components/SamaiLogo";
 import { useToast } from "@/hooks/use-toast";
 import { resolveRequiredEnv } from "@/services/apiClient";
+import { saveUser } from "@/services/userService";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 
 const OnboardingVCPage = () => {
   const navigate = useNavigate();
-  const { setUserData } = useUserData();
+  const { userData, setUserData } = useUserData();
   const { toast } = useToast();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [vcType, setVcType] = useState<"consumption" | "generation" | null>(null);
+
+  const getHomeRoute = () => {
+    return userData?.intent === "buy" ? "/buyer-home" : "/home";
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -95,8 +100,24 @@ const OnboardingVCPage = () => {
 
       // Mark VC as pending verification and continue
       localStorage.setItem(ONBOARDING_VC_KEY, "true");
-      setUserData({ isVCVerified: false });
-      navigate("/home", { replace: true });
+      localStorage.setItem("samai_onboarding_complete", "true");
+
+      // Update user data with onboarding complete
+      setUserData({
+        isVCVerified: false,
+        onboardingComplete: true
+      });
+
+      // Save onboarding completion to Firestore
+      if (userData?.phone && userData?.intent) {
+        await saveUser({
+          phone: userData.phone,
+          intent: userData.intent,
+          onboardingComplete: true,
+        } as any).catch(err => console.error("Failed to save onboarding completion:", err));
+      }
+
+      navigate(getHomeRoute(), { replace: true });
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -109,9 +130,23 @@ const OnboardingVCPage = () => {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     localStorage.setItem(ONBOARDING_VC_KEY, "true");
-    navigate("/home", { replace: true });
+    localStorage.setItem("samai_onboarding_complete", "true");
+
+    // Mark onboarding as complete
+    setUserData({ onboardingComplete: true });
+
+    // Save onboarding completion to Firestore
+    if (userData?.phone && userData?.intent) {
+      await saveUser({
+        phone: userData.phone,
+        intent: userData.intent,
+        onboardingComplete: true,
+      } as any).catch(err => console.error("Failed to save onboarding completion:", err));
+    }
+
+    navigate(getHomeRoute(), { replace: true });
   };
 
   return (

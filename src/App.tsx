@@ -13,9 +13,6 @@ import {
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
-
-import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
-import OnboardingTalkPage from "./pages/OnboardingTalkPage";
 import OnboardingVCPage from "./pages/OnboardingVCPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
@@ -60,9 +57,7 @@ const App = () => (
             {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
             <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
 
-            {/* Onboarding Steps - Seller only */}
-            <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
-            <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
+            {/* Onboarding Steps - Both buyers and sellers */}
             <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
 
             {/* Seller Main App */}
