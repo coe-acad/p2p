@@ -96,7 +96,7 @@ const PreparedTomorrowScreen = ({
 }: PreparedTomorrowScreenProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, displayName } = useUserData();
   const { publishTrades, updatePlannedTrades, tradesData, setTradesData } = usePublishedTrades();
 
   const suggestionChips = [
@@ -273,9 +273,9 @@ const PreparedTomorrowScreen = ({
   const handlePublish = async () => {
   if (isPublishing) return;
 
-  if (!userData.name || !userData.consumerId) {
-    alert("Please complete your profile (Name and Meter Number) before publishing trades.");
-    navigate("/settings/profile");
+  if (!displayName) {
+    alert("Please upload your Generation Profile VC before publishing trades.");
+    navigate("/settings/vc-documents");
     return;
   }
 
@@ -715,9 +715,9 @@ const PreparedTomorrowScreen = ({
               <>
                 <button
                   onClick={handleLooksGood}
-                  disabled={activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing}
-                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !userData.name || !userData.consumerId || isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={!userData.name || !userData.consumerId ? "Complete your profile first" : isPublishing ? "Publishing..." : ""}
+                  disabled={activeTimeSlots.length === 0 || !displayName || !userData.consumerId || isPublishing}
+                  className={`btn-solar flex-1 !py-2.5 text-sm ${activeTimeSlots.length === 0 || !displayName || !userData.consumerId || isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={!displayName || !userData.consumerId ? "Complete your profile first" : isPublishing ? "Publishing..." : ""}
                 >
                   {isPublishing ? "Publishing..." : t("trades.approveNow")}
                 </button>

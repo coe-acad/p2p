@@ -11,100 +11,121 @@ const VerifyPage = () => {
   // Intent from IntentPage selection (only present for new-user flow)
   const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
   const isReturningUser = location.state?.isReturningUser || false;
-  const { userData: currentUserData, setUserData } = useUserData();
+  const { setUserData } = useUserData();
 
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
 
     const phoneWithCountry = `+91${phone}`;
 
-    // Check if user already exists in database
-    const existingUser = await loadUser(phoneWithCountry);
-    const isReturning = !!existingUser;
+    // Clear all old user data from context immediately
+    setUserData({});
 
-    if (isReturning && existingUser) {
-      // Returning users must always follow the role already stored in Firestore.
-      const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
+    // Check if user already exists via backend API (doesn't require auth)
+    let isReturning = false;
+    let existingUser = null;
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+      const response = await fetch(`${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(phoneWithCountry)}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.exists) {
+          isReturning = true;
+          // After auth, we'll load full user data from Firestore
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check if user exists:", err);
+      // Continue anyway - will be treated as new user if check fails
+    }
 
-      const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
-      setUserData({
-        ...existingWithoutIntent,
-        phone: phoneWithCountry,
-        aadhaarVerified: true,
-        ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-        onboardingComplete: true, // Lock all user details for returning users
-      });
+    if (isReturning) {
+      // Returning user: load full profile from Firestore now that they're authenticated
+      try {
+        existingUser = await loadUser(phoneWithCountry);
+      } catch (err) {
+        console.error("Failed to load returning user profile:", err);
+      }
 
-      if (resolvedIntent === "sell") {
+      if (existingUser) {
+        // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
+        const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
+
+        const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
+        setUserData({
+          ...existingWithoutIntent,
+          phone: phoneWithCountry,
+          ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+          onboardingComplete: true, // Lock all user details for returning users
+        });
+
+        // Save to Firestore BEFORE navigating to ensure intent is persisted
+        await saveUser({
+          phone: phoneWithCountry,
+          ...(resolvedIntent ? { intent: resolvedIntent } : {}),
+          name: existingUser.name || "",
+          address: existingUser.address || "",
+          city: existingUser.city || "",
+          discom: existingUser.discom || "",
+          consumerId: existingUser.consumerId || "",
+          automationLevel: existingUser.automationLevel || "recommend",
+          onboardingComplete: true,
+        } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
+
         ensureUserOnServer({
           name: existingUser.name || "",
           meter_number: existingUser.consumerId || "",
           discom: existingUser.discom || "",
           consumerId: existingUser.consumerId || "",
         }).catch((err) => console.error("Failed to ensure user on server:", err));
+
+        // Mark all onboarding steps as complete
+        localStorage.setItem("samai_onboarding_complete", "true");
+        localStorage.setItem("samai_onboarding_location_done", "true");
+        localStorage.setItem("samai_onboarding_devices_done", "true");
+        localStorage.setItem("samai_onboarding_talk_done", "true");
+
+        const targetRoute =
+          resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
+        navigate(targetRoute, { replace: true });
       }
-
-      // Mark all onboarding steps as complete
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-      localStorage.setItem("samai_onboarding_talk_done", "true");
-
-      const targetRoute =
-        resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
-      navigate(targetRoute, { replace: true });
     } else {
-      // New user: intent only from this signup flow (navigation state, then pre-verify stash if the page was refreshed).
-      const intentFromStorage = localStorage.getItem("samai_selected_intent");
-      const newUserIntent: "sell" | "buy" | undefined =
-        (isIntentValue(selectedIntent) ? selectedIntent : undefined) ||
-        (isIntentValue(intentFromStorage) ? intentFromStorage : undefined);
-      if (!newUserIntent) {
-        navigate("/intent", { replace: true });
-        return;
-      }
+      // New user: needs to select intent first
       const newUserData = {
         phone: phoneWithCountry,
-        aadhaarVerified: true,
-        intent: newUserIntent,
-        name: currentUserData.name || "",
-        consumerId: currentUserData.consumerId || "",
-        address: currentUserData.address || "",
-        city: currentUserData.city || "",
-        discom: currentUserData.discom || "",
-        automationLevel: "recommend" as const,
-        onboardingComplete: true, // Lock all user details after signup
+        onboardingComplete: false, // New users must complete onboarding first
       };
 
       setUserData(newUserData);
 
+      // Clear ALL user-related cache and localStorage to ensure fresh start
       localStorage.removeItem("samai_selected_intent");
+      localStorage.removeItem("samai_onboarding_complete");
+      localStorage.removeItem("samai_onboarding_location_done");
+      localStorage.removeItem("samai_onboarding_devices_done");
+      localStorage.removeItem("samai_onboarding_talk_done");
+      localStorage.removeItem("samai_aadhaar_verified");
+      localStorage.removeItem("samai_published_trades");
+      localStorage.removeItem("samai_hide_setup_banner");
+      localStorage.removeItem("samai_user_data");
+      localStorage.removeItem("samai_onboarding_vc_done");
 
-      if (newUserIntent === "sell") {
-        ensureUserOnServer({
-          name: newUserData.name,
-          meter_number: newUserData.consumerId,
-          discom: newUserData.discom,
-          consumerId: newUserData.consumerId,
-        }).catch((err) => console.error("Failed to ensure user on server:", err));
-      }
+      // Save phone to Firestore first
+      await saveUser({
+        phone: newUserData.phone,
+      } as any).catch((err) =>
+        console.error("Failed to save user phone to Firestore:", err)
+      );
 
-      localStorage.setItem("samai_onboarding_complete", "true");
-      localStorage.setItem("samai_aadhaar_verified", "true");
-      localStorage.setItem("samai_onboarding_location_done", "true");
-      localStorage.setItem("samai_onboarding_devices_done", "true");
-      localStorage.setItem("samai_onboarding_talk_done", "true");
-
-      const targetRoute = newUserIntent === "buy" ? "/buyer-home" : "/home";
-      navigate(targetRoute, { replace: true });
+      // New users go to intent selection first
+      navigate("/intent", { replace: true, state: { fromVerification: true } });
     }
   };
 
   return (
     <VerificationScreen
       onVerified={handleVerified}
-      onBack={() => navigate(isReturningUser ? "/" : "/intent")}
+      onBack={() => navigate("/")}
       isReturningUser={isReturningUser}
       selectedIntent={selectedIntent}
     />

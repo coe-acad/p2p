@@ -58,7 +58,7 @@ export interface OrderStateResponse {
 const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
 const DEFAULT_BAP_URI = resolveRequiredEnv(
   import.meta.env.VITE_ORDER_BAP_URI,
-  'https://atria-bap.atriauniversity.ai/bap/receiver',
+  'https://stage-atria-bap.atriauniversity.ai/bap/receiver',
   'VITE_ORDER_BAP_URI'
 );
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
@@ -148,6 +148,7 @@ const buildSelectedOrderFallback = (orderDetails: OrderDetails) => ({
 
 export const orderService = {
   async select(orderDetails: OrderDetails): Promise<SelectResponse> {
+    console.log('[orderService.select] Starting select for offer:', orderDetails.offer_id);
     const context = createContext(orderDetails);
 
     const payload: any = {
@@ -163,6 +164,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.select] Sending payload, transactionId:', (context as any).transaction_id);
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -177,12 +179,13 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.select] Success, response:', response);
       return {
         transactionId: (context as any).transaction_id,
         order: response.message?.order || {},
       };
     } catch (error) {
-      console.error('Select failed:', error);
+      console.error('[orderService.select] Failed:', error);
       throw error;
     }
   },
@@ -192,6 +195,7 @@ export const orderService = {
     orderDetails: OrderDetails,
     orderData?: any
   ): Promise<InitResponse> {
+    console.log('[orderService.init] Starting init for transactionId:', transactionId);
     const context = createContext(orderDetails);
     (context as any).transaction_id = transactionId;
     (context as any).action = 'init';
@@ -225,6 +229,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.init] Sending init payload');
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -239,12 +244,13 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.init] Success, order state:', response.message?.order?.['beckn:state']);
       return {
         transactionId,
         order: response.message?.order || {},
       };
     } catch (error) {
-      console.error('Init failed:', error);
+      console.error('[orderService.init] Failed:', error);
       throw error;
     }
   },
@@ -254,6 +260,7 @@ export const orderService = {
     orderDetails: OrderDetails,
     orderData: any
   ): Promise<ConfirmResponse> {
+    console.log('[orderService.confirm] Starting confirm for transactionId:', transactionId);
     const context = createContext(orderDetails);
     (context as any).transaction_id = transactionId;
     (context as any).action = 'confirm';
@@ -267,6 +274,7 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
+      console.log('[orderService.confirm] Sending confirm payload');
       const response = await requestWithRetry<any>(
         bapClient,
         {
@@ -281,13 +289,14 @@ export const orderService = {
         }
       );
 
+      console.log('[orderService.confirm] Success, orderId:', response.message?.order?.['beckn:id']);
       return {
         transactionId,
         order: response.message?.order || {},
         orderId: response.message?.order?.['beckn:id'] || 'unknown',
       };
     } catch (error) {
-      console.error('Confirm failed:', error);
+      console.error('[orderService.confirm] Failed:', error);
       throw error;
     }
   },
@@ -302,19 +311,57 @@ export const orderService = {
   },
 
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
-    const headers = await getAuthHeaders();
-    return requestWithRetry<OrderStateResponse>(
-      bapClient,
-      {
-        url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,
-        method: 'GET',
-        headers,
-      },
-      {
-        timeoutMs: 10000,
-        retries: 1,
+    console.log('[orderService] getOrderState:', transactionId);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await requestWithRetry<any>(
+        bapClient,
+        {
+          url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,
+          method: 'GET',
+          headers,
+        },
+        {
+          timeoutMs: 5000,
+          retries: 1,
+        }
+      );
+
+      console.log('[orderService] getOrderState response:', response);
+      return {
+        order_state: response.order_state || response.message?.order?.['beckn:state'] || null,
+        context: response.context || {},
+        order: response.order || response.message?.order || {},
+      };
+    } catch (error) {
+      console.error('[orderService] getOrderState failed:', error);
+      throw error;
+    }
+  },
+
+  async waitForInitialization(
+    transactionId: string,
+    options?: { maxAttempts?: number; delayMs?: number }
+  ): Promise<OrderStateResponse> {
+    const maxAttempts = options?.maxAttempts ?? 20;
+    const delayMs = options?.delayMs ?? 1000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'INITIATED' && state.order) {
+          return state;
+        }
+      } catch (error) {
+        console.log(`[waitForInitialization] Attempt ${attempt + 1}/${maxAttempts}: Order not initialized yet, retrying...`);
       }
-    );
+
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw new Error('Initialization is still pending');
   },
 
   async waitForQuotation(
@@ -325,9 +372,14 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
-        return state;
+      try {
+        const state = await this.getOrderState(transactionId);
+        if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
+          return state;
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForQuotation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -346,9 +398,14 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if (state.order_state === 'SELECTED' && state.order) {
-        return state;
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'SELECTED' && state.order) {
+          return state;
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForSelectedOrder] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -367,13 +424,18 @@ export const orderService = {
     const delayMs = options?.delayMs ?? 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const state = await this.getOrderState(transactionId);
-      if (state.order_state === 'CONFIRMED' && state.order) {
-        return {
-          status: true,
-          price: extractOrderAmount(state.order),
-          state: state.order_state,
-        };
+      try {
+        const state = await this.getOrderState(transactionId);
+        if (state.order_state === 'CONFIRMED' && state.order) {
+          return {
+            status: true,
+            price: extractOrderAmount(state.order),
+            state: state.order_state,
+          };
+        }
+      } catch (error) {
+        // Trade not created yet, retry
+        console.log(`[waitForConfirmation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
       }
 
       if (attempt < maxAttempts - 1) {
@@ -381,13 +443,17 @@ export const orderService = {
       }
     }
 
-    const finalState = await this.getOrderState(transactionId);
-    if (finalState.order_state === 'CONFIRMED' && finalState.order) {
-      return {
-        status: true,
-        price: extractOrderAmount(finalState.order),
-        state: finalState.order_state,
-      };
+    try {
+      const finalState = await this.getOrderState(transactionId);
+      if (finalState.order_state === 'CONFIRMED' && finalState.order) {
+        return {
+          status: true,
+          price: extractOrderAmount(finalState.order),
+          state: finalState.order_state,
+        };
+      }
+    } catch (error) {
+      console.log('[waitForConfirmation] Final state check failed');
     }
 
     throw new Error('Confirmation is still pending or failed validation');

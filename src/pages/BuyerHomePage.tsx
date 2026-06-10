@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Alert, Button, Box } from "@mui/material";
 import { useUserData } from "@/hooks/useUserData";
+import { useVCStatus } from "@/hooks/useVCStatus";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
@@ -8,8 +10,10 @@ import { EnergyListingCard } from "@/components/EnergyListingCard";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
+import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
+import VCUploadModal from "@/components/modals/VCUploadModal";
 import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
@@ -71,7 +75,8 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
 
 const BuyerHomePage = () => {
   const navigate = useNavigate();
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
+  const { consumption: hasConsumptionVC, loading: vcLoading } = useVCStatus();
   const {
     listings,
     loading,
@@ -81,16 +86,25 @@ const BuyerHomePage = () => {
     clearFilters,
     goToPage,
   } = useDiscoverListings();
+
+
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showSelectedModal, setShowSelectedModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+  const [showVCMissingAlert, setShowVCMissingAlert] = useState(false);
+  const [showVCUploadModal, setShowVCUploadModal] = useState(false);
+
   const groupedListings = groupListingsByCatalog(listings);
+  console.log("Raw listings count:", listings.length);
+  console.log("Grouped listings count:", groupedListings.length);
+  console.log("First grouped listing:", groupedListings[0]);
   const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
   const paginatedGroupedListings = groupedListings.slice(
     currentPage * CATALOGS_PER_PAGE,
@@ -119,6 +133,12 @@ const BuyerHomePage = () => {
   };
 
   const handleSelectOffer = async (listing: EnergyListing) => {
+    // VC Guard: Buyers must have consumption profile to purchase
+    if (!hasConsumptionVC) {
+      setShowVCMissingAlert(true);
+      return;
+    }
+
     setSelectedOffer(listing);
     setOrderStatus('selecting');
     setOrderError(null);
@@ -142,11 +162,12 @@ const BuyerHomePage = () => {
       });
 
       setCurrentTransactionId(selectResult.transactionId);
+      // Wait for on_select callback from BPP
       const selectedOrderState = await orderService.waitForSelectedOrder(selectResult.transactionId);
       setCurrentOrderData(selectedOrderState.order);
 
       setShowOfferModal(false);
-      setShowQuoteModal(true);
+      setShowSelectedModal(true);
       setOrderStatus('selected');
     } catch (error) {
       setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
@@ -155,35 +176,42 @@ const BuyerHomePage = () => {
     }
   };
 
-  const handleGetQuotation = async () => {
+  const handleInitOrder = async () => {
     if (!selectedOffer || !currentTransactionId) return;
 
     setOrderStatus('quoting');
     setOrderError(null);
 
     try {
-      await orderService.init(currentTransactionId, {
-        offer_id: selectedOffer.offer_id,
-        seller_id: selectedOffer.seller_id,
-        bpp_id: selectedOffer.bpp_id,
-        bpp_uri: selectedOffer.bpp_uri,
-        offer_item_ids: selectedOffer.offer_item_ids,
-        offer_provider: selectedOffer.offer_provider,
-        offer_descriptor: selectedOffer.offer_descriptor,
-        offer_price: selectedOffer.offer_price,
-        offer_attributes: selectedOffer.offer_attributes,
-        quantity: selectedOffer.quantity_available,
-        price_per_unit: selectedOffer.price_per_unit,
-        seller_name: selectedOffer.seller_name,
-        delivery_start: selectedOffer.delivery_start,
-        delivery_end: selectedOffer.delivery_end,
-      }, currentOrderData);
+      await orderService.init(
+        currentTransactionId,
+        {
+          offer_id: selectedOffer.offer_id,
+          bpp_id: selectedOffer.bpp_id,
+          bpp_uri: selectedOffer.bpp_uri,
+          offer_item_ids: selectedOffer.offer_item_ids,
+          offer_provider: selectedOffer.offer_provider,
+          offer_descriptor: selectedOffer.offer_descriptor,
+          offer_price: selectedOffer.offer_price,
+          offer_attributes: selectedOffer.offer_attributes,
+          quantity: selectedOffer.quantity_available,
+          price_per_unit: selectedOffer.price_per_unit,
+          seller_name: selectedOffer.seller_name,
+          delivery_start: selectedOffer.delivery_start,
+          delivery_end: selectedOffer.delivery_end,
+        },
+        currentOrderData
+      );
 
-      const orderState = await orderService.waitForQuotation(currentTransactionId);
-      setCurrentOrderData(orderState.order);
+      // Wait for on_init callback from BPP
+      const initiatedOrderState = await orderService.waitForInitialization(currentTransactionId);
+      setCurrentOrderData(initiatedOrderState.order);
+
+      setShowSelectedModal(false);
+      setShowQuoteModal(true);
       setOrderStatus('quoted');
     } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Failed to get quotation');
+      setOrderError(error instanceof Error ? error.message : 'Failed to initialize order');
       setOrderStatus('selected');
     }
   };
@@ -219,6 +247,9 @@ const BuyerHomePage = () => {
       await orderService.waitForConfirmation(currentTransactionId);
       setOrderStatus('confirmed');
 
+      // Refresh listings to show updated inventory
+      await fetchListings();
+
       // Close modal after 2 seconds
       setTimeout(() => {
         setShowQuoteModal(false);
@@ -243,10 +274,20 @@ const BuyerHomePage = () => {
   };
 
   const handleBackToOfferModal = () => {
-    setShowQuoteModal(false);
+    setShowSelectedModal(false);
     setShowOfferModal(true);
     setOrderError(null);
-    setOrderStatus(selectedOffer ? 'selected' : 'idle');
+    setOrderStatus('idle');
+  };
+
+  const handleCloseSelectedModal = () => {
+    setShowSelectedModal(false);
+    setSelectedListing(null);
+    setSelectedOffer(null);
+    setOrderStatus('idle');
+    setOrderError(null);
+    setCurrentTransactionId('');
+    setCurrentOrderData(null);
   };
 
   const handleCloseQuoteModal = () => {
@@ -273,7 +314,7 @@ const BuyerHomePage = () => {
           {/* Header */}
           <div className="flex items-center justify-between animate-fade-in">
             <h1 className="text-lg font-bold text-foreground">
-              {getGreeting()} {userData.name || "Buyer"}!
+              {getGreeting()} {displayName || "Buyer"}!
             </h1>
             <div className="flex items-center gap-2">
               <button
@@ -310,14 +351,69 @@ const BuyerHomePage = () => {
             </div>
           </div>
 
+
+          {/* Consumption Profile VC Required Alert */}
+          {!vcLoading && !hasConsumptionVC && (
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              <strong>Consumption Profile VC Required</strong>
+              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+                To purchase energy, you need to upload your Consumption Profile VC first. This verifies your electricity meter and allows you to buy clean energy.
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => setShowVCUploadModal(true)}
+                  sx={{ mr: 1 }}
+                >
+                  Upload Consumption Profile VC
+                </Button>
+              </Box>
+            </Alert>
+          )}
+
+          {/* VC Missing Modal Alert */}
+          {showVCMissingAlert && (
+            <Alert severity="error" onClose={() => setShowVCMissingAlert(false)} sx={{ borderRadius: 2, mb: 2 }}>
+              <strong>Consumption Profile VC Required</strong>
+              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
+                You need to upload your Consumption Profile VC before you can purchase energy. Please upload it in your settings.
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  onClick={() => {
+                    setShowVCMissingAlert(false);
+                    navigate("/settings/vc-documents");
+                  }}
+                  sx={{ mr: 1 }}
+                >
+                  Upload VC Now
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => setShowVCMissingAlert(false)}
+                >
+                  Dismiss
+                </Button>
+              </Box>
+            </Alert>
+          )}
+
           {/* Search and Filter Section */}
-          <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <SearchListings
-              onSearch={(filters) => fetchListings(0, filters)}
-              onClearFilters={clearFilters}
-              isLoading={loading}
-            />
-          </div>
+          {!vcLoading && hasConsumptionVC && (
+            <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              <SearchListings
+                onSearch={(filters) => fetchListings(0, filters)}
+                onClearFilters={clearFilters}
+                isLoading={loading}
+              />
+            </div>
+          )}
 
           {/* Error State */}
           {error && (
@@ -336,7 +432,7 @@ const BuyerHomePage = () => {
           )}
 
           {/* Listings Grid */}
-          {!loading && groupedListings.length > 0 && !selectedListing && (
+          {hasConsumptionVC && !loading && groupedListings.length > 0 && !selectedListing && (
             <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">
@@ -388,15 +484,33 @@ const BuyerHomePage = () => {
           onSelectOffer={handleSelectOffer}
           onCancel={handleCloseOfferModal}
         />
+        <SelectedOrderModal
+          isOpen={showSelectedModal}
+          listing={selectedOffer}
+          error={orderError}
+          status={orderStatus}
+          onRequestInit={handleInitOrder}
+          onBack={handleCloseSelectedModal}
+        />
         <QuoteOrderModal
           isOpen={showQuoteModal}
           listing={selectedOffer}
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
-          onGetQuote={handleGetQuotation}
+          onGetQuote={handleInitOrder}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
+        />
+
+        {/* VC Upload Modal */}
+        <VCUploadModal
+          isOpen={showVCUploadModal}
+          onClose={() => setShowVCUploadModal(false)}
+          onSuccess={() => {
+            setShowVCUploadModal(false);
+            fetchListings();
+          }}
         />
       </div>
     </MainAppShell>

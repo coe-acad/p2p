@@ -1,6 +1,6 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@mui/material/styles";
+import { SnackbarProvider } from "notistack";
+import { muiTheme } from "./theme/muiTheme";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {
@@ -13,18 +13,11 @@ import {
 import WelcomePage from "./pages/WelcomePage";
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
-import SuccessPage from "./pages/SuccessPage";
-
-import OnboardingIntroPage from "./pages/OnboardingIntroPage";
-import OnboardingDevicesPage from "./pages/OnboardingDevicesPage";
-import OnboardingTalkPage from "./pages/OnboardingTalkPage";
-import CalculatingPage from "./pages/CalculatingPage";
-import EarningsHookPage from "./pages/EarningsHookPage";
-import PreparedPage from "./pages/PreparedPage";
-import PublishedPage from "./pages/PublishedPage";
+import OnboardingVCPage from "./pages/OnboardingVCPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
+import TomorrowTradesPage from "./pages/TomorrowTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PaymentPage from "./pages/PaymentPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -53,11 +46,10 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="app-viewport-min bg-background">
+    <ThemeProvider theme={muiTheme}>
+      <SnackbarProvider>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <div className="app-viewport-min bg-background">
           <Routes>
             {/* Public routes - redirects to /home if already logged in */}
             <Route path="/" element={<PublicOnlyRoute><WelcomePage /></PublicOnlyRoute>} />
@@ -65,24 +57,14 @@ const App = () => (
             {/* Verify route: no guard (allows unauthenticated AND authenticating users) */}
             <Route path="/verify" element={<VerificationRoute><VerifyPage /></VerificationRoute>} />
 
-            {/* Protected routes - redirects to / if not logged in */}
-            <Route path="/success" element={<RoleProtectedRoute requiredIntent="sell"><SuccessPage /></RoleProtectedRoute>} />
-
-            {/* Onboarding Steps (Talk to Samai after verification) - Seller only */}
-            <Route path="/onboarding" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingIntroPage /></RoleProtectedRoute>} />
-            <Route path="/onboarding/devices" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingDevicesPage /></RoleProtectedRoute>} />
-            <Route path="/onboarding/talk" element={<RoleProtectedRoute requiredIntent="sell"><OnboardingTalkPage /></RoleProtectedRoute>} />
-
-            {/* Post-Onboarding - Seller only */}
-            <Route path="/calculating" element={<RoleProtectedRoute requiredIntent="sell"><CalculatingPage /></RoleProtectedRoute>} />
-            <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsHookPage /></RoleProtectedRoute>} />
-            <Route path="/prepared" element={<RoleProtectedRoute requiredIntent="sell"><PreparedPage /></RoleProtectedRoute>} />
-            <Route path="/published" element={<RoleProtectedRoute requiredIntent="sell"><PublishedPage /></RoleProtectedRoute>} />
+            {/* Onboarding Steps - Both buyers and sellers */}
+            <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
 
             {/* Seller Main App */}
             <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
             <Route path="/ask-samai" element={<RoleProtectedRoute requiredIntent="sell"><AskSamaiPage /></RoleProtectedRoute>} />
             <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
+            <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
             <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
             <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
             <Route path="/profile" element={<RoleProtectedRoute requiredIntent="sell"><ProfilePage /></RoleProtectedRoute>} />
@@ -114,7 +96,8 @@ const App = () => (
           </Routes>
         </div>
       </BrowserRouter>
-    </TooltipProvider>
+      </SnackbarProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

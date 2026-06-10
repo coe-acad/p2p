@@ -96,23 +96,14 @@ export const useDiscoverListings = () => {
 
       // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
       if (pageNumber === 0) {
-        const discoverPayload = {
-          message: {
-            filters: {
-              type: "jsonpath",
-              expression:
-                "$.catalogs[*] ? " +
-                `(@.beckn:items[*].beckn:networkId[*] == '${NETWORK_ID}' && @.beckn:offers[*].beckn:isActive == true)`,
-            },
-          },
-        };
+        console.log('[useDiscoverListings] Triggering POST /discover to refresh catalogs');
         await requestWithRetry<unknown>(
           discoverClientRef.current,
           {
             url: "/discover",
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            data: discoverPayload,
+            data: {},
           },
           {
             signal: controller.signal,
@@ -121,6 +112,9 @@ export const useDiscoverListings = () => {
             retryDelayMs: 2000,
           }
         );
+        console.log('[useDiscoverListings] POST /discover completed, waiting 2s for catalog storage');
+        // Wait for on_discover callback to store catalogs in backend
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       const params = new URLSearchParams();
@@ -149,6 +143,7 @@ export const useDiscoverListings = () => {
         params.append("source_type", searchFilters.source_type);
       }
 
+      console.log('[useDiscoverListings] Fetching GET /discover with params:', params.toString());
       const data = await requestWithRetry<ListingsResponse>(
         discoverClientRef.current,
         {
@@ -162,7 +157,9 @@ export const useDiscoverListings = () => {
         }
       );
 
+      console.log('[useDiscoverListings] GET /discover returned', data.listings?.length || 0, 'listings');
       const sanitizedListings = sanitizeListings(data.listings);
+      console.log('[useDiscoverListings] After sanitization:', sanitizedListings.length, 'listings');
 
       setListings(sanitizedListings);
       setTotal(sanitizedListings.length);
@@ -171,11 +168,12 @@ export const useDiscoverListings = () => {
     } catch (err) {
       const apiError = toApiError(err, "Failed to fetch listings");
       if (apiError.code === "ERR_CANCELED") {
+        console.log('[useDiscoverListings] Request was cancelled');
         return;
       }
       const message = apiError.message;
       setError(message);
-      console.error("Error fetching listings:", apiError);
+      console.error("[useDiscoverListings] Error fetching listings:", apiError);
     } finally {
       setLoading(false);
     }

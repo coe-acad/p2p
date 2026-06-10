@@ -1,18 +1,21 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, User, Wallet, Package, LogOut } from "lucide-react";
-import { useUserData, extractLocality } from "@/hooks/useUserData";
+import { ChevronLeft, User, FileText, Wallet, Package, LogOut, ChevronRight } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
+import VCUploadModal from "@/components/modals/VCUploadModal";
+import VCDetailsView from "@/components/VCDetailsView";
 
 const BuyerProfilePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { userData } = useUserData();
+  const { userData, displayName } = useUserData();
   const { logout } = useAuth();
-
-  const locality = extractLocality(userData.address);
+  const [showVCModal, setShowVCModal] = useState(false);
+  const [showVCDetails, setShowVCDetails] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -23,21 +26,42 @@ const BuyerProfilePage = () => {
     }
   };
 
+  const vcData = userData?.vc_data as any || {};
+  const hasVC = Object.keys(vcData).length > 0;
+
   const sections = [
     {
-      title: t("profile.account"),
+      title: "Account",
       items: [
-        { icon: User, label: t("profile.personalDetails"), sublabel: userData.name || userData.consumerId ? `${userData.name || "Not set"} • ${userData.consumerId || "Not set"}` : "Complete profile", route: "/buyer-profile" },
-        { icon: Wallet, label: t("payments.title"), sublabel: userData.upiId || t("profile.setUpPayment"), route: "/buyer-payments" },
+        { icon: User, label: "Personal Details", sublabel: displayName || "Set your name", route: "/buyer-profile" },
+        {
+          icon: FileText,
+          label: "VC Documents",
+          sublabel: hasVC ? "View details" : "Upload credentials",
+          action: () => hasVC ? setShowVCDetails(true) : setShowVCModal(true)
+        },
       ]
     },
     {
-      title: t("profile.yourOrders"),
+      title: "Transactions",
       items: [
         { icon: Package, label: "Purchase History", sublabel: "View all your energy purchases", route: "/buyer-order-history" },
+        { icon: Wallet, label: "Payments", sublabel: "Manage payment methods", route: "/buyer-payments" },
       ]
     },
   ];
+
+  if (showVCDetails) {
+    return (
+      <MainAppShell>
+        <div className="screen-container !justify-start !pt-4 !pb-6">
+          <PageContainer gap={4}>
+            <VCDetailsView onBack={() => setShowVCDetails(false)} />
+          </PageContainer>
+        </div>
+      </MainAppShell>
+    );
+  }
 
   return (
     <MainAppShell>
@@ -60,7 +84,7 @@ const BuyerProfilePage = () => {
             <User size={24} className="text-teal-600" />
           </div>
           <div>
-            <p className="text-base font-bold text-foreground">{userData.name}</p>
+            <p className="text-base font-bold text-foreground">{displayName}</p>
             <p className="text-xs text-muted-foreground">{userData.phone}</p>
           </div>
         </div>
@@ -76,7 +100,7 @@ const BuyerProfilePage = () => {
                   return (
                     <button
                       key={iIndex}
-                      onClick={() => item.route && navigate(item.route)}
+                      onClick={() => item.action ? item.action() : item.route && navigate(item.route)}
                       className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors first:rounded-t-xl last:rounded-b-xl"
                     >
                       <div className="flex items-center gap-3">
@@ -88,7 +112,7 @@ const BuyerProfilePage = () => {
                           <p className="text-xs text-muted-foreground">{item.sublabel}</p>
                         </div>
                       </div>
-                      <ChevronLeft size={16} className="text-muted-foreground rotate-180" />
+                      <ChevronRight size={16} className="text-muted-foreground" />
                     </button>
                   );
                 })}
@@ -100,11 +124,21 @@ const BuyerProfilePage = () => {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
         >
           <LogOut size={16} />
           <span className="text-sm font-medium">Logout</span>
         </button>
+
+        {/* VC Upload Modal */}
+        <VCUploadModal
+          isOpen={showVCModal}
+          onClose={() => setShowVCModal(false)}
+          onSuccess={() => {
+            setShowVCModal(false);
+            // Optionally refresh user data here
+          }}
+        />
         </PageContainer>
       </div>
     </MainAppShell>

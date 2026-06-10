@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
 
@@ -44,6 +44,7 @@ export const ProtectedRoute = ({ children }: RouteProps) => {
 export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const { userData, profileHydrated } = useUserData();
+  const location = useLocation();
 
   if (isLoading || !profileHydrated) {
     return <LoadingSpinner />;
@@ -60,6 +61,15 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
 
   if (userIntent !== requiredIntent) {
     return <Navigate to={homePathForIntent(userIntent)} replace />;
+  }
+
+  // For sellers, check if onboarding is complete before allowing access to main app
+  // But exclude onboarding flow paths so users can complete onboarding
+  const ONBOARDING_FLOW_PATHS = ['/onboarding'];
+  const isOnOnboardingFlow = ONBOARDING_FLOW_PATHS.some(p => location.pathname.startsWith(p));
+
+  if (requiredIntent === "sell" && !userData.onboardingComplete && !isOnOnboardingFlow) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;
@@ -97,18 +107,10 @@ export const IntentAccessRoute = ({ children }: RouteProps) => {
 };
 
 export const VerificationRoute = ({ children }: RouteProps) => {
-  const { user, isLoading } = useAuth();
-  const { userData, profileHydrated } = useUserData();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingSpinner />;
-  }
-
-  if (user) {
-    if (!profileHydrated) {
-      return <LoadingSpinner />;
-    }
-    return <Navigate to={homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;
