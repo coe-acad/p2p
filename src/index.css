@@ -1,103 +1,106 @@
+@import "@fontsource-variable/inter/index.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Samai Design System - Vibrant, Warm, Colorful Palette */
+/* atria design system — calm fintech (Stripe/Revolut inspired) */
 
 @layer base {
   :root {
-    /* Core palette - warm, refined neutrals */
-    --background: 35 30% 98%;
-    --foreground: 25 25% 12%;
+    /* Core — soft tinted yellow surface (Atria warmth), white cards on top for contrast */
+    --background: 48 38% 97%;
+    --foreground: 222 16% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 25 25% 12%;
+    --card-foreground: 222 16% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 25 25% 12%;
+    --popover-foreground: 222 16% 12%;
 
-    /* Primary - Vibrant orange/amber */
-    --primary: 25 95% 53%;
+    /* Brand — Atria University deep blue */
+    --primary: 240 60% 42%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Warm cream */
-    --secondary: 35 25% 95%;
-    --secondary-foreground: 25 20% 25%;
+    /* Secondary — cool neutral fills */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 16% 22%;
 
-    /* Muted - Warm soft grays */
-    --muted: 35 20% 94%;
-    --muted-foreground: 25 15% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent - Vibrant teal/green */
-    --accent: 165 60% 42%;
+    /* Accent — Atria University green (used sparingly, mostly for the brand mark
+       and positive signals like "available", "verified"). */
+    --accent: 144 65% 38%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 20% 90%;
-    --input: 35 20% 90%;
-    --ring: 25 95% 53%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 240 60% 42%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Custom brand tokens - vibrant & warm */
-    --solar-gradient: linear-gradient(135deg, hsl(25 95% 55%) 0%, hsl(35 95% 50%) 50%, hsl(45 95% 55%) 100%);
-    --green-gradient: linear-gradient(135deg, hsl(165 60% 45%) 0%, hsl(155 55% 42%) 100%);
-    --warm-gradient: linear-gradient(135deg, hsl(25 95% 55% / 0.15) 0%, hsl(35 95% 55% / 0.10) 50%, hsl(45 95% 60% / 0.08) 100%);
-    --card-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 3px -1px rgb(0 0 0 / 0.04);
-    --card-shadow-hover: 0 8px 20px -4px rgb(0 0 0 / 0.08);
-    --glow-primary: 0 0 20px hsl(25 95% 55% / 0.25);
-    --glow-accent: 0 0 20px hsl(165 60% 45% / 0.2);
-    
-    /* Sidebar tokens */
-    --sidebar-background: 35 25% 99%;
-    --sidebar-foreground: 25 20% 25%;
-    --sidebar-primary: 25 95% 53%;
+    /* Brand tokens kept for back-compat with un-reskinned pages;
+       neutralised to flat Atria fills so nothing looks neon. */
+    --solar-gradient: hsl(240 60% 42%);
+    --green-gradient: hsl(144 65% 38%);
+    --warm-gradient: hsl(220 14% 96%);
+    --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --card-shadow-hover: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+    --glow-primary: none;
+    --glow-accent: none;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 16% 22%;
+    --sidebar-primary: 240 60% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 20% 96%;
-    --sidebar-accent-foreground: 25 20% 25%;
-    --sidebar-border: 35 20% 92%;
-    --sidebar-ring: 25 95% 53%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 16% 22%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 240 60% 42%;
   }
 
   .dark {
-    --background: 25 20% 7%;
-    --foreground: 35 15% 95%;
+    --background: 222 18% 8%;
+    --foreground: 220 14% 96%;
 
-    --card: 25 18% 10%;
-    --card-foreground: 35 15% 95%;
+    --card: 222 18% 10%;
+    --card-foreground: 220 14% 96%;
 
-    --popover: 25 18% 10%;
-    --popover-foreground: 35 15% 95%;
+    --popover: 222 18% 10%;
+    --popover-foreground: 220 14% 96%;
 
-    --primary: 25 90% 58%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 240 70% 65%;
+    --primary-foreground: 222 18% 8%;
 
-    --secondary: 25 15% 15%;
-    --secondary-foreground: 35 15% 90%;
+    --secondary: 222 14% 16%;
+    --secondary-foreground: 220 14% 90%;
 
-    --muted: 25 15% 15%;
-    --muted-foreground: 35 10% 55%;
+    --muted: 222 14% 16%;
+    --muted-foreground: 220 9% 60%;
 
-    --accent: 165 55% 48%;
+    --accent: 144 60% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 60% 50%;
+    --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 25 15% 18%;
-    --input: 25 15% 18%;
-    --ring: 25 90% 58%;
-    
-    --sidebar-background: 25 18% 8%;
-    --sidebar-foreground: 35 15% 90%;
-    --sidebar-primary: 25 90% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 15% 15%;
-    --sidebar-accent-foreground: 35 15% 90%;
-    --sidebar-border: 25 15% 15%;
-    --sidebar-ring: 25 90% 58%;
+    --border: 222 14% 18%;
+    --input: 222 14% 18%;
+    --ring: 240 70% 65%;
+
+    --sidebar-background: 222 18% 9%;
+    --sidebar-foreground: 220 14% 90%;
+    --sidebar-primary: 240 70% 65%;
+    --sidebar-primary-foreground: 222 18% 8%;
+    --sidebar-accent: 222 14% 16%;
+    --sidebar-accent-foreground: 220 14% 90%;
+    --sidebar-border: 222 14% 18%;
+    --sidebar-ring: 240 70% 65%;
   }
 }
 
@@ -112,8 +115,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv11", "ss01", "ss03";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -125,7 +128,13 @@
   }
 
   p {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
+  }
+
+  /* Tabular numerals for any element with .nums — use for kWh, ₹, dates */
+  .nums, input[type="tel"], input[type="number"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11";
   }
 }
 
@@ -142,90 +151,64 @@
     min-height: 100dvh;
   }
 
-  /* Premium button variants */
+  /* Legacy button classes — kept so un-reskinned pages still render.
+     Now flat solids in the new brand color, no gradients/glows. */
   .btn-solar {
-    @apply relative overflow-hidden font-semibold text-primary-foreground px-6 py-3 rounded-xl transition-all duration-200;
-    background: var(--solar-gradient);
-    box-shadow: 0 4px 14px -2px hsl(25 95% 55% / 0.35);
+    @apply inline-flex items-center justify-center font-medium text-primary-foreground px-4 h-10 rounded-md transition-colors duration-150;
+    background: hsl(var(--primary));
   }
-  
+
   .btn-solar:hover {
-    filter: brightness(1.08);
-    box-shadow: 0 6px 20px -2px hsl(25 95% 55% / 0.45);
-    transform: translateY(-1px);
+    background: hsl(240 60% 36%);
   }
-  
+
   .btn-solar:active {
-    filter: brightness(0.95);
-    transform: scale(0.98) translateY(0);
+    background: hsl(240 60% 32%);
   }
 
   .btn-solar:disabled {
-    @apply cursor-not-allowed;
-    background: hsl(var(--muted));
-    color: hsl(var(--muted-foreground));
-    filter: none;
-    transform: none;
-    box-shadow: none;
+    @apply cursor-not-allowed opacity-50;
   }
-  
+
   .btn-green {
-    @apply font-semibold text-accent-foreground px-6 py-3 rounded-xl transition-all duration-200;
-    background: var(--green-gradient);
-    box-shadow: 0 4px 14px -2px hsl(165 60% 42% / 0.3);
+    @apply inline-flex items-center justify-center font-medium text-accent-foreground px-4 h-10 rounded-md transition-colors duration-150;
+    background: hsl(var(--accent));
   }
-  
+
   .btn-green:hover {
-    filter: brightness(1.08);
-    box-shadow: 0 6px 20px -2px hsl(165 60% 42% / 0.4);
-    transform: translateY(-1px);
+    background: hsl(144 65% 32%);
   }
-  
+
   .btn-outline-calm {
-    @apply font-medium px-6 py-3 rounded-xl border-2 border-primary/20 bg-card text-foreground transition-all duration-200;
+    @apply inline-flex items-center justify-center font-medium px-4 h-10 rounded-md border border-input bg-card text-foreground transition-colors duration-150;
   }
-  
+
   .btn-outline-calm:hover {
-    @apply bg-primary/5 border-primary/40;
+    @apply bg-secondary;
   }
-  
+
   .btn-outline-calm:active {
-    @apply bg-primary/10;
-    transform: scale(0.98);
+    @apply bg-muted;
   }
-  
-  /* Card styles */
+
   .card-interactive {
-    @apply bg-card rounded-xl p-3 transition-all duration-200 cursor-pointer border border-border;
-    box-shadow: var(--card-shadow);
+    @apply bg-card rounded-xl p-4 transition-all duration-150 cursor-pointer border border-border;
   }
-  
+
   .card-interactive:hover {
-    box-shadow: var(--card-shadow-hover);
-    border-color: hsl(var(--primary) / 0.2);
+    @apply border-foreground/20;
   }
-  
+
   .card-interactive.selected {
-    @apply border-primary bg-primary/5;
-    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.15), var(--card-shadow);
+    @apply border-primary bg-primary/[0.04];
   }
-  
-  /* Vibrant gradient card */
+
   .card-vibrant {
-    @apply relative rounded-xl overflow-hidden border;
-    background: var(--warm-gradient);
-    border-color: hsl(var(--primary) / 0.2);
+    @apply relative rounded-xl overflow-hidden border border-border bg-card;
   }
-  
-  .card-vibrant::before {
-    content: '';
-    @apply absolute inset-0 pointer-events-none;
-    background: linear-gradient(135deg, transparent 0%, hsl(0 0% 100% / 0.1) 50%, transparent 100%);
-  }
-  
-  /* Screen container - responsive centering */
+
   .screen-container {
-    @apply flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-12;
+    @apply flex flex-col items-center justify-center px-6 py-8 sm:px-8 lg:px-12;
     background: hsl(var(--background));
     min-height: 100vh;
     min-height: 100svh;
@@ -233,32 +216,19 @@
     padding-top: max(1rem, env(safe-area-inset-top));
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
-  
-  /* Shadow utilities */
+
   .shadow-card {
     box-shadow: var(--card-shadow);
   }
 
-  .shadow-glow-primary {
-    box-shadow: var(--glow-primary);
+  .shadow-glow-primary,
+  .shadow-glow-green {
+    box-shadow: none;
   }
 
-  .shadow-glow-green {
-    box-shadow: var(--glow-accent);
-  }
-  
-  /* Animated elements */
-  .fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
-  }
-  
-  .slide-up {
-    animation: slideUp 0.35s ease-out forwards;
-  }
-  
-  .scale-in {
-    animation: scaleIn 0.3s ease-out forwards;
-  }
+  .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+  .slide-up { animation: slideUp 0.25s ease-out forwards; }
+  .scale-in { animation: scaleIn 0.2s ease-out forwards; }
 }
 
 @layer utilities {
@@ -268,157 +238,151 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 hsl(230 65% 55% / 0.1);
-  }
-  50% {
-    box-shadow: 0 0 0 12px hsl(230 65% 55% / 0);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.15); }
+  50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
 }
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-@keyframes coin-float {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+/* Subtle horizontal nudge — used on touch devices to signal "tap me" on cards
+   that would normally rely on a desktop hover state. Slow enough to ignore,
+   present enough to draw the eye. */
+@keyframes nudge-x {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+/* Only animate when the input device has no hover (touchscreens). The same
+   element on desktop stays still and uses the group-hover transform instead. */
+@media (hover: none) and (pointer: coarse) {
+  .touch-nudge {
+    animation: nudge-x 2.4s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .touch-nudge {
+    animation: none;
+  }
+}
+
+/* (bg-grid-energy removed — radial-gradient violates the no-gradients rule.) */
+
+/* Hover underline — solid Atria green line that reveals under headings.
+   No shimmer/gradient — flat color only, per the no-gradients rule. */
+.shimmer-underline {
+  background-color: hsl(var(--accent));
+}
+
+/* Electric pulse — soft green aura that breathes around the Samai brand mark.
+   Uses single-color box-shadow with opacity transitions, not a gradient. */
+@keyframes electric-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--accent) / 0.45);
   }
   50% {
-    opacity: 1;
+    box-shadow: 0 0 0 5px hsl(var(--accent) / 0);
   }
-  100% {
-    opacity: 0;
-    transform: translateY(-40px) scale(0.5);
+}
+.electric-pulse {
+  border-radius: 9999px;
+  animation: electric-pulse 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .electric-pulse {
+    animation: none;
   }
+}
+
+/* Continuous icon shine — a soft breath that brightens + lifts the Zap glyph
+   on a slow ~3.2s loop. Subtle enough to register as "alive" without distracting
+   from the card content. */
+@keyframes zap-shine {
+  0%, 60%, 100% {
+    color: hsl(var(--muted-foreground) / 0.25);
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  30% {
+    color: hsl(var(--accent) / 0.95);
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 6px hsl(var(--accent) / 0.45));
+  }
+}
+.zap-shine {
+  animation: zap-shine 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-underline {
+    animation: none;
+    background: hsl(var(--accent));
+  }
+  .zap-shine {
+    animation: none;
+  }
+}
+
+/* MarioCoin / celebration keyframes left intact — scoped to those components. */
+@keyframes coin-float {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
 }
 
 @keyframes confetti-fall {
-  0% {
-    opacity: 1;
-    transform: translateY(0) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(100vh) rotate(720deg);
-  }
+  0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
 }
 
 @keyframes coin-burst {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc((var(--random, 0.5) - 0.5) * 200px), -150px) scale(0.5) rotate(360deg);
-  }
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc((var(--random, 0.5) - 0.5) * 200px), -150px) scale(0.5) rotate(360deg); }
 }
 
 @keyframes celebration-pulse {
-  0% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.5);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2);
-  }
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(2); }
 }
 
 @keyframes float-up {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px) scale(0.8);
-  }
-  20% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1.2);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-80px) scale(1);
-  }
+  0% { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.8); }
+  20% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-80px) scale(1); }
 }
 
 @keyframes digit-roll {
-  0% {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  0% { transform: translateY(100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes sparkle-pop {
-  0% {
-    opacity: 1;
-    transform: scale(0.5) translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.5) translateY(-10px);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1) translateY(-20px);
-  }
+  0% { opacity: 1; transform: scale(0.5) translateY(0); }
+  50% { opacity: 1; transform: scale(1.5) translateY(-10px); }
+  100% { opacity: 0; transform: scale(1) translateY(-20px); }
 }
 
-/* Safe area for mobile */
 .safe-area-pb {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }

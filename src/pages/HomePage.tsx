@@ -1,1103 +1,291 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { FileText, User, AlertTriangle, X, Sparkles, Plane, CalendarClock, GraduationCap, Sun, Wallet, Check, ArrowRight, ChevronDown, ChevronUp, EyeOff, Mic, Send, LogOut, Globe, CloudSun, Shield } from "lucide-react";
 import {
-  Box,
-  Stack,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  Menu,
-  MenuItem,
-  LinearProgress,
-  Container,
-  Alert,
-  CircularProgress,
-} from "@mui/material";
-import SamaiLogo from "@/components/SamaiLogo";
-import RollingNumber from "@/components/RollingNumber";
-import MarioCoin from "@/components/MarioCoin";
-import chatbotIcon from "@/assets/chatbot-icon.png";
-import auLogo from "@/assets/AU-logo.png";
-import tecLogo from "@/assets/TEC-logo.png";
+  ArrowRight,
+  CheckCircle,
+  RefreshCw,
+  ShieldAlert,
+  Sun,
+  Timer,
+  Zap,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
-import { useAuth } from "@/hooks/useAuth";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import LanguageToggle from "@/components/LanguageToggle";
 import MainAppShell from "@/components/layout/MainAppShell";
-import VCUploadModal from "@/components/modals/VCUploadModal";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { Button } from "@/components/ui/button";
 
-// Session storage keys
-const NOTIFICATION_SHOWN_KEY = "samai_confirmed_notification_shown";
-const ONBOARDING_DEVICES_KEY = "samai_onboarding_devices_done";
-const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
-const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
-const HIDE_SETUP_BANNER_KEY = "samai_hide_setup_banner";
-const HIDE_VC_BANNER_KEY = "samai_hide_vc_banner";
-const HAS_COMPLETED_FIRST_TRADE_KEY = "samai_has_completed_first_trade";
-const SESSION_APPROVED_KEY = "samai_session_approved";
-
-type TomorrowStatus = "not_published" | "published_confirmed" | "published_pending";
-
-const getGreeting = (t: (key: string) => string) => {
+const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return t("home.greeting.morning");
-  if (hour < 17) return t("home.greeting.afternoon");
-  return t("home.greeting.evening");
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 };
-
 
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
   const { toast } = useToast();
-  const { userData, setUserData, displayName: vcDisplayName } = useUserData();
-  const { tradesData, totalUnits, totalEarnings, avgRate, setShowConfirmedTrades } = usePublishedTrades();
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
-  };
-  
-  // Get verification status from router state or userData (persisted)
-  // Default to false (unverified) if not set
-  const isVCVerified = location.state?.isVCVerified ?? userData.isVCVerified ?? false;
-  const justPublished = location.state?.justPublished ?? false;
-  
-  // Determine if user is new (based on userData flag)
-  const isNewUser = !userData.isReturningUser;
-  
-  const displayName = vcDisplayName.trim();
-  const firstName = displayName.split(" ")[0] || "User";
-  const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
-  const [setupExpanded, setSetupExpanded] = useState(false);
-  const [hideSetupBanner, setHideSetupBanner] = useState(() => {
-    return localStorage.getItem(HIDE_SETUP_BANNER_KEY) === "true";
-  });
-  const [hideVCBanner, setHideVCBanner] = useState(() => {
-    return localStorage.getItem(HIDE_VC_BANNER_KEY) === "true";
-  });
-  const [showVCModal, setShowVCModal] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [showMegaCelebration, setShowMegaCelebration] = useState(false);
-
-  const [celebrationCount, setCelebrationCount] = useState(0);
-
-  // Fetch tomorrow's trades from API
-  const [tomorrowTrades, setTomorrowTrades] = useState<any>(null);
-
-  const { user: authUser } = useAuth();
+  const { displayName, userData } = useUserData();
+  const { tradesData, totalUnits, totalEarnings, avgRate, confirmedEarnings, confirmedUnits } =
+    usePublishedTrades();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
 
-  // Check if VC is verified
-  const vcData = userData?.vc_data as any || {};
-  const hasVC = Object.keys(vcData).length > 0;
-
-  // NOTE: Auto-redirect disabled to prevent navigation loops
-  // Users can still manually navigate to /tomorrow-trades from the home page
-  // useEffect(() => {
-  //   if (hasGenerationVC && !vcLoading) {
-  //     navigate("/tomorrow-trades");
-  //   }
-  // }, [hasGenerationVC, vcLoading, navigate]);
+  const justPublished = location.state?.justPublished ?? false;
+  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const hasPublished = tradesData.plannedTrades.length > 0;
+  const confirmedCount = tradesData.confirmedTrades.length;
 
   useEffect(() => {
-    const fetchTomorrowTrades = async () => {
-      if (!userData?.phone || !authUser || !hasVC) return;
-
-      try {
-        const token = await authUser.getIdToken();
-
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const encodedPhone = encodeURIComponent(userData.phone);
-
-        console.log("Fetching tomorrow trades for:", encodedPhone, "with token:", !!token);
-
-        const response = await fetch(`${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        console.log("Tomorrow trades response:", response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Tomorrow trades data:", data);
-          setTomorrowTrades(data);
-        } else {
-          const errorText = await response.text();
-          console.error("Failed to fetch tomorrow trades:", {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorText,
-            requestUrl: `${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`,
-            hasToken: !!token,
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching tomorrow trades:", err);
-      }
-    };
-
-    fetchTomorrowTrades();
-  }, [userData?.phone, authUser, hasVC]);
-
-  // Calculate tomorrow data from actual trades
-  const calculateTomorrowData = () => {
-    if (!tomorrowTrades?.trades || tomorrowTrades.trades.length === 0) {
-      return { units: 0, earnings: 0, avgRate: 0 };
-    }
-
-    const totalKwh = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + (Number(trade.kWh) || 0), 0);
-    const totalEarnings = tomorrowTrades.trades.reduce((sum: number, trade: any) => sum + ((Number(trade.kWh) || 0) * (Number(trade.price) || 0)), 0);
-    const avgRate = totalKwh > 0 ? totalEarnings / totalKwh : 0;
-
-    return { units: totalKwh, earnings: totalEarnings, avgRate };
-  };
-
-  const tomorrowDataFromAPI = calculateTomorrowData();
-
-  // Tomorrow status based on published trades OR justPublished flag from navigation
-  const isPublished = tradesData.isPublished || justPublished;
-  const tomorrowStatus: TomorrowStatus = isPublished
-    ? (tradesData.showConfirmedTrades ? "published_confirmed" : "published_pending")
-    : "not_published";
-  // Use API data only (no fallback)
-  const tomorrowData = tomorrowDataFromAPI;
-  // Only show confirmed trades if explicitly flagged
-  const hasConfirmedTrades = tradesData.showConfirmedTrades && tradesData.confirmedTrades.length > 0;
-
-  // Session-based notification state
-  const [notificationShown, setNotificationShown] = useState(() => {
-    return sessionStorage.getItem(NOTIFICATION_SHOWN_KEY) === "true";
-  });
-
-
-  const showConfirmedNotification = () => {
-    toast({
-      title: t("home.tradesConfirmed"),
-      description: `7 ${t("home.kwhMatchedBuyers")}`,
-      action: (
-        <Button
-          onClick={() => navigate("/prepared", { state: { isVCVerified, hasConfirmedTrades: true, showConfirmed: true } })}
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            color: "primary.main",
-            textTransform: "none",
-            whiteSpace: "nowrap",
-            "&:hover": { color: "primary.dark" },
-          }}
-        >
-          {t("common.viewDetails")}
-        </Button>
-      ),
-    });
-    sessionStorage.setItem(NOTIFICATION_SHOWN_KEY, "true");
-    setNotificationShown(true);
-  };
-
-  const resetNotification = () => {
-    sessionStorage.removeItem(NOTIFICATION_SHOWN_KEY);
-    setNotificationShown(false);
-  };
-
-  // Show confirmed trades notification after 15s
-  useEffect(() => {
-    if (hasConfirmedTrades && isVCVerified && !notificationShown) {
-      const timer = setTimeout(() => {
-        showConfirmedNotification();
-      }, 15000); // 15 second delay
-      return () => clearTimeout(timer);
-    }
-  }, [hasConfirmedTrades, isVCVerified, notificationShown]);
-
-
-  const toggleHideSetupBanner = () => {
-    const newValue = !hideSetupBanner;
-    setHideSetupBanner(newValue);
-    localStorage.setItem(HIDE_SETUP_BANNER_KEY, String(newValue));
-  };
-
-  const toggleHideVCBanner = () => {
-    const newValue = !hideVCBanner;
-    setHideVCBanner(newValue);
-    localStorage.setItem(HIDE_VC_BANNER_KEY, String(newValue));
-  };
-
-  const dismissNudge = (id: string) => {
-    setDismissedNudges([...dismissedNudges, id]);
-  };
-
-  // Build personalized nudges based on user data
-  const buildNudges = () => {
-    const nudgeList = [];
-    
-    // Ask about school holidays if not set
-    if (!userData.schoolHolidays) {
-      nudgeList.push({ 
-        id: "school-holidays", 
-        text: t("home.schoolHolidays"), 
-        icon: GraduationCap,
-        route: "/settings/vacations"
+    if (justPublished) {
+      toast({
+        title: "Catalog published",
+        description: "Buyers can now discover your tomorrow's energy.",
       });
+      // Clear navigation state so the toast doesn't fire again on refresh.
+      navigate(location.pathname, { replace: true });
     }
-    
-    // Ask about summer vacation if not set
-    if (!userData.summerVacationStart) {
-      nudgeList.push({ 
-        id: "summer-vacation", 
-        text: t("home.summerVacation"), 
-        icon: Sun,
-        action: "chat",
-        chatMessage: "My school is going on vacation soon. I want to sell all my solar energy during this time except what I need for basic home use."
-      });
-    }
-    
-    // Generic nudges if user has filled vacation data
-    if (userData.schoolHolidays && userData.summerVacationStart) {
-      nudgeList.push({ 
-        id: "holiday", 
-        text: t("home.holidaySoon"), 
-        icon: Plane,
-        route: "/settings/vacations"
-      });
-      nudgeList.push({ 
-        id: "event", 
-        text: t("home.upcomingEvents"), 
-        icon: CalendarClock,
-        route: "/settings/vacations"
-      });
-    }
-    
-    return nudgeList.filter(n => !dismissedNudges.includes(n.id));
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justPublished]);
 
-  const nudges = buildNudges();
-
-  // Check for incomplete onboarding steps (location is now part of verification)
-  const getIncompleteSteps = () => {
-    const steps = [];
-    if (localStorage.getItem(ONBOARDING_DEVICES_KEY) !== "true") {
-      steps.push({ id: "devices", title: "Confirm your solar setup", route: "/onboarding/devices" });
-    }
-    if (localStorage.getItem(ONBOARDING_TALK_KEY) !== "true") {
-      steps.push({ id: "talk", title: "Help Samai understand you", route: "/onboarding/talk" });
-    }
-    return steps;
-  };
-
-  const incompleteSteps = getIncompleteSteps();
-
-  const renderHomeContent = () => (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden", position: "relative" }}>
-      {/* Minimal background effects */}
-      <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", opacity: 0.5 }}>
-        {/* Subtle top glow */}
-        <Box sx={{
-          position: "absolute",
-          top: -100,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 400,
-          height: 300,
-          background: "radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 100%)",
-          borderRadius: "50%",
-          filter: "blur(60px)",
-        }} />
-      </Box>
-
-      {/* Content with relative z-index */}
-      <Stack sx={{ position: "relative", zIndex: 10, gap: { xs: 1, sm: 2 }, overflow: "auto" }}>
-        {/* Incomplete Onboarding Card - Collapsible */}
-        {incompleteSteps.length > 0 && !hideSetupBanner && (
-          <Card sx={{
-            background: "linear-gradient(135deg, rgba(254,196,62,0.1) 0%, rgba(254,175,24,0.05) 100%)",
-            border: "1px solid rgba(245,158,11,0.2)",
-            borderRadius: "12px",
-            animation: "slideUp 0.5s ease-out",
-            overflow: "hidden",
-          }}>
-            <Button
-              onClick={() => setSetupExpanded(!setupExpanded)}
-              sx={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                p: 2,
-                textTransform: "none",
-                color: "inherit",
-                "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  background: "rgba(254,175,24,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <AlertTriangle size={10} sx={{ color: "#f59e0b" }} />
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {t("home.completeSetup")} ({incompleteSteps.length} {incompleteSteps.length > 1 ? t("home.stepsLeftPlural") : t("home.stepsLeft")})
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                {setupExpanded ? (
-                  <ChevronUp size={14} sx={{ color: "#f59e0b" }} />
-                ) : (
-                  <ChevronDown size={14} sx={{ color: "#f59e0b" }} />
-                )}
-              </Box>
-            </Button>
-
-            {setupExpanded && (
-              <Box sx={{ px: 2, pb: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-                {incompleteSteps.map((step) => (
-                  <Button
-                    key={step.id}
-                    onClick={() => navigate(step.route)}
-                    sx={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      p: 1.5,
-                      background: "rgba(255,255,255,0.6)",
-                      borderRadius: "8px",
-                      textAlign: "left",
-                      textTransform: "none",
-                      color: "text.primary",
-                      "&:hover": { background: "rgba(255,255,255,0.8)" },
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Typography variant="body2">{step.title}</Typography>
-                    <ArrowRight size={12} sx={{ color: "#f59e0b" }} />
-                  </Button>
-                ))}
-                {/* Dev hide option */}
-                <Button
-                  onClick={toggleHideSetupBanner}
-                  sx={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 1,
-                    p: 1.5,
-                    fontSize: "0.7rem",
-                    color: "text.secondary",
-                    textTransform: "none",
-                    "&:hover": { color: "text.primary" },
-                  }}
-                >
-                  <EyeOff size={9} />
-                  <span>[Dev] Hide banner</span>
-                </Button>
-              </Box>
-            )}
-          </Card>
-        )}
-
-        {/* Dev button to show hidden setup banner */}
-        {hideSetupBanner && incompleteSteps.length > 0 && (
-          <Button
-            onClick={toggleHideSetupBanner}
-            sx={{
-              fontSize: "0.7rem",
-              color: "text.secondary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              alignSelf: "flex-end",
-              textTransform: "none",
-              "&:hover": { color: "text.primary" },
-            }}
-          >
-            <EyeOff size={9} />
-            <span>[Dev] Show setup banner</span>
-          </Button>
-        )}
-
-        {/* VC Verification Banner - Shown if not verified and not hidden */}
-        {!isVCVerified && !hideVCBanner && (
-          <Card sx={{
-            background: "linear-gradient(135deg, rgba(34,197,233,0.1) 0%, rgba(26,158,122,0.05) 100%)",
-            border: "1px solid rgba(26,158,122,0.2)",
-            borderRadius: "12px",
-            animation: "slideUp 0.5s ease-out",
-            overflow: "hidden",
-          }}>
-            <Button
-              onClick={() => setShowVCModal(true)}
-              sx={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                p: 2,
-                textAlign: "left",
-                textTransform: "none",
-                color: "inherit",
-                "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  background: "rgba(34,197,233,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <Shield size={10} sx={{ color: "#1a9e7a" }} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    Verify your credentials to start trading
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>
-                    Upload your electricity meter or solar system credentials
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <ArrowRight size={14} sx={{ color: "#1a9e7a" }} />
-              </Box>
-            </Button>
-
-            {/* Hide option */}
-            <Box sx={{ px: 2, pb: 1.5 }}>
-              <Button
-                onClick={toggleHideVCBanner}
-                sx={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 1,
-                  p: 1,
-                  fontSize: "0.7rem",
-                  color: "text.secondary",
-                  textTransform: "none",
-                  "&:hover": { color: "text.primary" },
-                }}
-              >
-                <EyeOff size={9} />
-                <span>[Dev] Hide banner</span>
-              </Button>
-            </Box>
-          </Card>
-        )}
-
-        {/* Dev button to show hidden VC banner */}
-        {hideVCBanner && !isVCVerified && (
-          <Button
-            onClick={toggleHideVCBanner}
-            sx={{
-              fontSize: "0.7rem",
-              color: "text.secondary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              alignSelf: "flex-end",
-              textTransform: "none",
-              "&:hover": { color: "text.primary" },
-            }}
-          >
-            <EyeOff size={9} />
-            <span>[Dev] Show VC banner</span>
-          </Button>
-        )}
-
-        {/* Earnings and Tomorrow Side by Side - with VC Guard */}
-        {!vcLoading && !hasGenerationVC ? (
-          <Alert severity="warning" sx={{ flex: 1 }}>
-            <strong>Generation Profile VC Required</strong>
-            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-              To view your earnings and trading projections, you need to upload your Generation Profile VC first.
-            </Box>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => navigate("/settings/vc-documents")}
-              sx={{ mt: 2, alignSelf: "flex-start" }}
-            >
-              Upload Generation Profile VC
-            </Button>
-          </Alert>
-        ) : vcLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, flex: 1 }}>
-            <CircularProgress size={40} />
-          </Box>
-        ) : (
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 1, sm: 2 }, flexShrink: 0 }}>
-          {/* Section 1: Earnings Snapshot */}
-          <Card sx={{
-            background: "#ffffff",
-            border: "1px solid rgba(0,0,0,0.05)",
-            borderRadius: "12px",
-            p: { xs: 1, sm: 2.5 },
-            animation: "slideUp 0.5s ease-out",
-            overflow: "hidden",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-          }}>
-          {/* Header with toggle */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: { xs: 1, sm: 1.5 } }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
-                  {t("home.earnings")}
-                </Typography>
-              </Box>
-              {/* Toggle buttons */}
-            </Box>
-
-          {/* Orange earnings card */}
-          <Button
-            onClick={() => isVCVerified && navigate("/today-trades")}
-            disabled={!isVCVerified}
-            sx={{
-              width: "100%",
-              textAlign: "left",
-              borderRadius: "8px",
-              p: { xs: 1.25, sm: 2 },
-              flex: 1,
-              position: "relative",
-              overflow: "hidden",
-              background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
-              "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
-              "&:disabled": { background: "linear-gradient(135deg, rgba(245,158,11,0.5) 0%, rgba(217,119,6,0.5) 100%)" },
-              textTransform: "none",
-            }}
-          >
-            {/* Coin Shower Animation for celebrations */}
-            {showCelebration && !showMegaCelebration && (
-                <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-                  {[...Array(8)].map((_, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        position: "absolute",
-                        left: `${10 + i * 12}%`,
-                        top: "-20px",
-                        animation: `fall ${1 + Math.random() * 0.5}s ease-in forwards`,
-                        animationDelay: `${i * 0.1}s`,
-                      }}
-                    >
-                      <MarioCoin size={16 + Math.random() * 8} />
-                    </Box>
-                  ))}
-                </Box>
+  return (
+    <MainAppShell>
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <PageContainer gap={5}>
+          {/* Greeting row */}
+          <div className="flex items-center justify-between gap-3 fade-in opacity-0">
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                {getGreeting()}, {displayName || "Seller"}
+              </h1>
+              {hasPublished ? (
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                  </span>
+                  <span className="nums font-semibold text-primary">{totalUnits.toFixed(2)}</span> ⚡kWh
+                  prepared for tomorrow
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No catalog published yet for tomorrow.
+                </p>
               )}
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              aria-label="Refresh"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-primary/[0.04] text-primary
+                         transition-all duration-200 hover:border-primary/50 hover:bg-primary/10"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
 
-              {/* MEGA Celebration Overlay with more coins */}
-              {showMegaCelebration && (
-                <Box sx={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 20,
-                  pointerEvents: "none",
-                  overflow: "hidden",
-                }}>
-                  {/* Coin shower for mega celebration */}
-                  {[...Array(15)].map((_, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        position: "absolute",
-                        left: `${5 + i * 6}%`,
-                        top: "-30px",
-                        animation: `fall ${1.5 + Math.random() * 1}s ease-in infinite`,
-                        animationDelay: `${i * 0.15}s`,
-                      }}
-                    >
-                      <Box sx={{ animation: "spin 1s linear infinite" }}>
-                        <MarioCoin size={20 + Math.random() * 12} />
-                      </Box>
-                    </Box>
-                  ))}
-                  <Box sx={{
-                    background: "linear-gradient(135deg, #fcd34d 0%, #fef3c7 50%, #fcd34d 100%)",
-                    color: "#b45309",
-                    px: 2,
-                    py: 1,
-                    borderRadius: "9999px",
-                    fontWeight: 700,
-                    fontSize: "0.875rem",
-                    animation: "bounce 1s ease-in-out infinite",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                    zIndex: 30,
-                  }}>
-                    🎉 100% {t("home.projected")}! 🎉
-                  </Box>
-                </Box>
-              )}
-
-              <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative", zIndex: 10, width: "100%" }}>
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
-                    {t("home.earnings")}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1 }}>
-                    <Typography sx={{ fontSize: { xs: "1.25rem", sm: "1.75rem" }, fontWeight: 900, color: "white", lineHeight: 1 }}>
-                      ₹{Math.round(totalEarnings)}
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>
-                    {Math.round(totalUnits * 100) / 100} kWh {t("trades.kwhSold")}
-                  </Typography>
-                </Box>
-
-                {/* LIVE indicator */}
-                <Box sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  px: 2,
-                  py: 0.75,
-                  background: "rgba(255,255,255,0.2)",
-                  borderRadius: "9999px",
-                  flexShrink: 0,
-                }}>
-                  <Box sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "#86efac",
-                    animation: "pulse 2s ease-in-out infinite",
-                  }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "white", textTransform: "uppercase", fontSize: "0.65rem" }}>
-                    Live
-                  </Typography>
-                </Box>
-              </Box>
-          </Button>
-
-          {/* Average rate info */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {t("home.avgRate")}
-            </Typography>
-            <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}>
-              ₹{avgRate}/kWh
-            </Typography>
-          </Box>
-          </Card>
-
-          {/* Section 2: Tomorrow Card with VC Guard */}
-          {!vcLoading && !hasGenerationVC ? (
-            <Alert severity="warning" sx={{ mt: 2, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <strong>Generation Profile VC Required</strong>
-              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-                To see your tomorrow's trading projections, you need to upload your Generation Profile VC first.
-              </Box>
+          {/* VC banner — red box, only when generation VC not on file */}
+          {!vcLoading && !hasGenerationVC && !isVCVerified && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-destructive">Verification required</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Upload your Generation Profile credential to publish trades and earn.
+                </p>
+              </div>
               <Button
-                variant="contained"
-                color="primary"
-                onClick={() => navigate("/settings/vc-documents")}
-                sx={{ mt: 2, alignSelf: "flex-start" }}
+                size="sm"
+                onClick={() => navigate("/vc")}
+                className="shrink-0 bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Upload Generation Profile VC
+                Verify
               </Button>
-            </Alert>
-          ) : vcLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 2, flex: 1 }}>
-              <CircularProgress size={40} />
-            </Box>
-          ) : (
-            <Card sx={{
-              background: "#ffffff",
-              border: "1px solid rgba(0,0,0,0.05)",
-              borderRadius: "12px",
-              p: { xs: 1, sm: 2.5 },
-              animation: "slideUp 0.5s ease-out",
-              animationDelay: "0.05s",
-              overflow: "hidden",
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-            }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
-                  {t("home.tomorrow")}
-                </Typography>
-              </Box>
-
-              <Button
-                onClick={() => navigate("/tomorrow-trades")}
-                sx={{
-                  width: "100%",
-                  textAlign: "left",
-                  borderRadius: "8px",
-                  p: { xs: 1.25, sm: 2 },
-                  flex: 1,
-                  background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
-                  "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
-                  textTransform: "none",
-                  color: "white",
-                }}
-              >
-              <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", width: "100%" }}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", mb: 0.5, display: "block" }}>
-                    {t("home.sellingTomorrow")}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                    <Typography sx={{ fontSize: { xs: "1.1rem", sm: "1.5rem" }, fontWeight: 900, color: "white" }}>
-                      ₹{Math.round(tomorrowData.earnings)}
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5, display: "block" }}>
-                    {(tomorrowData.units || 0).toFixed(2)} kWh
-                  </Typography>
-                </Box>
-
-                {/* Right side - Published status */}
-                <Box sx={{ textAlign: "right" }}>
-                  {isPublished ? (
-                    <>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mb: 1 }}>
-                        <Check size={12} sx={{ color: "white" }} />
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: "white", textTransform: "uppercase" }}>
-                          {t("home.published")}
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", display: "block" }}>
-                        {t("home.avgRate")}
-                      </Typography>
-                      <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
-                        ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
-                      </Typography>
-                    </>
-                  ) : (
-                    <>
-                      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", textTransform: "uppercase", mb: 1, display: "block" }}>
-                        {t("home.avgRate")}
-                      </Typography>
-                      <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "white" }}>
-                        ₹{(tomorrowData.avgRate || 0).toFixed(2)}/kWh
-                      </Typography>
-                    </>
-                  )}
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end", mt: 2 }}>
-                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.9)" }}>
-                      {t("home.viewTrades")}
-                    </Typography>
-                    <ArrowRight size={12} sx={{ color: "rgba(255,255,255,0.9)" }} />
-                  </Box>
-                </Box>
-              </Box>
-            </Button>
-          </Card>
+            </div>
           )}
-        </Box>
-        )}
 
-        {/* Nudge cards removed as requested */}
+          {/* Earnings overview — no stripe; section label sits outside the card.
+              Hairline divider separates the hero amount from the stats. */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Earnings overview
+              </p>
+              {confirmedCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent nums">
+                  <CheckCircle className="h-2.5 w-2.5" />
+                  {confirmedCount} confirmed
+                </span>
+              )}
+            </div>
 
-        {/* Chat Input Bar - Always visible */}
-        <Card sx={{
-          background: "#ffffff",
-          border: "1px solid rgba(0,0,0,0.05)",
-          borderRadius: "12px",
-          p: { xs: 1, sm: 2.5 },
-          animation: "slideUp 0.5s ease-out",
-          animationDelay: "0.15s",
-          flexShrink: 0,
-        }}>
-          <ChatInputBar />
-        </Card>
-      </Stack>
-    </Box>
-  );
+            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              <p className="flex items-baseline gap-1 text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+                ₹{totalEarnings.toLocaleString("en-IN")}
+              </p>
+              <span aria-hidden className="mt-1 block h-[2px] w-8 rounded-full bg-primary" />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Total earnings across published and confirmed slots.
+              </p>
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+              {/* Hairline divider — replaces the stripe pattern */}
+              <div className="my-4 h-px w-full bg-border/60" />
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Units prepared
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-foreground nums">
+                    {totalUnits.toFixed(2)}{" "}
+                    <span className="text-xs font-medium text-muted-foreground">kWh</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Avg rate
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-foreground nums">
+                    ₹{avgRate.toFixed(2)}
+                    <span className="text-xs font-medium text-muted-foreground">/kWh</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Confirmed
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-accent nums">
+                    {confirmedUnits.toFixed(2)}{" "}
+                    <span className="text-xs font-medium text-muted-foreground">kWh</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
+          {/* Next action — section label outside, single CTA card below.
+              No stripe. A solid blue left-edge accent bar carries the persona
+              identity instead. */}
+          <div className="space-y-2">
+            <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Next action
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/tomorrow-trades")}
+              className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl
+                         border border-primary/25 bg-card p-5 text-left
+                         shadow-[0_6px_18px_-12px_rgba(36,40,128,0.22)]
+                         transition-all duration-300 ease-out
+                         hover:-translate-y-0.5 hover:border-primary/55
+                         hover:shadow-[0_16px_36px_-18px_rgba(36,40,128,0.36)]
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {/* Blue left-edge accent line — solid identity bar without a full stripe */}
+              <span
+                aria-hidden
+                className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-primary
+                           transition-all duration-300 ease-out group-hover:top-1 group-hover:bottom-1"
+              />
 
-  return (
-    <MainAppShell contentClassName="lg:py-6">
-      <Box sx={{
-        mx: "auto",
-        display: "flex",
-        height: "100%",
-        width: "100%",
-        maxWidth: "80rem",
-        flexDirection: "column",
-        overflow: "hidden",
-        background: "background.default",
-        borderRadius: { xs: 0, lg: "2rem" },
-        border: { xs: "none", lg: "1px solid rgba(0,0,0,0.05)" },
-        boxShadow: { xs: "none", lg: "0 24px 80px -48px rgba(15,23,42,0.35)" },
-        backdropFilter: { xs: "none", lg: "blur(8px)" },
-        backgroundColor: { xs: "background.default", lg: "rgba(255,255,255,0.55)" },
-      }}>
-        {/* Scrollable Content Area */}
-        <Box sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          px: { xs: 1.5, sm: 2.5, lg: 4 },
-          pt: { xs: 1.5, sm: 2.5, lg: 3 },
-          pb: 0,
-        }}>
-          {/* Header */}
-          <Box sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            pb: 1,
-            animation: "fadeIn 0.6s ease-out",
-            flexShrink: 0,
-          }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <SamaiLogo size="sm" showText={false} />
-              <Box>
-                <Typography variant="body1" sx={{ fontWeight: 600, color: "text.primary" }}>
-                  {getGreeting(t)}, {firstName}!
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                    {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
+              <span className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground
+                               shadow-[0_6px_14px_-6px_rgba(36,40,128,0.45)]
+                               transition-transform duration-300 ease-out
+                               group-hover:scale-105">
+                <Sun className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-semibold text-foreground sm:text-lg">
+                  {hasPublished ? "Edit tomorrow's catalog" : "Prepare tomorrow's catalog"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {hasPublished
+                    ? "Adjust slots and prices before the publish deadline."
+                    : "Set prices and slots so buyers can discover your energy."}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform duration-300 group-hover:translate-x-1" />
+            </button>
+          </div>
 
-            {/* Profile dropdown - mobile/tablet only */}
-            <Box sx={{ display: { lg: "none" } }}>
-              <IconButton
-                onClick={handleMenuOpen}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: "rgba(245,158,11,0.1)",
-                  "&:hover": { background: "rgba(245,158,11,0.2)" },
-                  color: "primary.main",
-                }}
-              >
-                <User size={16} />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem onClick={() => {
-                  navigate("/profile");
-                  handleMenuClose();
-                }}>
-                  <User size={14} style={{ marginRight: 8 }} />
-                  {t("home.profile")}
-                </MenuItem>
-                <MenuItem onClick={() => {
-                  navigate("/today-trades");
-                  handleMenuClose();
-                }}>
-                  <FileText size={14} style={{ marginRight: 8 }} />
-                  {t("home.todaysTrades")}
-                </MenuItem>
-                <MenuItem onClick={() => {
-                  handleLogout();
-                  handleMenuClose();
-                }} sx={{ color: "error.main" }}>
-                  <LogOut size={14} style={{ marginRight: 8 }} />
-                  {t("home.logout")}
-                </MenuItem>
-              </Menu>
-            </Box>
-          </Box>
+          {/* Secondary — today's trades. Green icon tile signals "live activity /
+              active matches in progress" while the card stays neutral so the blue
+              "Next action" above keeps its dominance. */}
+          <button
+            type="button"
+            onClick={() => navigate("/today-trades")}
+            className="group flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 text-left
+                       transition-all duration-300 ease-out
+                       hover:-translate-y-0.5 hover:border-accent/40
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-accent
+                             transition-all duration-300 ease-out
+                             group-hover:bg-accent group-hover:text-accent-foreground group-hover:scale-105">
+              <Timer className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-medium text-foreground">View today's trades</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Watch confirmations as buyers discover and match your slots.
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-accent" />
+          </button>
 
-          {/* Compact Language & Weather row */}
-          <Box sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            pb: 1,
-            animation: "fadeIn 0.6s ease-out",
-            animationDelay: "0.1s",
-            flexShrink: 0,
-          }}>
-            <LanguageToggle />
-            <Box sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 2,
-              py: 0.5,
-              background: "rgba(255,255,255,0.6)",
-              borderRadius: "9999px",
-              border: "1px solid rgba(0,0,0,0.05)",
-            }}>
-              <CloudSun size={12} sx={{ color: "primary.main" }} />
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>32°C</Typography>
-            </Box>
-          </Box>
+          {/* Recently confirmed feed — only if any */}
+          {tradesData.confirmedTrades.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Recently confirmed
+              </p>
+              <div className="space-y-2">
+                {tradesData.confirmedTrades.slice(0, 4).map((t, i) => (
+                  <div
+                    key={`${t.time}-${i}`}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                  >
+                    {/* Blue tile = persona identity for the seller row */}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                      <Zap className="h-4 w-4 fill-current" strokeWidth={0} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{t.time}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground nums">
+                        {t.kWh.toFixed(2)} kWh · ₹{t.rate.toFixed(2)}/kWh
+                        {t.buyer && (
+                          <>
+                            {" · "}
+                            <span className="text-foreground">{t.buyer}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    {/* Earnings stay in green — "confirmed money in" = success state */}
+                    <p className="shrink-0 text-base font-semibold text-accent nums">
+                      ₹{t.earnings.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {tradesData.confirmedTrades.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/today-trades")}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  See all <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
 
-          {/* Main Content - fills remaining space */}
-          <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-            {renderHomeContent()}
-          </Box>
-        </Box>
-
-        {/* Powered by AU x TEC */}
-        <Box sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          px: { xs: 1.5, sm: 2.5, lg: 4 },
-          pb: { xs: 1.5, lg: 2.5 },
-          pt: 1.5,
-          flexShrink: 0,
-        }}>
-          <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>
-            Powered by
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box component="img" src={auLogo} alt="AU" sx={{ height: 16, width: "auto" }} />
-            <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.7rem" }}>×</Typography>
-            <Box component="img" src={tecLogo} alt="TEC" sx={{ height: 16, width: "auto" }} />
-          </Box>
-        </Box>
-      </Box>
-
-      {/* VC Upload Modal */}
-      <VCUploadModal
-        isOpen={showVCModal}
-        onClose={() => setShowVCModal(false)}
-        onSuccess={() => {
-          setUserData({ isVCVerified: false });
-          toast({
-            title: "Credentials uploaded!",
-            description: "Your credentials are pending verification. Trading will be enabled once approved.",
-          });
-        }}
-      />
+        </PageContainer>
+      </div>
     </MainAppShell>
-  );
-};
-
-// QuickSpeak Card Component - Clickable to open Ask Samai page
-const ChatInputBar = () => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  // Vacation/action prompts for QuickSpeak
-  const suggestions = [
-    { text: t("home.suggestHoliday") || "Going on holiday?" },
-    { text: t("home.suggestSchoolVacation") || "School vacation?" },
-    { text: t("home.suggestChangePlan") || "Change my plan" },
-  ];
-
-  const handleOpenAskSamai = () => {
-    navigate("/ask-samai");
-  };
-
-  return (
-    <Box>
-      {/* Title - matching earnings/tomorrow card style */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: { xs: 1, sm: 1.5 } }}>
-        <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#1a9e7a" }} />
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, letterSpacing: "0.1em", fontSize: "0.7rem", color: "#1a9e7a" }}>
-          {t("home.quickspeak")}
-        </Typography>
-      </Box>
-
-      {/* Input button with mic and send */}
-      <Button
-        onClick={handleOpenAskSamai}
-        sx={{
-          width: "100%",
-          textAlign: "left",
-          position: "relative",
-          borderRadius: "8px",
-          p: { xs: 1.25, sm: 2 },
-          background: "linear-gradient(135deg, rgba(245,158,11,1) 0%, rgba(217,119,6,1) 100%)",
-          "&:hover": { background: "linear-gradient(135deg, rgba(251,174,24,1) 0%, rgba(225,130,14,1) 100%)" },
-          overflow: "hidden",
-          textTransform: "none",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-        }}
-      >
-        <Box sx={{
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <Mic size={14} sx={{ color: "white" }} />
-        </Box>
-
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: 500, color: "white" }}>
-            {t("home.askSamai")}
-          </Typography>
-        </Box>
-
-        <Box sx={{
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <Send size={14} sx={{ color: "white" }} />
-        </Box>
-      </Button>
-    </Box>
   );
 };
 

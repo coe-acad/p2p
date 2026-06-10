@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["-apple-system", "BlinkMacSystemFont", "'SF Pro Display'", "'SF Pro Text'", "'Helvetica Neue'", "Arial", "sans-serif"],
+        sans: ["'Inter Variable'", "Inter", "-apple-system", "BlinkMacSystemFont", "'SF Pro Text'", "'Helvetica Neue'", "Arial", "sans-serif"],
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.875rem" }],
@@ -73,10 +73,10 @@ export default {
         "3xl": "1.5rem",
       },
       boxShadow: {
-        card: "0 1px 3px 0 rgb(0 0 0 / 0.03), 0 1px 2px -1px rgb(0 0 0 / 0.03)",
-        "card-hover": "0 4px 12px -2px rgb(0 0 0 / 0.06)",
-        subtle: "0 1px 2px 0 rgb(0 0 0 / 0.02)",
-        medium: "0 2px 8px -2px rgb(0 0 0 / 0.06)",
+        card: "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        "card-hover": "0 1px 3px 0 rgb(0 0 0 / 0.06)",
+        subtle: "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        medium: "0 1px 3px 0 rgb(0 0 0 / 0.06)",
       },
       keyframes: {
         "accordion-down": {

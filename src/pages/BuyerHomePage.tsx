@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Box } from "@mui/material";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
+import { ListingSkeletonList } from "@/components/ListingSkeleton";
 import { SearchListings } from "@/components/SearchListings";
 import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
@@ -14,7 +14,8 @@ import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
 import VCUploadModal from "@/components/modals/VCUploadModal";
-import { ShoppingCart, Zap, User, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, RefreshCw, ShieldAlert, Zap } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
 
@@ -22,9 +23,7 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
   const grouped = new Map<string, EnergyListing>();
 
   for (const listing of listings) {
-    if (!listing.catalog_id || !listing.offer_id) {
-      continue;
-    }
+    if (!listing.catalog_id || !listing.offer_id) continue;
 
     const existing = grouped.get(listing.catalog_id);
     if (!existing) {
@@ -76,17 +75,11 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
 const BuyerHomePage = () => {
   const navigate = useNavigate();
   const { userData, displayName } = useUserData();
-  const { consumption: hasConsumptionVC, loading: vcLoading } = useVCStatus();
-  const {
-    listings,
-    loading,
-    error,
-    currentPage,
-    fetchListings,
-    clearFilters,
-    goToPage,
-  } = useDiscoverListings();
-
+  const { loading: vcLoading, refetch: refetchVCStatus } = useVCStatus();
+  // Source of truth for the VC gate: userData.is_vc_verified. If true → user
+  // can discover/buy. If anything else → red banner + block discover.
+  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const { listings, loading, error, currentPage, fetchListings, clearFilters, goToPage } = useDiscoverListings();
 
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<EnergyListing | null>(null);
@@ -95,25 +88,51 @@ const BuyerHomePage = () => {
   const [showSelectedModal, setShowSelectedModal] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderStatus, setOrderStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
-  const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
+  const [orderStatus, setOrderStatus] = useState<
+    "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed"
+  >("idle");
+  const [currentTransactionId, setCurrentTransactionId] = useState<string>("");
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
-  const [showVCMissingAlert, setShowVCMissingAlert] = useState(false);
   const [showVCUploadModal, setShowVCUploadModal] = useState(false);
 
-  const groupedListings = groupListingsByCatalog(listings);
-  console.log("Raw listings count:", listings.length);
-  console.log("Grouped listings count:", groupedListings.length);
-  console.log("First grouped listing:", groupedListings[0]);
+  // Optimistic local filter: tracks offer_ids the user just bought so they
+  // disappear from the grid immediately. BPP catalogs aren't always updated
+  // server-side the moment a confirm lands, so without this the same offer
+  // would keep showing on refresh until the backend syncs.
+  const [purchasedOfferIds, setPurchasedOfferIds] = useState<Set<string>>(new Set());
+
+  const visibleListings = listings.filter((l) => !purchasedOfferIds.has(l.offer_id));
+  const groupedListings = groupListingsByCatalog(visibleListings);
   const totalPages = Math.ceil(groupedListings.length / CATALOGS_PER_PAGE);
   const paginatedGroupedListings = groupedListings.slice(
     currentPage * CATALOGS_PER_PAGE,
-    (currentPage + 1) * CATALOGS_PER_PAGE
+    (currentPage + 1) * CATALOGS_PER_PAGE,
   );
 
   useEffect(() => {
-    fetchListings();
-  }, []);
+    // Only fetch listings if the user is VC-verified. Otherwise discover is
+    // blocked and we shouldn't be making the request at all.
+    if (isVCVerified) fetchListings();
+  }, [isVCVerified]);
+
+  // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
+  // catalog without manually pulling. Suspended while a buy flow is in
+  // progress or any modal is open — don't rip data out from under the user
+  // mid-transaction.
+  useEffect(() => {
+    if (!isVCVerified) return;
+    const interval = setInterval(() => {
+      const buyFlowActive =
+        showOfferModal ||
+        showSelectedModal ||
+        showQuoteModal ||
+        showVCUploadModal ||
+        orderStatus !== "idle";
+      if (buyFlowActive) return;
+      void fetchListings();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [isVCVerified, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -126,21 +145,22 @@ const BuyerHomePage = () => {
     setSelectedOffer(null);
     setShowOfferModal(true);
     setShowQuoteModal(false);
-    setOrderStatus('idle');
+    setOrderStatus("idle");
     setOrderError(null);
-    setCurrentTransactionId('');
+    setCurrentTransactionId("");
     setCurrentOrderData(null);
   };
 
   const handleSelectOffer = async (listing: EnergyListing) => {
-    // VC Guard: Buyers must have consumption profile to purchase
-    if (!hasConsumptionVC) {
-      setShowVCMissingAlert(true);
+    // Action-level VC gate: shouldn't be reachable when isVCVerified is false
+    // (the listings grid is hidden), but kept as a safety net.
+    if (!isVCVerified) {
+      setShowVCUploadModal(true);
       return;
     }
 
     setSelectedOffer(listing);
-    setOrderStatus('selecting');
+    setOrderStatus("selecting");
     setOrderError(null);
 
     try {
@@ -162,24 +182,22 @@ const BuyerHomePage = () => {
       });
 
       setCurrentTransactionId(selectResult.transactionId);
-      // Wait for on_select callback from BPP
       const selectedOrderState = await orderService.waitForSelectedOrder(selectResult.transactionId);
       setCurrentOrderData(selectedOrderState.order);
 
       setShowOfferModal(false);
       setShowSelectedModal(true);
-      setOrderStatus('selected');
-    } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Failed to select offer');
+      setOrderStatus("selected");
+    } catch (e) {
+      setOrderError(e instanceof Error ? e.message : "Failed to select offer");
       setSelectedOffer(null);
-      setOrderStatus('idle');
+      setOrderStatus("idle");
     }
   };
 
   const handleInitOrder = async () => {
     if (!selectedOffer || !currentTransactionId) return;
-
-    setOrderStatus('quoting');
+    setOrderStatus("quoting");
     setOrderError(null);
 
     try {
@@ -200,26 +218,24 @@ const BuyerHomePage = () => {
           delivery_start: selectedOffer.delivery_start,
           delivery_end: selectedOffer.delivery_end,
         },
-        currentOrderData
+        currentOrderData,
       );
 
-      // Wait for on_init callback from BPP
       const initiatedOrderState = await orderService.waitForInitialization(currentTransactionId);
       setCurrentOrderData(initiatedOrderState.order);
 
       setShowSelectedModal(false);
       setShowQuoteModal(true);
-      setOrderStatus('quoted');
-    } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Failed to initialize order');
-      setOrderStatus('selected');
+      setOrderStatus("quoted");
+    } catch (e) {
+      setOrderError(e instanceof Error ? e.message : "Failed to initialize order");
+      setOrderStatus("selected");
     }
   };
 
   const handleConfirmOrder = async () => {
     if (!selectedOffer || !currentTransactionId) return;
-
-    setOrderStatus('confirming');
+    setOrderStatus("confirming");
     setOrderError(null);
 
     try {
@@ -241,25 +257,31 @@ const BuyerHomePage = () => {
           delivery_start: selectedOffer.delivery_start,
           delivery_end: selectedOffer.delivery_end,
         },
-        currentOrderData
+        currentOrderData,
       );
 
       await orderService.waitForConfirmation(currentTransactionId);
-      setOrderStatus('confirmed');
-
-      // Refresh listings to show updated inventory
+      setOrderStatus("confirmed");
+      // Hide the bought offer locally before the refetch — guarantees it
+      // disappears even if the BPP catalog hasn't synced yet.
+      if (selectedOffer?.offer_id) {
+        setPurchasedOfferIds((prev) => {
+          const next = new Set(prev);
+          next.add(selectedOffer.offer_id);
+          return next;
+        });
+      }
       await fetchListings();
 
-      // Close modal after 2 seconds
       setTimeout(() => {
         setShowQuoteModal(false);
         setSelectedListing(null);
         setSelectedOffer(null);
-        setOrderStatus('idle');
+        setOrderStatus("idle");
       }, 2000);
-    } catch (error) {
-      setOrderError(error instanceof Error ? error.message : 'Failed to confirm order');
-      setOrderStatus('quoted');
+    } catch (e) {
+      setOrderError(e instanceof Error ? e.message : "Failed to confirm order");
+      setOrderStatus("quoted");
     }
   };
 
@@ -267,9 +289,9 @@ const BuyerHomePage = () => {
     setShowOfferModal(false);
     setSelectedListing(null);
     setSelectedOffer(null);
-    setOrderStatus('idle');
+    setOrderStatus("idle");
     setOrderError(null);
-    setCurrentTransactionId('');
+    setCurrentTransactionId("");
     setCurrentOrderData(null);
   };
 
@@ -277,16 +299,16 @@ const BuyerHomePage = () => {
     setShowSelectedModal(false);
     setShowOfferModal(true);
     setOrderError(null);
-    setOrderStatus('idle');
+    setOrderStatus("idle");
   };
 
   const handleCloseSelectedModal = () => {
     setShowSelectedModal(false);
     setSelectedListing(null);
     setSelectedOffer(null);
-    setOrderStatus('idle');
+    setOrderStatus("idle");
     setOrderError(null);
-    setCurrentTransactionId('');
+    setCurrentTransactionId("");
     setCurrentOrderData(null);
   };
 
@@ -294,10 +316,15 @@ const BuyerHomePage = () => {
     setShowQuoteModal(false);
     setSelectedListing(null);
     setSelectedOffer(null);
-    setOrderStatus('idle');
+    setOrderStatus("idle");
     setOrderError(null);
-    setCurrentTransactionId('');
+    setCurrentTransactionId("");
     setCurrentOrderData(null);
+    // Re-hydrate every API-driven piece of state on the home page after a
+    // confirmed transaction — listings (the offer might be sold out / updated)
+    // and VC status — without a physical page reload.
+    void fetchListings();
+    void refetchVCStatus();
   };
 
   const getGreeting = () => {
@@ -307,174 +334,128 @@ const BuyerHomePage = () => {
     return "Good evening";
   };
 
+  const showListings = !loading && groupedListings.length > 0;
+  const showEmpty = !loading && groupedListings.length === 0;
+
   return (
     <MainAppShell>
-      <div className="screen-container !justify-start !pt-4 !pb-6">
-        <PageContainer gap={4}>
-          {/* Header */}
-          <div className="flex items-center justify-between animate-fade-in">
-            <h1 className="text-lg font-bold text-foreground">
-              {getGreeting()} {displayName || "Buyer"}!
+      <div className="min-h-screen overflow-x-hidden bg-background">
+        <PageContainer gap={5}>
+          {/* Greeting — profile now lives in the shell's top header. Only the
+              refresh action stays on the page since it's contextual to listings. */}
+          <div className="flex items-center justify-between fade-in opacity-0">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              {getGreeting()}, {displayName || "Buyer"}
             </h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center hover:bg-blue-200 transition-colors disabled:opacity-50"
-                aria-label="Refresh listings"
-                title="Sync latest listings from CDS"
-              >
-                <RefreshCw size={16} className={`text-blue-600 ${isRefreshing ? "animate-spin" : ""}`} />
-              </button>
-              <button
-                onClick={() => navigate("/buyer-profile")}
-                className="lg:hidden w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                aria-label="Go to profile"
-              >
-                <User size={16} className="text-primary" />
-              </button>
-            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+              aria-label="Refresh listings"
+              title="Sync latest listings"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-accent/20 bg-accent/[0.04] text-accent transition-all duration-200
+                         hover:border-accent/50 hover:bg-accent/10
+                         disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
           </div>
 
-          {/* Buyer Welcome Card */}
-          <div className="bg-gradient-to-br from-teal-50 to-green-50 rounded-xl p-6 shadow-card animate-slide-up border border-teal-200">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
-                <ShoppingCart size={24} className="text-white" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-foreground">Welcome to Samai Buyer</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Browse clean energy from local solar producers and make your first purchase.
+          {/* VC required banner — RED box, only when is_vc_verified !== true.
+              When this is showing, discover is completely blocked (no search,
+              no listings). Backend also enforces at /select. */}
+          {!vcLoading && !isVCVerified && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-destructive">Verification required</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Upload your Consumption Profile credential to discover and purchase energy.
                 </p>
               </div>
+              <Button
+                size="sm"
+                onClick={() => setShowVCUploadModal(true)}
+                className="shrink-0 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Verify now
+              </Button>
             </div>
-          </div>
-
-
-          {/* Consumption Profile VC Required Alert */}
-          {!vcLoading && !hasConsumptionVC && (
-            <Alert severity="warning" sx={{ borderRadius: 2 }}>
-              <strong>Consumption Profile VC Required</strong>
-              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-                To purchase energy, you need to upload your Consumption Profile VC first. This verifies your electricity meter and allows you to buy clean energy.
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => setShowVCUploadModal(true)}
-                  sx={{ mr: 1 }}
-                >
-                  Upload Consumption Profile VC
-                </Button>
-              </Box>
-            </Alert>
           )}
 
-          {/* VC Missing Modal Alert */}
-          {showVCMissingAlert && (
-            <Alert severity="error" onClose={() => setShowVCMissingAlert(false)} sx={{ borderRadius: 2, mb: 2 }}>
-              <strong>Consumption Profile VC Required</strong>
-              <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-                You need to upload your Consumption Profile VC before you can purchase energy. Please upload it in your settings.
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="contained"
-                  color="error"
-                  size="small"
-                  onClick={() => {
-                    setShowVCMissingAlert(false);
-                    navigate("/settings/vc-documents");
-                  }}
-                  sx={{ mr: 1 }}
-                >
-                  Upload VC Now
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={() => setShowVCMissingAlert(false)}
-                >
-                  Dismiss
-                </Button>
-              </Box>
-            </Alert>
-          )}
-
-          {/* Search and Filter Section */}
-          {!vcLoading && hasConsumptionVC && (
-            <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          {/* Search, error, listings — ALL gated by VC verification. */}
+          {isVCVerified && (
+            <>
               <SearchListings
                 onSearch={(filters) => fetchListings(0, filters)}
                 onClearFilters={clearFilters}
                 isLoading={loading}
               />
-            </div>
-          )}
 
-          {/* Error State */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-              Failed to load listings: {error}
-            </div>
-          )}
-
-          {/* Loading State */}
-          {loading && !selectedListing && (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin">
-                <Zap size={32} className="text-blue-600" />
-              </div>
-            </div>
-          )}
-
-          {/* Listings Grid */}
-          {hasConsumptionVC && !loading && groupedListings.length > 0 && !selectedListing && (
-            <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Available Listings ({groupedListings.length})
-                </p>
-              </div>
-              <div className="grid gap-4">
-                {paginatedGroupedListings.map((listing) => (
-                  <EnergyListingCard
-                    key={listing.id}
-                    listing={listing}
-                    onSelect={handleSelectListing}
-                  />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  isLoading={loading}
-                />
+              {error && (
+                <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">Couldn't load listings</p>
+                    <p className="mt-1 text-sm text-muted-foreground break-words">{error}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleRefresh} className="shrink-0">
+                    Retry
+                  </Button>
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Empty State */}
-          {!loading && groupedListings.length === 0 && !selectedListing && (
-            <div className="text-center py-12">
-              <Zap size={48} className="mx-auto text-gray-300 mb-4" />
-              <p className="text-muted-foreground mb-2">No listings available</p>
-              <p className="text-xs text-muted-foreground">
-                Try adjusting your search filters
-              </p>
-            </div>
-          )}
+              {loading && !showListings && <ListingSkeletonList count={4} />}
 
+              {showListings && (
+                <div className="-mt-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
+                    listing{groupedListings.length === 1 ? "" : "s"} available
+                  </p>
+                  <div className="grid gap-4">
+                    {paginatedGroupedListings.map((listing, idx) => (
+                      <div
+                        key={listing.id}
+                        style={{ animationDelay: `${Math.min(idx * 60, 360)}ms` }}
+                        className="slide-up min-w-0 opacity-0"
+                      >
+                        <EnergyListingCard listing={listing} onSelect={handleSelectListing} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} isLoading={loading} />
+                  )}
+                </div>
+              )}
+
+              {showEmpty && (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/40 px-6 py-16 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                    <Zap className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">No listings right now</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try clearing your filters or refresh in a moment.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-2">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Refresh
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </PageContainer>
 
-        {/* Order Confirmation Modal */}
+        {/* Buy-flow modals — untouched (separate roadmap task) */}
         <ConfirmOrderModal
           isOpen={showOfferModal}
           listing={selectedListing}
@@ -500,10 +481,9 @@ const BuyerHomePage = () => {
           status={orderStatus}
           onGetQuote={handleInitOrder}
           onConfirm={handleConfirmOrder}
-          onBack={orderStatus === 'confirmed' ? handleCloseQuoteModal : handleBackToOfferModal}
+          onBack={orderStatus === "confirmed" ? handleCloseQuoteModal : handleBackToOfferModal}
         />
 
-        {/* VC Upload Modal */}
         <VCUploadModal
           isOpen={showVCUploadModal}
           onClose={() => setShowVCUploadModal(false)}

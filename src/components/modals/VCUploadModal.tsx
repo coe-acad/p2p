@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, FileCheck, X, Shield } from "lucide-react";
+import { CheckCircle, FileCheck, Shield, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface VCUploadModalProps {
   isOpen: boolean;
@@ -207,22 +208,38 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
     onClose();
   };
 
+  // Persona-by-color: buyer = green identity, seller = blue identity.
+  const isBuyer = userIntent === "buy";
+  const tone = isBuyer
+    ? {
+        tile: "bg-accent/10 text-accent",
+        dashedBorder: "border-accent/40 hover:border-accent/60",
+        dashedBg: "bg-accent/[0.04] hover:bg-accent/[0.08]",
+        innerTile: "bg-accent/15 group-hover:bg-accent/20 text-accent",
+      }
+    : {
+        tile: "bg-primary/10 text-primary",
+        dashedBorder: "border-primary/40 hover:border-primary/60",
+        dashedBg: "bg-primary/[0.04] hover:bg-primary/[0.08]",
+        innerTile: "bg-primary/15 group-hover:bg-primary/20 text-primary",
+      };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex justify-center mb-3">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <Shield className="text-primary" size={28} />
+          <div className="mb-3 flex justify-center">
+            <div className={`flex h-14 w-14 items-center justify-center rounded-full ${tone.tile}`}>
+              <Shield className="h-7 w-7" />
             </div>
           </div>
           <DialogTitle className="text-xl">Upload your credentials</DialogTitle>
           <DialogDescription className="text-sm">
-            Add your electricity meter or solar system credentials to enable trading
+            Add your electricity meter or solar system credentials to enable trading.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2">
+        <div className="mt-2 space-y-4">
           {!uploadedFile ? (
             <>
               <input
@@ -237,82 +254,81 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
               <button
                 onClick={() => document.getElementById("vc-modal-file-input")?.click()}
                 disabled={isLoading}
-                className="w-full py-8 rounded-xl border-2 border-dashed border-primary/40 bg-gradient-to-br from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 hover:border-primary/60 transition-all duration-300 flex flex-col items-center gap-3 disabled:opacity-50 group"
+                className={`group flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed
+                            ${tone.dashedBorder} ${tone.dashedBg}
+                            py-8 transition-colors duration-200 disabled:opacity-50`}
               >
-                <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Upload size={24} className="text-primary" />
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${tone.innerTile} transition-colors`}>
+                  <Upload className="h-6 w-6" />
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-foreground">
                     Click to upload credential
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">JSON file only • Max 10 MB</p>
+                  <p className="mt-1 text-xs text-muted-foreground">JSON file only · Max 10 MB</p>
                 </div>
               </button>
             </>
           ) : (
-            <>
-              {/* Selected File - Success State */}
-              <div className="rounded-xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-emerald-50/30 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                      <FileCheck size={20} className="text-emerald-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {uploadedFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {(uploadedFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
+            // Selected file — green success card (semantic, regardless of persona)
+            <div className="space-y-3 rounded-xl border border-accent/25 bg-card p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                    <FileCheck className="h-5 w-5" />
                   </div>
-                  <button
-                    onClick={() => setUploadedFile(null)}
-                    disabled={isLoading}
-                    className="p-2 rounded-lg hover:bg-emerald-100/50 transition-colors flex-shrink-0 disabled:opacity-50"
-                  >
-                    <X size={16} className="text-muted-foreground hover:text-destructive" />
-                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {uploadedFile.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground nums">
+                      {(uploadedFile.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
                 </div>
-
-                {/* Success Message */}
-                <div className="px-3 py-2 bg-emerald-100/40 rounded-lg border border-emerald-200/60">
-                  <p className="text-xs text-emerald-700 font-medium">
-                    ✓ File ready to upload. Your credentials are encrypted and secure.
-                  </p>
-                </div>
+                <button
+                  onClick={() => setUploadedFile(null)}
+                  disabled={isLoading}
+                  aria-label="Remove file"
+                  className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-            </>
+
+              <div className="flex items-start gap-2 rounded-lg border border-accent/15 bg-accent/[0.06] px-3 py-2">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                <p className="text-xs text-foreground">
+                  File ready to upload. Your credentials are encrypted and secure.
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Buttons */}
           <div className="flex gap-2 pt-2">
             {uploadedFile ? (
               <>
-                <button
-                  onClick={handleUpload}
-                  disabled={isLoading}
-                  className="flex-1 btn-solar text-sm font-semibold py-2.5 rounded-lg disabled:opacity-50 transition-all"
-                >
-                  {isLoading ? "Uploading..." : "Upload"}
-                </button>
-                <button
+                <Button
                   onClick={() => setUploadedFile(null)}
                   disabled={isLoading}
-                  className="flex-1 btn-outline-calm text-sm font-semibold py-2.5 rounded-lg disabled:opacity-50 transition-all"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Back
-                </button>
+                </Button>
+                <Button
+                  onClick={handleUpload}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  {isLoading ? "Uploading…" : "Upload"}
+                </Button>
               </>
             ) : (
-              <button
-                onClick={handleClose}
-                className="w-full btn-outline-calm text-sm font-semibold py-2.5 rounded-lg transition-all"
-              >
+              <Button onClick={handleClose} variant="outline" className="w-full">
                 Close
-              </button>
+              </Button>
             )}
           </div>
         </div>
