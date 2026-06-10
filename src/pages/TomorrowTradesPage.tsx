@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { ChevronLeft, AlertCircle, Zap } from "lucide-react";
-import { Box, Alert, Button, CircularProgress } from "@mui/material";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  RefreshCw,
+  ShieldAlert,
+  Sun,
+  Zap,
+} from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import MainAppShell from "@/components/layout/MainAppShell";
-import PageContainer from "@/components/layout/PageContainer";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { getAuthHeaders } from "@/services/authHeaders";
 
 interface TradeItem {
@@ -32,110 +40,80 @@ const resolveBackendUrl = (envUrl?: string): string => {
 
 const TomorrowTradesPage = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const { toast } = useToast();
   const { userData, profileHydrated } = useUserData();
   const { user } = useAuth();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
   const backendUrl = resolveBackendUrl(import.meta.env.VITE_BACKEND_URL);
 
+  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [refreshCountdown, setRefreshCountdown] = useState<string>("Calculating...");
+  const [refreshCountdown, setRefreshCountdown] = useState<string>("Calculating…");
+  const [confirmingApprove, setConfirmingApprove] = useState(false);
 
-  // Calculate time until next 7:00 PM IST
+  // Countdown to the 7 PM IST catalog refresh.
   const calculateRefreshCountdown = () => {
     const now = new Date();
-
-    // Get UTC components (timezone-independent)
     let istHours = now.getUTCHours() + 5;
     let istMinutes = now.getUTCMinutes() + 30;
     const istSeconds = now.getUTCSeconds();
 
-    // Handle minute overflow
     if (istMinutes >= 60) {
       istMinutes -= 60;
       istHours += 1;
     }
-
-    // Handle hour overflow (only affects day, not our calculation)
     if (istHours >= 24) {
       istHours -= 24;
     }
 
-    // Calculate milliseconds into the current IST day
     const msInDay = istHours * 60 * 60 * 1000 + istMinutes * 60 * 1000 + istSeconds * 1000;
-
-    // 7 PM = 19:00 = 19 * 3600 * 1000 milliseconds into the day
     const refreshTimeMs = 19 * 60 * 60 * 1000;
 
-    // Calculate milliseconds until refresh
     let msDiff = refreshTimeMs - msInDay;
-    if (msDiff <= 0) {
-      // Already past 7 PM today, calculate to tomorrow's 7 PM
-      msDiff += 24 * 60 * 60 * 1000;
-    }
+    if (msDiff <= 0) msDiff += 24 * 60 * 60 * 1000;
 
     const diffHours = Math.floor(msDiff / (60 * 60 * 1000));
     const diffMinutes = Math.floor((msDiff % (60 * 60 * 1000)) / (60 * 1000));
-
     return `Refreshes in ${diffHours}h ${diffMinutes}m`;
   };
 
-  // Update refresh countdown every minute
   useEffect(() => {
     setRefreshCountdown(calculateRefreshCountdown());
     const interval = setInterval(() => {
       setRefreshCountdown(calculateRefreshCountdown());
-    }, 60000); // Update every 60 seconds (1 minute)
-
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Refetch VC status on page load to ensure we have latest data
+  // Refetch VC status on load to ensure latest.
   useEffect(() => {
     const refetchVCStatus = async () => {
       try {
         const token = await user?.getIdToken();
         if (!token) return;
-
-        const response = await fetch(`${backendUrl}/api/vc/status`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        await fetch(`${backendUrl}/api/vc/status`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("✅ VC status refreshed:", data);
-        }
       } catch (err) {
         console.error("Error refreshing VC status:", err);
       }
     };
-
     refetchVCStatus();
   }, [user, backendUrl]);
 
-  // Fetch tomorrow's catalog from API
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
-      if (!profileHydrated) {
-        console.log("Profile not hydrated yet");
-        return;
-      }
+      if (!profileHydrated) return;
 
       if (!hasGenerationVC) {
-        console.log("VC not uploaded");
         setLoading(false);
         setError("Please upload your credentials to access tomorrow's catalog");
         return;
       }
-
       if (!userData?.phone) {
-        console.log("No phone number in userData:", userData);
         setLoading(false);
         setError("User phone number not available");
         return;
@@ -145,55 +123,24 @@ const TomorrowTradesPage = () => {
         setLoading(true);
         setError(null);
 
-        // Get Firebase auth token
         const token = await user?.getIdToken();
-        console.log("Token acquired:", !!token);
-
         const encodedPhone = encodeURIComponent(userData.phone);
-        console.log("Encoded phone:", encodedPhone);
-
         const apiUrl = `${backendUrl}/api/sellers/${encodedPhone}/tomorrow`;
-        console.log("API URL:", apiUrl);
 
-        const response = await fetch(apiUrl,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-          }
-        );
-
-        console.log("Response status:", response.status);
-        console.log("Response headers:", {
-          contentType: response.headers.get("content-type"),
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.log("Error response body:", errorText);
-          if (response.status === 403) {
-            throw new Error("You are not authorized to view this catalog");
-          }
+          if (response.status === 403) throw new Error("You are not authorized to view this catalog");
           throw new Error("Failed to fetch tomorrow's catalog");
         }
 
-        const responseText = await response.text();
-        console.log("Raw response text:", responseText);
-
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseErr) {
-          console.error("JSON parse error:", parseErr);
-          throw parseErr;
-        }
-
-        console.log("Received data:", data);
-        console.log("Data type:", typeof data);
-        console.log("Trades array:", data?.trades);
-
+        const data = await response.json();
         if (data && typeof data === "object") {
           setCatalog(data);
         } else {
@@ -203,8 +150,6 @@ const TomorrowTradesPage = () => {
         const errorMsg = err instanceof Error ? err.message : "An error occurred";
         setError(errorMsg);
         console.error("Error fetching tomorrow's catalog:", err);
-        console.error("Error type:", err instanceof Error ? err.constructor.name : typeof err);
-        console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
       } finally {
         setLoading(false);
       }
@@ -213,82 +158,52 @@ const TomorrowTradesPage = () => {
     fetchTomorrowCatalog();
   }, [userData.phone, profileHydrated, hasGenerationVC]);
 
-  // Convert UTC timestamp to IST display format
   const formatTimeInIST = (utcTimestamp: unknown): string => {
     try {
-      if (!utcTimestamp) {
-        return "Invalid time";
-      }
-
+      if (!utcTimestamp) return "Invalid time";
       const timestampStr = String(utcTimestamp).trim();
-      if (!timestampStr) {
-        return "Invalid time";
-      }
+      if (!timestampStr) return "Invalid time";
 
       let date: Date | null = null;
-
-      // Try to parse the timestamp with multiple strategies
       try {
         date = new Date(timestampStr);
-        if (isNaN(date.getTime())) {
-          date = null;
-        }
-      } catch (e) {
+        if (isNaN(date.getTime())) date = null;
+      } catch {
         date = null;
       }
-
-      // If direct parsing fails, try manual parsing
       if (!date) {
         const isoMatch = timestampStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
         if (isoMatch) {
           const [, year, month, day, hours, minutes] = isoMatch;
           try {
             date = new Date(`${year}-${month}-${day}T${hours}:${minutes}:${String(isoMatch[6]).padStart(2, "0")}Z`);
-          } catch (e) {
+          } catch {
             date = null;
           }
         }
       }
+      if (!date || isNaN(date.getTime())) return "Invalid time";
 
-      if (!date || isNaN(date.getTime())) {
-        console.warn("Could not parse timestamp:", utcTimestamp);
-        return "Invalid time";
-      }
-
-      // IST is UTC+5:30
       const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-
-      // Manual formatting to avoid locale-specific issues
       const hours = istDate.getUTCHours();
       const minutes = istDate.getUTCMinutes();
-
       const ampm = hours >= 12 ? "PM" : "AM";
       const displayHours = hours % 12 || 12;
       const displayMinutes = String(minutes).padStart(2, "0");
-
       return `${displayHours}:${displayMinutes} ${ampm}`;
-    } catch (err) {
-      console.error("formatTimeInIST error:", err);
+    } catch {
       return "Invalid time";
     }
   };
 
-  // Get tomorrow's date in IST
   const getTomorrowDateIST = (): string => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-
     const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    const dayName = weekdays[tomorrow.getDay()];
-    const monthName = months[tomorrow.getMonth()];
-    const date = tomorrow.getDate();
-
-    return `${dayName}, ${date} ${monthName}`;
+    return `${weekdays[tomorrow.getDay()]}, ${tomorrow.getDate()} ${months[tomorrow.getMonth()]}`;
   };
 
-  // Calculate total earnings and kWh
   const totalStats = catalog?.trades.reduce(
     (acc, trade) => ({
       kWh: acc.kWh + trade.kWh,
@@ -297,25 +212,19 @@ const TomorrowTradesPage = () => {
     { kWh: 0, earnings: 0 }
   ) || { kWh: 0, earnings: 0 };
 
-  // Handle catalog approval and submission
   const handleApprove = async () => {
     if (!catalog?.trades || catalog.trades.length === 0) {
       setError("No trades to approve");
+      setConfirmingApprove(false);
       return;
     }
-
     setSubmitting(true);
     try {
       const headers = await getAuthHeaders();
       const response = await fetch(`${backendUrl}/api/create`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-        body: JSON.stringify({
-          trades: catalog.trades,
-        }),
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ trades: catalog.trades }),
       });
 
       if (!response.ok) {
@@ -323,224 +232,230 @@ const TomorrowTradesPage = () => {
         throw new Error(errorData.detail || "Failed to approve catalog");
       }
 
+      setConfirmingApprove(false);
       toast({
-        title: "Catalog approved",
-        description: "Your trades have been submitted successfully",
+        title: "Catalog published",
+        description: "Buyers can now discover your tomorrow's energy.",
       });
-      navigate(-1);
+      navigate("/home", { state: { justPublished: true } });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to approve catalog";
       console.error("Approve error:", err);
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: errorMsg, variant: "destructive" });
+      setConfirmingApprove(false);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // VC Guard: Sellers must have generation profile
-  if (!vcLoading && !hasGenerationVC) {
+  // VC Guard
+  if (!vcLoading && !hasGenerationVC && !isVCVerified) {
     return (
       <MainAppShell>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 3, maxWidth: 600, mx: "auto" }}>
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <strong>Generation Profile VC Required</strong>
-            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-              To view and publish your energy trades for tomorrow, you need to upload your Generation Profile VC first. This verifies your solar generation capacity.
-            </Box>
-          </Alert>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate("/settings/vc-documents")}
-            sx={{ alignSelf: "flex-start", mt: 2 }}
-          >
-            Upload Generation Profile VC
-          </Button>
-
-          <Button
-            variant="outlined"
-            onClick={() => navigate("/home")}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            Go Back Home
-          </Button>
-        </Box>
-      </MainAppShell>
-    );
-  }
-
-  if (vcLoading) {
-    return (
-      <MainAppShell>
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-          <CircularProgress />
-        </Box>
+        <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+          <PageContainer gap={4}>
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-destructive">Verification required</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Upload your Generation Profile credential to view and publish tomorrow's energy.
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => navigate("/vc")} className="w-full">
+              Go to verification
+            </Button>
+          </PageContainer>
+        </div>
       </MainAppShell>
     );
   }
 
   return (
-    <MainAppShell contentClassName="lg:py-6">
-      <PageContainer>
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
-            <ChevronLeft size={20} className="text-foreground" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">All set for tomorrow</h1>
-            <p className="text-sm text-muted-foreground">{getTomorrowDateIST()} (Recommended)</p>
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading tomorrow's offers...</p>
+    <MainAppShell>
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <PageContainer gap={5}>
+          {/* Heading row */}
+          <div className="flex items-center gap-2 fade-in opacity-0">
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Back"
+              className="flex h-9 w-9 -ml-1.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                Tomorrow's catalog
+              </h1>
+              <p className="mt-0.5 text-xs text-muted-foreground nums">{getTomorrowDateIST()}</p>
             </div>
           </div>
-        )}
 
-        {/* Error State */}
-        {error && !loading && (
-          <div className={`rounded-lg border p-4 mb-6 ${!hasGenerationVC ? "bg-cyan-50 border-cyan-200" : "bg-red-50 border-red-200"}`}>
-            <div className="flex items-start gap-3">
-              <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${!hasGenerationVC ? "text-cyan-600" : "text-red-600"}`} />
-              <div>
-                <p className={`font-semibold ${!hasGenerationVC ? "text-cyan-800" : "text-red-800"}`}>
-                  {!hasGenerationVC ? "Credentials Required" : "Unable to load offers"}
+          {/* Loading */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <RefreshCw className="h-5 w-5 animate-spin" />
+              </span>
+              <p className="text-sm text-muted-foreground">Loading tomorrow's offers…</p>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && !loading && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-foreground">
+                  {!hasGenerationVC ? "Credentials required" : "Couldn't load offers"}
                 </p>
-                <p className={`text-sm ${!hasGenerationVC ? "text-cyan-700" : "text-red-700"}`}>{error}</p>
+                <p className="mt-1 break-words text-muted-foreground">{error}</p>
                 <button
-                  onClick={() => navigate("/settings/profile")}
-                  className={`mt-2 text-sm ${!hasGenerationVC ? "text-cyan-600 hover:text-cyan-700" : "text-red-600 hover:text-red-700"} underline`}
+                  onClick={() => navigate(!hasGenerationVC ? "/vc" : 0 as any)}
+                  className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
                 >
-                  {!hasGenerationVC ? "Go to profile to upload" : "Refresh page"}
+                  {!hasGenerationVC ? "Go to verification" : "Refresh page"}
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Empty State */}
-        {!loading && !error && (!catalog?.trades || catalog.trades.length === 0) && (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-6 text-center">
-            <Zap size={32} className="mx-auto mb-3 text-blue-600" />
-            <p className="font-semibold text-blue-900 mb-1">No offers for tomorrow</p>
-            <p className="text-sm text-blue-700">
-              You don't have any excess energy scheduled for tomorrow. Check back later or adjust your settings.
-            </p>
-          </div>
-        )}
-
-        {/* Catalog View */}
-        {!loading && !error && catalog?.trades && catalog.trades.length > 0 && (
-          <div className="space-y-6">
-            {/* Expected Earnings Card */}
-            <div className="rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
-              <p className="text-sm text-emerald-700 font-medium mb-2">Expected Earnings</p>
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-4xl font-bold text-emerald-900">
-                  ₹{isFinite(totalStats.earnings) ? totalStats.earnings.toFixed(0) : "0"}
-                </span>
-              </div>
-              <p className="text-sm text-emerald-700">{isFinite(totalStats.kWh) ? totalStats.kWh.toFixed(2) : "0"} kWh</p>
-              <div className="mt-4 pt-4 border-t border-emerald-200">
-                <p className="text-xs text-emerald-600">100% Solar</p>
+          {/* Empty State */}
+          {!loading && !error && (!catalog?.trades || catalog.trades.length === 0) && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Zap className="h-5 w-5 fill-current" strokeWidth={0} />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-foreground">No offers for tomorrow</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  You don't have any excess energy scheduled for tomorrow. Check back later or adjust your settings.
+                </p>
               </div>
             </div>
+          )}
 
-            {/* Planned Trades Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Planned Trades</h2>
-                <p className="text-xs text-muted-foreground">{refreshCountdown}</p>
+          {/* Catalog View */}
+          {!loading && !error && catalog?.trades && catalog.trades.length > 0 && (
+            <>
+              {/* Expected Earnings — blue identity frame, green hero amount */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Expected earnings
+                  </p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary nums">
+                    <Sun className="h-2.5 w-2.5" />
+                    100% Solar
+                  </span>
+                </div>
+
+                <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+                  <p className="text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+                    ₹{isFinite(totalStats.earnings) ? totalStats.earnings.toFixed(0) : "0"}
+                  </p>
+                  <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
+                  <p className="mt-2 text-xs text-muted-foreground nums">
+                    {isFinite(totalStats.kWh) ? totalStats.kWh.toFixed(2) : "0"} kWh listed for tomorrow.
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {catalog.trades && Array.isArray(catalog.trades) && catalog.trades.map((trade, index) => {
-                  if (!trade || typeof trade !== "object") {
-                    console.warn(`Invalid trade at index ${index}:`, trade);
-                    return null;
-                  }
+              {/* Planned Trades */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Planned trades
+                  </p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground nums">
+                    {refreshCountdown}
+                  </p>
+                </div>
 
-                  try {
-                    console.log(`Processing trade ${index}:`, trade);
-                    const startTimeIST = formatTimeInIST(String(trade.startTime || ""));
-                    const endTimeIST = formatTimeInIST(String(trade.endTime || ""));
-                    const totalPrice = (Number(trade.kWh) || 0) * (Number(trade.price) || 0);
+                <div className="space-y-2">
+                  {catalog.trades.map((trade, index) => {
+                    if (!trade || typeof trade !== "object") return null;
+                    try {
+                      const startTimeIST = formatTimeInIST(String(trade.startTime || ""));
+                      const endTimeIST = formatTimeInIST(String(trade.endTime || ""));
+                      const totalPrice = (Number(trade.kWh) || 0) * (Number(trade.price) || 0);
 
-                    return (
-                      <div
-                        key={index}
-                        className="rounded-lg bg-white border border-gray-200 p-4 hover:border-emerald-300 transition"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                              <p className="font-semibold text-foreground">
-                                {startTimeIST} – {endTimeIST}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{Number(trade.kWh || 0).toFixed(2)} kWh</span>
-                              <span>₹{Number(trade.price || 0).toFixed(2)}/unit</span>
-                            </div>
-                          </div>
-
-                          {/* Price on the right */}
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-foreground">
-                              ₹{isFinite(totalPrice) ? totalPrice.toFixed(0) : "0"}
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-xl border border-border bg-card p-3
+                                     transition-all duration-200 ease-out
+                                     hover:-translate-y-0.5 hover:border-primary/30
+                                     hover:shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                            <Zap className="h-4 w-4 fill-current" strokeWidth={0} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground nums">
+                              {startTimeIST} – {endTimeIST}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground nums">
+                              {Number(trade.kWh || 0).toFixed(2)} kWh · ₹{Number(trade.price || 0).toFixed(2)}/kWh
                             </p>
                           </div>
+                          <p className="shrink-0 text-base font-semibold text-foreground nums">
+                            ₹{isFinite(totalPrice) ? totalPrice.toFixed(0) : "0"}
+                          </p>
                         </div>
-                      </div>
-                    );
-                  } catch (err) {
-                    console.error(`Error rendering trade ${index}:`, err);
-                    return null;
-                  }
-                })}
+                      );
+                    } catch (err) {
+                      console.error(`Error rendering trade ${index}:`, err);
+                      return null;
+                    }
+                  })}
+                </div>
+
+                <p className="px-1 pt-1 text-[10px] text-muted-foreground">
+                  Prices may improve as demand updates.
+                </p>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={handleApprove}
-                disabled={submitting}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-semibold py-3 rounded-lg transition"
-              >
-                {submitting ? "Submitting..." : "Approve Now"}
-              </button>
-              <button
-                onClick={() => navigate(-1)}
-                disabled={submitting}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-foreground font-semibold py-3 rounded-lg transition"
-              >
-                Change
-              </button>
-            </div>
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  onClick={() => navigate(-1)}
+                  disabled={submitting}
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                >
+                  Change
+                </Button>
+                <Button
+                  onClick={() => setConfirmingApprove(true)}
+                  disabled={submitting}
+                  size="lg"
+                  className="flex-1 gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Publish catalog
+                </Button>
+              </div>
+            </>
+          )}
+        </PageContainer>
+      </div>
 
-            {/* Disclaimer */}
-            <p className="text-xs text-muted-foreground text-center">
-              Prices may improve as demand updates.
-            </p>
-          </div>
-        )}
-      </PageContainer>
+      {/* Publish confirmation popup — irreversible action gets a confirm */}
+      <ConfirmDialog
+        open={confirmingApprove}
+        onOpenChange={(open) => !submitting && setConfirmingApprove(open)}
+        title="Publish tomorrow's catalog?"
+        description={`You're about to list ${totalStats.kWh.toFixed(2)} kWh for ₹${totalStats.earnings.toFixed(0)} expected earnings. Buyers will be able to discover and match these slots.`}
+        proceedLabel="Publish"
+        loading={submitting}
+        onProceed={handleApprove}
+      />
     </MainAppShell>
   );
 };

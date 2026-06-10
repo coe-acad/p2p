@@ -20,8 +20,17 @@ const IntentPage = () => {
         console.error("Failed to save user intent to Firestore:", err)
       );
 
-      // Navigate to VC upload page
-      navigate("/onboarding/vc", { replace: true });
+      // If the user has already verified their VC (Firestore source of truth),
+      // skip the onboarding upload step and go straight to their home.
+      const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+      const hasCompletedOnboarding = Boolean((userData as any)?.onboardingComplete);
+      const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
+
+      if (isVCVerified || hasCompletedOnboarding) {
+        navigate(homeRoute, { replace: true });
+      } else {
+        navigate("/onboarding/vc", { replace: true });
+      }
     }
   };
 
