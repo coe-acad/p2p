@@ -12,6 +12,7 @@ const bapClient = createApiClient(BAP_URL);
 
 export interface OrderDetails {
   offer_id: string;
+  seller_id?: string;
   bpp_id?: string;
   bpp_uri?: string;
   offer_item_ids?: string[];
@@ -62,7 +63,7 @@ const DEFAULT_BAP_URI = resolveRequiredEnv(
 );
 const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
 const DEFAULT_BPP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BPP_URI,
+  import.meta.env.VITE_ORDER_BPP_URI || import.meta.env.VITE_BACKEND_URL,
   'https://atria-bpp.atriauniversity.ai',
   'VITE_ORDER_BPP_URI'
 );
@@ -106,6 +107,17 @@ const extractOrderAmount = (order: any): number | null => {
 
 const buildSelectOrderItem = (orderDetails: OrderDetails) => {
   const orderedItemId = orderDetails.offer_item_ids?.[0] || `item-${generateUUID()}`;
+  const acceptedOfferProvider = orderDetails.offer_provider || orderDetails.seller_id || '';
+  const acceptedOfferDescriptor = orderDetails.offer_descriptor || {
+    '@type': 'beckn:Descriptor',
+    'schema:name': orderDetails.seller_name
+      ? `${orderDetails.seller_name} - Energy Offer`
+      : 'Energy Offer',
+  };
+  const acceptedOfferItems = orderDetails.offer_item_ids?.length
+    ? orderDetails.offer_item_ids
+    : [orderedItemId];
+
   return {
     'beckn:id': orderedItemId,
     'beckn:orderedItem': orderedItemId,
@@ -113,10 +125,13 @@ const buildSelectOrderItem = (orderDetails: OrderDetails) => {
       unitQuantity: orderDetails.quantity,
     },
     'beckn:acceptedOffer': {
+      '@context':
+        'https://raw.githubusercontent.com/beckn/protocol-specifications-v2/tags/core-2.0.0-rc-eos-release/schema/core/v2/context.jsonld',
+      '@type': 'beckn:Offer',
       'beckn:id': orderDetails.offer_id,
-      ...(orderDetails.offer_provider ? { 'beckn:provider': orderDetails.offer_provider } : {}),
-      ...(orderDetails.offer_item_ids?.length ? { 'beckn:items': orderDetails.offer_item_ids } : {}),
-      ...(orderDetails.offer_descriptor ? { 'beckn:descriptor': orderDetails.offer_descriptor } : {}),
+      'beckn:provider': acceptedOfferProvider,
+      'beckn:items': acceptedOfferItems,
+      'beckn:descriptor': acceptedOfferDescriptor,
       ...(orderDetails.offer_price ? { 'beckn:price': orderDetails.offer_price } : {}),
       ...(orderDetails.offer_attributes
         ? { 'beckn:offerAttributes': orderDetails.offer_attributes }
@@ -189,11 +204,20 @@ export const orderService = {
       ? structuredClone(orderData)
       : buildSelectedOrderFallback(orderDetails);
 
-    baseOrder['beckn:fulfillment'] = baseOrder['beckn:fulfillment'] ?? {};
+    const fulfillment = baseOrder['beckn:fulfillment'];
+    if (
+      fulfillment &&
+      typeof fulfillment === 'object' &&
+      !Array.isArray(fulfillment) &&
+      Object.keys(fulfillment).length === 0
+    ) {
+      delete baseOrder['beckn:fulfillment'];
+    }
     baseOrder['beckn:payment'] = baseOrder['beckn:payment'] ?? {
-      'beckn:uri': 'https://razorpay.com',
-      'beckn:tlMethod': 'http',
-      'beckn:paymentStatus': 'NOT_PAID',
+      '@context':
+        'https://raw.githubusercontent.com/beckn/protocol-specifications-v2/tags/core-2.0.0-rc-eos-release/schema/core/v2/context.jsonld',
+      '@type': 'beckn:Payment',
+      'beckn:paymentStatus': 'PENDING',
     };
 
     const payload = {

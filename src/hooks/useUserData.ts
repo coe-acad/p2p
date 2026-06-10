@@ -182,7 +182,6 @@ export const useUserData = () => {
         ...updates,
         name: updates.name ? normalizeName(updates.name) : prev.name,
       };
-      saveUser(next).catch(err => console.error("Firestore sync failed:", err));
       return next;
     });
   };

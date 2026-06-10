@@ -154,35 +154,38 @@ const VerificationScreen = ({ onVerified, onBack, isReturningUser = false, selec
     try {
       await confirmationResultRef.current.confirm(enteredOtp);
 
-      // Bootstrap Firebase auth by setting custom claims with phone number
-      const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
-      const token = await auth.currentUser?.getIdToken();
-      if (token) {
-        try {
-          await fetch(`${BACKEND_URL}/api/auth/setup`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
-          });
-          logger.devLog("Auth bootstrap complete");
-          // Force token refresh to include the newly set phone_number custom claim
-          await auth.currentUser?.getIdToken(true);
-          logger.devLog("Token refreshed with phone_number claim");
-        } catch (err) {
-          logger.devDebug("Auth bootstrap failed (non-critical):", err);
+      // Seller flows still use BPP-backed auth/bootstrap helpers.
+      // Buyer flows should not call seller BPP auth endpoints during startup.
+      if (selectedIntent === "sell") {
+        const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+        const token = await auth.currentUser?.getIdToken();
+        if (token) {
+          try {
+            await fetch(`${BACKEND_URL}/api/auth/setup`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ phone_number: `+91${phoneNumber}` }),
+            });
+            logger.devLog("Auth bootstrap complete");
+            // Force token refresh to include the newly set phone_number custom claim
+            await auth.currentUser?.getIdToken(true);
+            logger.devLog("Token refreshed with phone_number claim");
+          } catch (err) {
+            logger.devDebug("Auth bootstrap failed (non-critical):", err);
+          }
         }
       }
 
       // For new users, save phone number so profile data can be saved to Firestore
       if (!isUserReturning) {
-        // Do not read intent from localStorage here (avoids clobbering Firestore after hydration).
-        const flowIntent = selectedIntent === "buy" || selectedIntent === "sell" ? selectedIntent : undefined;
+        // Only stage the phone number here.
+        // Intent must be decided and persisted only in VerifyPage after we conclusively
+        // determine whether this is an existing account or a true new-user signup.
         setUserData({
           phone: `+91${phoneNumber}`,
-          ...(flowIntent ? { intent: flowIntent } : {}),
         });
       }
       // Both new and returning users proceed to VC upload after OTP verification
