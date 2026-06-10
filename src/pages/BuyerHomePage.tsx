@@ -166,6 +166,7 @@ const BuyerHomePage = () => {
     try {
       const selectResult = await orderService.select({
         offer_id: listing.offer_id,
+        seller_id: listing.seller_id,
         bpp_id: listing.bpp_id,
         bpp_uri: listing.bpp_uri,
         offer_item_ids: listing.offer_item_ids,
@@ -242,6 +243,7 @@ const BuyerHomePage = () => {
         currentTransactionId,
         {
           offer_id: selectedOffer.offer_id,
+          seller_id: selectedOffer.seller_id,
           bpp_id: selectedOffer.bpp_id,
           bpp_uri: selectedOffer.bpp_uri,
           offer_item_ids: selectedOffer.offer_item_ids,
