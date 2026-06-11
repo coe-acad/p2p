@@ -85,14 +85,24 @@ export const useDiscoverListings = () => {
   const discoverClientRef = useRef(createApiClient(BAP_URL));
   const activeRequestRef = useRef<AbortController | null>(null);
 
-  const fetchListings = async (pageNumber: number = 0, searchFilters: SearchFilters = {}) => {
+  const fetchListings = async (
+    pageNumber: number = 0,
+    searchFilters: SearchFilters = {},
+    opts: { silent?: boolean } = {},
+  ) => {
+    const { silent = false } = opts;
     try {
       activeRequestRef.current?.abort();
       const controller = new AbortController();
       activeRequestRef.current = controller;
 
-      setLoading(true);
-      setError(null);
+      // Silent refreshes keep the existing catalogs visible — no loading
+      // skeleton, no error banner flicker. Used by the 30s background poll
+      // and the manual refresh button so the page doesn't "blink".
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
 
       // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
       if (pageNumber === 0) {
@@ -171,11 +181,10 @@ export const useDiscoverListings = () => {
         console.log('[useDiscoverListings] Request was cancelled');
         return;
       }
-      const message = apiError.message;
-      setError(message);
       console.error("[useDiscoverListings] Error fetching listings:", apiError);
+      if (!silent) setError(apiError.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
