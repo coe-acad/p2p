@@ -58,13 +58,6 @@ const DEFAULT_USER_DATA: UserData = {
 const LEGACY_STORAGE_KEY = "samai_user_data";
 const SESSION_STORAGE_KEY = "samai_user_data_session";
 
-/** Persisted to localStorage — intent is intentionally omitted (Firestore is the source of truth when signed in). */
-type UserPrefs = Pick<UserData, "isReturningUser">;
-
-const getUserPrefs = (data: UserData): UserPrefs => ({
-  isReturningUser: data.isReturningUser,
-});
-
 export const useUserData = () => {
   /** False until Firebase auth has been resolved and Firestore user doc (if any) has been merged in. */
   const [profileHydrated, setProfileHydrated] = useState(false);
@@ -115,7 +108,7 @@ export const useUserData = () => {
         if (hadFirebaseUserRef.current) {
           setUserDataState({ ...DEFAULT_USER_DATA });
           sessionStorage.removeItem(SESSION_STORAGE_KEY);
-          localStorage.removeItem(PREFS_STORAGE_KEY);
+          localStorage.removeItem("samai_user_prefs");
           localStorage.removeItem("samai_selected_intent");
         }
         hadFirebaseUserRef.current = false;
@@ -167,13 +160,6 @@ export const useUserData = () => {
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persistWithoutIntent));
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, [userData]);
-
-  // All fields are locked after onboarding - profile is immutable
-  // User data is fully controlled by Firestore and read-only after initial setup
-  const LOCKED_FIELDS = [
-    "name", "phone", "discom", "email", "aadhaarVerified",
-    "vcVerifiedAt", "is_vc_verified", "intent", "isReturningUser"
-  ] as const;
 
   const setUserData = (updates: Partial<UserData>) => {
     setUserDataState(prev => {
