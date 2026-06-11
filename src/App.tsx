@@ -9,6 +9,7 @@ import {
   RoleProtectedRoute,
   IntentAccessRoute,
 } from "@/components/layout/ProtectedRoute";
+import { Toaster } from "@/components/ui/toaster";
 
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -64,6 +65,7 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Toaster />
         </div>
       </BrowserRouter>
       </SnackbarProvider>
