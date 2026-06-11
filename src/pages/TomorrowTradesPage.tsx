@@ -64,7 +64,7 @@ const TomorrowTradesPage = () => {
   const [refreshCountdown, setRefreshCountdown] = useState<string>("Calculating…");
   const [confirmingApprove, setConfirmingApprove] = useState(false);
   const [approvingDraftId, setApprovingDraftId] = useState<string | null>(null);
-  const [catalogView, setCatalogView] = useState<"draft" | "real">("draft");
+  const [catalogView, setCatalogView] = useState<"draft" | "real">("real");
 
   // Form state for creating draft trades
   const [draftForm, setDraftForm] = useState({
