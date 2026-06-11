@@ -116,9 +116,10 @@ const BuyerHomePage = () => {
   }, [isVCVerified]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
-  // catalog without manually pulling. Suspended while a buy flow is in
-  // progress or any modal is open — don't rip data out from under the user
-  // mid-transaction.
+  // catalog without manually pulling. Silent mode keeps the existing
+  // catalogs on screen while the new fetch is in flight — no skeleton, no
+  // page-blink. Suspended while a buy flow is in progress or any modal is
+  // open — don't rip data out from under the user mid-transaction.
   useEffect(() => {
     if (!isVCVerified) return;
     const interval = setInterval(() => {
@@ -129,14 +130,16 @@ const BuyerHomePage = () => {
         showVCUploadModal ||
         orderStatus !== "idle";
       if (buyFlowActive) return;
-      void fetchListings();
+      void fetchListings(0, {}, { silent: true });
     }, 30_000);
     return () => clearInterval(interval);
   }, [isVCVerified, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchListings();
+    // Silent so the catalog list doesn't get replaced by skeletons — the
+    // spinning icon on the refresh button is feedback enough.
+    await fetchListings(0, {}, { silent: true });
     setIsRefreshing(false);
   };
 
