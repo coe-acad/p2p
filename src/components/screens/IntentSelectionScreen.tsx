@@ -14,10 +14,16 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
   // double-taps while the save call is in flight in the parent IntentPage.
   const [submitting, setSubmitting] = useState<Choice | null>(null);
 
-  const handleChoice = (choice: Choice) => {
+  const handleChoice = async (choice: Choice) => {
     if (submitting) return;
     setSubmitting(choice);
-    onSelect([choice]);
+    try {
+      await onSelect([choice]);
+    } finally {
+      // If the parent didn't navigate (e.g. missing phone in userData), clear
+      // the spinner so the user can retry instead of being stuck.
+      setSubmitting(null);
+    }
   };
 
   // Each card has its own brand identity color, applied at rest (not just on hover).

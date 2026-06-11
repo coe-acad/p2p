@@ -8,49 +8,9 @@ import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/components/BrandMark";
+import { detectVCType, validateRequiredFields, unwrapCredential } from "@/utils/vcCredential";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
-
-const detectVCType = (credential: any): "consumption" | "generation" | null => {
-  const types = credential.type || [];
-  const subjectType = credential.credentialSubject?.type;
-  const credentialType = credential.credentialType || "";
-
-  if (
-    types.includes("ConsumptionProfileCredential") ||
-    subjectType === "ConsumptionProfileCredential" ||
-    credentialType.includes("Consumption")
-  ) {
-    return "consumption";
-  }
-  if (
-    types.includes("GenerationProfileCredential") ||
-    subjectType === "GenerationProfileCredential" ||
-    credentialType.includes("Generation")
-  ) {
-    return "generation";
-  }
-  return null;
-};
-
-const validateRequiredFields = (credential: any, type: "consumption" | "generation"): string[] => {
-  const errors: string[] = [];
-  const subject = credential.credentialSubject || {};
-
-  if (!subject.fullName) errors.push("Full name is missing");
-  if (!subject.issuerName) errors.push("Issuer name is missing");
-
-  if (type === "consumption") {
-    if (!subject.meterNumber) errors.push("Meter number is missing");
-    if (!subject.consumerNumber) errors.push("Consumer number is missing");
-  } else if (type === "generation") {
-    if (!subject.inverterNumber && !subject.systemId) {
-      errors.push("System ID or inverter number is missing");
-    }
-  }
-
-  return errors;
-};
 
 const OnboardingVCPage = () => {
   const navigate = useNavigate();
@@ -123,8 +83,7 @@ const OnboardingVCPage = () => {
         return;
       }
 
-      // Some issuers wrap the credential one level deep.
-      const credential = parsedData.credential && !parsedData.type ? parsedData.credential : parsedData;
+      const credential = unwrapCredential(parsedData);
 
       const detectedType = detectVCType(credential);
       if (!detectedType) {
