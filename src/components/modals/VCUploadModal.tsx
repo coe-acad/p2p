@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileText, Loader2, ShieldAlert, Upload, X } from "lucide-react";
+import { FileText, Loader2, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { detectVCType, validateRequiredFields, unwrapCredential } from "@/utils/vcCredential";
+import { unwrapCredential } from "@/utils/vcCredential";
 
 interface VCUploadModalProps {
   isOpen: boolean;
@@ -26,8 +26,6 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [wrongVCModal, setWrongVCModal] = useState(false);
-  const [wrongVCMessage, setWrongVCMessage] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const { userData, setUserData } = useUserData();
@@ -80,54 +78,6 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
 
       const credential = unwrapCredential(parsedData);
 
-      const detectedType = detectVCType(credential);
-      if (!detectedType) {
-        toast({
-          title: "Unsupported credential type",
-          description: "Upload a ConsumptionProfileCredential or GenerationProfileCredential.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (intent === "sell" && detectedType !== "generation") {
-        setWrongVCMessage("Sellers must upload a Generation Profile credential. Please choose a valid file.");
-        setWrongVCModal(true);
-        setUploadedFile(null);
-        setIsLoading(false);
-        return;
-      }
-      if (intent === "buy" && detectedType !== "consumption") {
-        setWrongVCMessage("Buyers must upload a Consumption Profile credential. Please choose a valid file.");
-        setWrongVCModal(true);
-        setUploadedFile(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const validationErrors = validateRequiredFields(credential, detectedType);
-      if (validationErrors.length > 0) {
-        toast({
-          title: "Missing required information",
-          description: validationErrors.join(". ") + ".",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const userName: string | null = credential.credentialSubject?.fullName || null;
-      if (!userName) {
-        toast({
-          title: "Invalid credential",
-          description: "Couldn't extract a name from the credential.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const token = await user?.getIdToken();
       if (!token) throw new Error("Unable to get authentication token");
 
@@ -147,17 +97,19 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
+      const userName: string | null = credential.credentialSubject?.fullName || null;
+
       toast({
         title: "Credential uploaded",
-        description: `${detectedType === "consumption" ? "Consumption" : "Generation"} profile saved.`,
+        description: `${credentialLabel} profile saved.`,
       });
 
       setUserData({
         isVCVerified: false,
-        name: userName,
+        ...(userName ? { name: userName } : {}),
       } as any);
 
-      if (userData?.phone && intent) {
+      if (userData?.phone && intent && userName) {
         await saveUser({
           phone: userData.phone,
           intent,
@@ -262,36 +214,6 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
             {isLoading ? <Loader2 className="animate-spin" /> : "Verify and continue"}
           </Button>
         </div>
-
-        {wrongVCModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 px-4 sm:items-center">
-            <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-card slide-up">
-              <div className="flex flex-col items-center text-center gap-4">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                  <ShieldAlert className="h-5 w-5" />
-                </span>
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">Wrong credential type</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">{wrongVCMessage}</p>
-                </div>
-              </div>
-              <div className="mt-6 flex flex-col gap-2">
-                <Button
-                  onClick={() => {
-                    setWrongVCModal(false);
-                    inputRef.current?.click();
-                  }}
-                  className="w-full"
-                >
-                  Choose another file
-                </Button>
-                <Button variant="outline" onClick={() => setWrongVCModal(false)} className="w-full">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
