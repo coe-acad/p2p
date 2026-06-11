@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 node_modules
 
-# env
-.env.staging
-.env.production
+# env — never commit env files; real values live in Vercel project settings
+.env
+.env.*
+!.env.example
