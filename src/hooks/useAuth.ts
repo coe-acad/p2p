@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { recordLogin } from "@/services/loginHistoryService";
 
 interface AuthState {
   user: User | null;
