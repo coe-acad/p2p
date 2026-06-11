@@ -1,163 +1,185 @@
 import { useState } from "react";
-import { ArrowLeft, Zap, Leaf, Check, Sun, Sparkles } from "lucide-react";
-import SamaiLogo from "../SamaiLogo";
+import { ChevronRight, Loader2, ShoppingBag, Sun } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
 
 interface IntentSelectionScreenProps {
   onSelect: (intents: ("sell" | "buy")[]) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-const IntentSelectionScreen = ({ onSelect, onBack }: IntentSelectionScreenProps) => {
-  const [selectedIntent, setSelectedIntent] = useState<"sell" | "buy" | null>(null);
+type Choice = "sell" | "buy";
 
-  const handleContinue = () => {
-    if (selectedIntent) {
-      onSelect([selectedIntent]);
-    }
+const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
+  // Track which card is being committed so we can show a spinner and prevent
+  // double-taps while the save call is in flight in the parent IntentPage.
+  const [submitting, setSubmitting] = useState<Choice | null>(null);
+
+  const handleChoice = (choice: Choice) => {
+    if (submitting) return;
+    setSubmitting(choice);
+    onSelect([choice]);
   };
 
+  // Each card has its own brand identity color, applied at rest (not just on hover).
+  // Buy = primary blue (steady, structural). Sell = accent green (active, energy).
+  // Class strings written out in full so Tailwind's JIT scanner can pick them up.
+  const cards: Array<{
+    id: Choice;
+    icon: typeof Sun;
+    title: string;
+    sub: string;
+    tone: {
+      restBorder: string;
+      restShadow: string;
+      restWash: string;
+      hoverBorder: string;
+      hoverShadow: string;
+      stripe: string;
+      iconTile: string;
+      iconHover: string;
+      chevHover: string;
+      underline: string;
+    };
+  }> = [
+    // Persona-by-color: Buy = GREEN identity (buyer world), Sell = BLUE identity
+    // (seller world). The intent screen is the bridge — colour picks the world.
+    // Washes use a solid bg-{color}/x rather than gradients (no-gradients rule).
+    {
+      id: "buy",
+      icon: ShoppingBag,
+      title: "Buy energy",
+      sub: "Browse offers from clean energy producers near you.",
+      tone: {
+        restBorder: "border-accent/15",
+        restShadow: "shadow-[0_6px_18px_-10px_rgba(31,138,82,0.22)]",
+        restWash: "bg-accent/[0.04]",
+        hoverBorder: "hover:border-accent/55",
+        hoverShadow: "hover:shadow-[0_18px_40px_-18px_rgba(31,138,82,0.40)]",
+        stripe: "bg-accent",
+        iconTile: "bg-accent/12 text-accent",
+        iconHover: "group-hover:bg-accent group-hover:text-accent-foreground group-hover:shadow-[0_8px_16px_-6px_rgba(31,138,82,0.50)]",
+        chevHover: "group-hover:text-accent",
+        underline: "bg-accent",
+      },
+    },
+    {
+      id: "sell",
+      icon: Sun,
+      title: "Sell energy",
+      sub: "List your excess solar generation for nearby buyers.",
+      tone: {
+        restBorder: "border-primary/15",
+        restShadow: "shadow-[0_6px_18px_-10px_rgba(36,40,128,0.22)]",
+        restWash: "bg-primary/[0.04]",
+        hoverBorder: "hover:border-primary/55",
+        hoverShadow: "hover:shadow-[0_18px_40px_-18px_rgba(36,40,128,0.40)]",
+        stripe: "bg-primary",
+        iconTile: "bg-primary/12 text-primary",
+        iconHover: "group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-[0_8px_16px_-6px_rgba(36,40,128,0.50)]",
+        chevHover: "group-hover:text-primary",
+        underline: "bg-primary",
+      },
+    },
+  ];
+
   return (
-    <div className="screen-container !py-4 relative overflow-hidden">
-      {/* Background gradient effects - Vibrant & Warm */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Top warm sunlight glow */}
-        <div className="absolute top-0 left-1/2 h-[240px] w-[400px] -translate-x-1/2 rounded-full bg-gradient-to-b from-orange-300/35 via-amber-200/20 to-transparent blur-3xl sm:h-[300px] sm:w-[500px]" />
-        
-        {/* Animated shimmer */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full animate-[shimmer_4s_ease-in-out_infinite]" />
-        
-        {/* Colorful accent orbs */}
-        <div className="absolute top-[28%] -left-24 h-[220px] w-[220px] rounded-full bg-gradient-to-br from-orange-400/20 to-amber-500/10 blur-3xl animate-pulse sm:-left-20 sm:h-[250px] sm:w-[250px]" style={{ animationDuration: "4s" }} />
-        <div className="absolute top-[46%] -right-20 h-[170px] w-[170px] rounded-full bg-gradient-to-bl from-teal-400/15 to-green-400/10 blur-3xl animate-pulse sm:h-[200px] sm:w-[200px]" style={{ animationDuration: "5s" }} />
-        
-        {/* Bottom warm gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-[150px] bg-gradient-to-t from-orange-100/20 to-transparent" />
-        
-        {/* Floating particles */}
-        <div className="absolute top-1/4 left-1/5 w-2 h-2 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full animate-[pulse_4s_ease-in-out_infinite] shadow-lg shadow-orange-400/30" />
-        <div className="absolute top-1/3 right-1/4 w-1.5 h-1.5 bg-gradient-to-br from-teal-400 to-green-500 rounded-full animate-[pulse_3s_ease-in-out_infinite] shadow-lg shadow-teal-400/30" style={{ animationDelay: "1s" }} />
-        <div className="absolute bottom-1/3 left-1/4 w-1.5 h-1.5 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full animate-[pulse_5s_ease-in-out_infinite] shadow-lg shadow-amber-400/30" style={{ animationDelay: "0.5s" }} />
-        
-        {/* Decorative icons */}
-        <div className="absolute right-6 top-14 hidden text-orange-400/20 sm:block">
-          <Sun size={36} className="animate-[pulse_6s_ease-in-out_infinite]" />
-        </div>
-      </div>
-
-      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col px-1 py-2 sm:py-4">
-        {/* Header with Back and Logo */}
-        <div className="mb-6 flex items-center justify-between animate-fade-in sm:mb-8">
-          <button
-            onClick={onBack}
-            className="group flex items-center gap-2 rounded-full border border-white/60 bg-white/65 px-3 py-2 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground"
-          >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm">Back</span>
-          </button>
-          <div className="rounded-full border border-white/60 bg-white/65 p-2 shadow-sm backdrop-blur-sm">
-            <SamaiLogo size="sm" showText={false} />
+    <div className="min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
+      <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
+        <div className="w-full max-w-md flex flex-col gap-8 slide-up">
+          <div className="flex justify-center">
+            <BrandMark size="lg" />
           </div>
-        </div>
 
-        <div className="flex flex-1 flex-col justify-between gap-6 sm:gap-8">
-          {/* Title with icon */}
-          <div className="text-center animate-slide-up">
-            <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-400/20 to-amber-500/10 sm:mb-4">
-              <Sparkles className="text-primary" size={22} />
-            </div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-orange-500/80">Set up your trade intent</p>
-            <h2 className="mx-auto mt-3 max-w-[15rem] text-xl font-semibold tracking-tight text-foreground sm:max-w-sm sm:text-2xl">
+          <div className="text-center">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
+              Set up your trade intent
+            </p>
+            <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
               What would you like Samai to help you do?
-            </h2>
-            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-              Start with the action you want right now. You can adjust your role later from profile settings.
-            </p>
+            </h1>
           </div>
 
-          {/* Cards */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <button
-              onClick={() => setSelectedIntent("sell")}
-              className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
-                selectedIntent === "sell"
-                  ? "border-primary bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg shadow-orange-200/30"
-                  : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
-              }`}
-            >
-              <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
-                selectedIntent === "sell"
-                  ? "scale-105 bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/40"
-                  : "bg-gradient-to-br from-orange-400/15 to-amber-400/10 group-hover:scale-105"
-              }`}>
-                <Zap className={selectedIntent === "sell" ? "text-white" : "text-primary"} size={22} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-foreground">Sell excess solar energy</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      Share surplus generation when your home is producing more than it needs.
-                    </p>
-                  </div>
-                  {selectedIntent === "sell" && (
-                    <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-400/30">
-                      <Check size={14} className="text-white" strokeWidth={3} />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            </button>
+          <div className="flex flex-col gap-3">
+            {cards.map(({ id, icon: Icon, title, sub, tone }, idx) => {
+              const isActive = submitting === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleChoice(id)}
+                  disabled={!!submitting}
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                  className={`group relative overflow-hidden flex items-center gap-4
+                              rounded-xl border bg-card p-5 pl-6 text-left
+                              slide-up opacity-0
+                              transition-all duration-300 ease-out
+                              ${tone.restBorder} ${tone.restShadow}
+                              hover:-translate-y-1 hover:scale-[1.005]
+                              ${tone.hoverBorder} ${tone.hoverShadow}
+                              active:scale-[0.99] active:translate-y-0
+                              active:transition-[transform] active:duration-100
+                              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                              disabled:cursor-not-allowed disabled:opacity-60
+                              disabled:hover:translate-y-0 disabled:hover:scale-100`}
+                >
+                  {/* Always-visible left stripe in the card's identity color. Grows to
+                      full saturation on hover. */}
+                  <span
+                    aria-hidden
+                    className={`absolute left-0 top-0 h-full w-1 ${tone.stripe}
+                                opacity-40 transition-opacity duration-300 ease-out
+                                group-hover:opacity-100`}
+                  />
 
-            <button
-              onClick={() => setSelectedIntent("buy")}
-              className={`group relative flex w-full items-start gap-4 overflow-hidden rounded-[1.5rem] border-2 p-4 text-left transition-all sm:p-5 ${
-                selectedIntent === "buy"
-                  ? "border-primary bg-gradient-to-r from-teal-50 to-green-50 shadow-lg shadow-teal-200/30"
-                  : "border-border bg-white/70 shadow-sm backdrop-blur-sm hover:border-primary/40 hover:shadow-md"
-              }`}
-            >
-              <div className={`mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-all ${
-                selectedIntent === "buy"
-                  ? "scale-105 bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/40"
-                  : "bg-gradient-to-br from-teal-400/15 to-green-400/10 group-hover:scale-105"
-              }`}>
-                <Leaf className={selectedIntent === "buy" ? "text-white" : "text-teal-600"} size={22} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-foreground">Buy clean energy</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      Source clean energy from local solar producers in your community.
-                    </p>
-                  </div>
-                  {selectedIntent === "buy" && (
-                    <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-green-500 shadow-lg shadow-teal-400/30">
-                      <Check size={14} className="text-white" strokeWidth={3} />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            </button>
-          </div>
+                  {/* Always-visible gradient wash in the card's identity color.
+                      Subtle at rest, more saturated on hover. */}
+                  <span
+                    aria-hidden
+                    className={`pointer-events-none absolute inset-0 -z-0
+                                ${tone.restWash}
+                                opacity-100 transition-opacity duration-300 ease-out
+                                group-hover:opacity-[1.5]`}
+                  />
 
-          {/* Continue button */}
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={handleContinue}
-              disabled={!selectedIntent}
-              className="btn-solar w-full text-sm !py-4 disabled:opacity-50"
-            >
-              Continue
-            </button>
-            <p className="text-center text-xs text-muted-foreground animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              You can change this anytime later.
-            </p>
+                  {/* Icon tile — tinted in card's color at rest, fully saturated on hover. */}
+                  <span className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg
+                                    ${tone.iconTile}
+                                    transition-all duration-300 ease-out
+                                    ${tone.iconHover}
+                                    group-hover:scale-110`}>
+                    <Icon className="h-5 w-5 transition-transform duration-300 ease-out group-hover:scale-105" />
+                  </span>
+
+                  <span className="relative z-10 min-w-0 flex-1">
+                    <span className="relative inline-block text-base font-medium text-foreground
+                                     transition-colors duration-200 group-hover:text-foreground">
+                      {title}
+                      {/* Underline reveal in the card's color. */}
+                      <span
+                        aria-hidden
+                        className={`absolute -bottom-0.5 left-0 h-px w-0 ${tone.underline}
+                                    transition-[width] duration-300 ease-out
+                                    group-hover:w-full`}
+                      />
+                    </span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">{sub}</span>
+                  </span>
+
+                  <span className={`relative z-10 text-muted-foreground
+                                    transition-all duration-300 ease-out
+                                    group-hover:translate-x-1.5 ${tone.chevHover}`}>
+                    {isActive ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 touch-nudge" />
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

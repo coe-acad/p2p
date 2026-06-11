@@ -1,5 +1,5 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { ensureUserOnServer, loadUser } from "@/services/userService";
 
@@ -7,40 +7,43 @@ const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "se
 
 const VerifyPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  // Intent from IntentPage selection (only present for new-user flow)
-  const selectedIntent = location.state?.intent as "sell" | "buy" | undefined;
-  const isReturningUser = location.state?.isReturningUser || false;
   const { setUserData } = useUserData();
 
+  /**
+   * After Firebase OTP verification, decide where the user goes.
+   *
+   * Returning users with intent set → straight to their home.
+   * Everyone else (new users, or returning users mid-onboarding) → /intent.
+   *
+   * The existence check uses GET /api/user/exists. Note: this endpoint is
+   * unauthenticated (phone enumeration risk) — flagged for a future hardening
+   * pass; not in scope for this UI refresh.
+   */
   const handleVerified = async (phone?: string) => {
     if (!phone) return;
-
     const phoneWithCountry = `+91${phone}`;
 
-    // Clear all old user data from context immediately
+    // Drop any stale in-memory user data from a previous session.
     setUserData({});
 
-    // Check if user already exists via backend API (doesn't require auth)
     let isReturning = false;
-    let existingUser = null;
+    let existingUser: Awaited<ReturnType<typeof loadUser>> | null = null;
+
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-      const response = await fetch(`${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(phoneWithCountry)}`);
+      const response = await fetch(
+        `${BACKEND_URL}/api/user/exists?phone_number=${encodeURIComponent(phoneWithCountry)}`,
+      );
       if (response.ok) {
         const result = await response.json();
-        if (result.exists) {
-          isReturning = true;
-          // After auth, we'll load full user data from Firestore
-        }
+        isReturning = !!result.exists;
       }
     } catch (err) {
       console.error("Failed to check if user exists:", err);
-      // Continue anyway - will be treated as new user if check fails
+      // Treat as new user on failure — safer than blocking.
     }
 
     if (isReturning) {
-      // Returning user: load full profile from Firestore now that they're authenticated
       try {
         existingUser = await loadUser(phoneWithCountry);
       } catch (err) {
@@ -48,88 +51,82 @@ const VerifyPage = () => {
       }
 
       if (existingUser) {
-        // Returning user: intent is only what is stored in Firestore (never localStorage or navigation state).
-        const resolvedIntent = isIntentValue(existingUser.intent) ? existingUser.intent : undefined;
+        // UserData type is partial — cast through any for fields the type
+        // doesn't yet model (address, consumerId, automationLevel, etc.).
+        const existing = existingUser as any;
+        const resolvedIntent = isIntentValue(existing.intent) ? existing.intent : undefined;
+        const { intent: _existingIntent, ...existingWithoutIntent } = existing;
 
-        const { intent: _existingIntent, ...existingWithoutIntent } = existingUser;
         setUserData({
           ...existingWithoutIntent,
           phone: phoneWithCountry,
           ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-          onboardingComplete: true, // Lock all user details for returning users
-        });
+          onboardingComplete: true,
+        } as any);
 
-        // Save to Firestore BEFORE navigating to ensure intent is persisted
+        // Persist intent + profile to Firestore before navigating so guards see fresh state.
         await saveUser({
           phone: phoneWithCountry,
           ...(resolvedIntent ? { intent: resolvedIntent } : {}),
-          name: existingUser.name || "",
-          address: existingUser.address || "",
-          city: existingUser.city || "",
-          discom: existingUser.discom || "",
-          consumerId: existingUser.consumerId || "",
-          automationLevel: existingUser.automationLevel || "recommend",
+          name: existing.name || "",
+          address: existing.address || "",
+          city: existing.city || "",
+          discom: existing.discom || "",
+          consumerId: existing.consumerId || "",
+          automationLevel: existing.automationLevel || "recommend",
           onboardingComplete: true,
-        } as any).catch(err => console.error("Failed to save profile to Firestore:", err));
+        } as any).catch((err) => console.error("Failed to save profile to Firestore:", err));
 
         ensureUserOnServer({
-          name: existingUser.name || "",
-          meter_number: existingUser.consumerId || "",
-          discom: existingUser.discom || "",
-          consumerId: existingUser.consumerId || "",
+          name: existing.name || "",
+          meter_number: existing.consumerId || "",
+          discom: existing.discom || "",
+          consumerId: existing.consumerId || "",
         }).catch((err) => console.error("Failed to ensure user on server:", err));
 
-        // Mark all onboarding steps as complete
+        // Mark legacy onboarding flags so older guards keep working.
         localStorage.setItem("samai_onboarding_complete", "true");
         localStorage.setItem("samai_onboarding_location_done", "true");
         localStorage.setItem("samai_onboarding_devices_done", "true");
         localStorage.setItem("samai_onboarding_talk_done", "true");
 
-        const targetRoute =
-          resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
-        navigate(targetRoute, { replace: true });
+        const target = resolvedIntent === "buy" ? "/buyer-home" : resolvedIntent === "sell" ? "/home" : "/intent";
+        navigate(target, { replace: true });
+        return;
       }
-    } else {
-      // New user: needs to select intent first
-      const newUserData = {
-        phone: phoneWithCountry,
-        onboardingComplete: false, // New users must complete onboarding first
-      };
-
-      setUserData(newUserData);
-
-      // Clear ALL user-related cache and localStorage to ensure fresh start
-      localStorage.removeItem("samai_selected_intent");
-      localStorage.removeItem("samai_onboarding_complete");
-      localStorage.removeItem("samai_onboarding_location_done");
-      localStorage.removeItem("samai_onboarding_devices_done");
-      localStorage.removeItem("samai_onboarding_talk_done");
-      localStorage.removeItem("samai_aadhaar_verified");
-      localStorage.removeItem("samai_published_trades");
-      localStorage.removeItem("samai_hide_setup_banner");
-      localStorage.removeItem("samai_user_data");
-      localStorage.removeItem("samai_onboarding_vc_done");
-
-      // Save phone to Firestore first
-      await saveUser({
-        phone: newUserData.phone,
-      } as any).catch((err) =>
-        console.error("Failed to save user phone to Firestore:", err)
-      );
-
-      // New users go to intent selection first
-      navigate("/intent", { replace: true, state: { fromVerification: true } });
+      // Backend says "exists" but we couldn't load the profile — fall through
+      // to new-user flow so the user isn't stranded.
     }
+
+    // New user (or returning user with no recoverable profile): start fresh onboarding.
+    const newUserData = {
+      phone: phoneWithCountry,
+      onboardingComplete: false,
+    };
+    setUserData(newUserData as any);
+
+    // Wipe any stale local flags so guards don't think this user is mid-flow.
+    [
+      "samai_selected_intent",
+      "samai_onboarding_complete",
+      "samai_onboarding_location_done",
+      "samai_onboarding_devices_done",
+      "samai_onboarding_talk_done",
+      "samai_aadhaar_verified",
+      "samai_published_trades",
+      "samai_hide_setup_banner",
+      "samai_user_data",
+      "samai_onboarding_vc_done",
+    ].forEach((k) => localStorage.removeItem(k));
+
+    await saveUser({ phone: newUserData.phone } as any).catch((err) =>
+      console.error("Failed to save user phone to Firestore:", err),
+    );
+
+    navigate("/intent", { replace: true, state: { fromVerification: true } });
   };
 
-  return (
-    <VerificationScreen
-      onVerified={handleVerified}
-      onBack={() => navigate("/")}
-      isReturningUser={isReturningUser}
-      selectedIntent={selectedIntent}
-    />
-  );
+  return <VerificationScreen onVerified={handleVerified} />;
 };
 
 export default VerifyPage;

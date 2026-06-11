@@ -1,258 +1,195 @@
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { ArrowLeft, CheckCircle2, AlertCircle, Timer, Zap, Search } from "lucide-react";
-import { Box, Alert, Button, CircularProgress } from "@mui/material";
-import SamaiLogo from "@/components/SamaiLogo";
+import { ArrowLeft, CheckCircle, ShieldAlert, Timer, Zap } from "lucide-react";
 import MainAppShell from "@/components/layout/MainAppShell";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { Button } from "@/components/ui/button";
+import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useVCStatus } from "@/hooks/useVCStatus";
+import { useUserData } from "@/hooks/useUserData";
 
-type TradeStatus = "searching" | "confirmed" | "completed" | "expired";
-
-interface Trade {
-  id: string;
-  timeSlot: string;
-  units: number;
-  pricePerUnit: number;
-  status: TradeStatus;
-  matchedUnits?: number;
-  buyer?: string;
-}
-
-// Price catalog for different time slots (₹6-7 range)
-const priceCatalog: Record<string, number> = {
-  "6:00 AM": 6.25,
-  "7:00 AM": 6.25,
-  "8:00 AM": 6.50,
-  "9:00 AM": 6.75,
-  "10:00 AM": 6.75,
-  "11:00 AM": 6.50,
-  "12:00 PM": 6.50,
-  "1:00 PM": 6.25,
-  "2:00 PM": 6.25,
-  "3:00 PM": 6.50,
-  "4:00 PM": 6.75,
-  "5:00 PM": 6.50,
-};
+const formatDateLabel = () =>
+  new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  });
 
 const TodayTradesPage = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
+  const { userData } = useUserData();
+  const {
+    tradesData,
+    plannedUnits,
+    plannedEarnings,
+    confirmedUnits,
+    confirmedEarnings,
+  } = usePublishedTrades();
 
-  // Demo data with 1-hour windows - amounts calculated from units * price
-  // Total completed: 2.0 + 2.0 + 2.0 + 2.5 = 8.5 kWh, earning ~₹55
-  const trades: Trade[] = [
-    { id: "1", timeSlot: "6:00 AM - 7:00 AM", units: 2.0, pricePerUnit: 6.25, status: "completed", buyer: "GridCo" },
-    { id: "2", timeSlot: "7:00 AM - 8:00 AM", units: 0.8, pricePerUnit: 6.25, status: "expired" },
-    { id: "3", timeSlot: "8:00 AM - 9:00 AM", units: 2.0, pricePerUnit: 6.50, status: "completed", buyer: "TPDDL" },
-    { id: "4", timeSlot: "9:00 AM - 10:00 AM", units: 2.0, pricePerUnit: 6.75, status: "completed", buyer: "GridCo" },
-    { id: "5", timeSlot: "10:00 AM - 11:00 AM", units: 3.5, pricePerUnit: 6.75, status: "completed", matchedUnits: 2.5, buyer: "BSES" },
-    { id: "6", timeSlot: "11:00 AM - 12:00 PM", units: 1.5, pricePerUnit: 6.50, status: "confirmed", buyer: "GridCo" },
-    { id: "7", timeSlot: "12:00 PM - 1:00 PM", units: 1.0, pricePerUnit: 6.25, status: "searching" },
-  ];
+  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const plannedTrades = tradesData.plannedTrades;
+  const confirmedTrades = tradesData.confirmedTrades;
+  const hasAnything = plannedTrades.length > 0 || confirmedTrades.length > 0;
 
-  const getStatusConfig = (trade: Trade) => {
-    const isPartial = trade.status === "completed" && trade.matchedUnits !== undefined;
-    
-    switch (trade.status) {
-      case "searching":
-        return {
-          icon: Search,
-          label: t("trades.searching"),
-          color: "text-muted-foreground",
-          bg: "bg-muted/50",
-          badgeColor: "bg-muted text-muted-foreground",
-        };
-      case "confirmed":
-        return {
-          icon: Timer,
-          label: t("trades.confirmed"),
-          color: "text-primary",
-          bg: "bg-primary/10",
-          badgeColor: "bg-primary/20 text-primary",
-        };
-      case "completed":
-        return {
-          icon: CheckCircle2,
-          label: isPartial ? `${t("trades.partial")} (${trade.matchedUnits}/${trade.units} kWh)` : t("trades.completed"),
-          color: "text-accent",
-          bg: "bg-accent/10",
-          badgeColor: isPartial ? "bg-amber-500/20 text-amber-600" : "bg-accent/20 text-accent",
-        };
-      case "expired":
-        return {
-          icon: AlertCircle,
-          label: t("trades.expired"),
-          color: "text-destructive",
-          bg: "bg-destructive/10",
-          badgeColor: "bg-destructive/20 text-destructive",
-        };
-    }
-  };
-
-  // Calculate actual earned amounts (only from completed/partial trades)
-  const completedTrades = trades.filter(t => t.status === "completed");
-  
-  const totalEarnings = completedTrades.reduce((sum, t) => {
-    const effectiveUnits = t.matchedUnits ?? t.units;
-    return sum + (effectiveUnits * t.pricePerUnit);
-  }, 0);
-
-  const totalUnits = completedTrades.reduce((sum, t) => {
-    return sum + (t.matchedUnits ?? t.units);
-  }, 0);
-
-  const groupedTrades = {
-    completed: trades.filter(t => t.status === "completed"),
-    confirmed: trades.filter(t => t.status === "confirmed"),
-    searching: trades.filter(t => t.status === "searching"),
-    expired: trades.filter(t => t.status === "expired"),
-  };
-
-  const renderTradeCard = (trade: Trade) => {
-    const config = getStatusConfig(trade);
-    const Icon = config.icon;
-    const isPartial = trade.status === "completed" && trade.matchedUnits !== undefined;
-    const effectiveUnits = trade.matchedUnits ?? trade.units;
-    const amount = effectiveUnits * trade.pricePerUnit;
-
+  // VC Guard
+  if (!vcLoading && !hasGenerationVC && !isVCVerified) {
     return (
-      <div key={trade.id} className={`px-3 py-2 rounded-lg ${config.bg}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Icon size={12} className={config.color} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-foreground truncate">{trade.timeSlot}</span>
-                {trade.buyer && (trade.status === "completed" || trade.status === "confirmed") && (
-                  <span className="text-2xs text-muted-foreground">{trade.buyer}</span>
-                )}
+      <MainAppShell>
+        <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+          <PageContainer gap={4}>
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-destructive">Verification required</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Upload your Generation Profile credential to view today's trades.
+                </p>
               </div>
-              {isPartial && (
-                <span className="text-2xs bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded-full">
-                  {t("trades.partial")} ({trade.matchedUnits}/{trade.units} kWh)
-                </span>
-              )}
             </div>
-          </div>
-          <div className="text-right ml-2">
-            <p className={`text-xs font-bold ${trade.status === "expired" ? "text-muted-foreground line-through" : "text-foreground"}`}>
-              ₹{Math.round(amount)}
-            </p>
-            <p className="text-2xs text-muted-foreground">
-              ₹{Math.round(trade.pricePerUnit)}/unit · {isPartial ? `${Math.round(effectiveUnits)}/${Math.round(trade.units)}` : Math.round(effectiveUnits)} kWh
-            </p>
-          </div>
+            <Button onClick={() => navigate("/vc")} className="w-full">
+              Go to verification
+            </Button>
+          </PageContainer>
         </div>
-      </div>
-    );
-  };
-
-  const renderSection = (title: string, trades: Trade[]) => {
-    if (trades.length === 0) return null;
-    
-    return (
-      <div className="space-y-1.5">
-        <h3 className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</h3>
-        <div className="space-y-1">
-          {trades.map(renderTradeCard)}
-        </div>
-      </div>
-    );
-  };
-
-  // VC Guard: Sellers must have generation profile
-  if (!vcLoading && !hasGenerationVC) {
-    return (
-      <MainAppShell>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 3, maxWidth: 600, mx: "auto" }}>
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <strong>Generation Profile VC Required</strong>
-            <Box sx={{ mt: 1, fontSize: "0.95rem" }}>
-              To view your daily trades, you need to upload your Generation Profile VC first. This verifies your solar generation capacity.
-            </Box>
-          </Alert>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate("/settings/vc-documents")}
-            sx={{ alignSelf: "flex-start", mt: 2 }}
-          >
-            Upload Generation Profile VC
-          </Button>
-
-          <Button
-            variant="outlined"
-            onClick={() => navigate("/home")}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            Go Back Home
-          </Button>
-        </Box>
-      </MainAppShell>
-    );
-  }
-
-  if (vcLoading) {
-    return (
-      <MainAppShell>
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-          <CircularProgress />
-        </Box>
       </MainAppShell>
     );
   }
 
   return (
     <MainAppShell>
-      <div className="screen-container !justify-start !pt-4">
-        <div className="w-full max-w-xl flex flex-col h-full px-4 lg:max-w-4xl lg:px-0">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <button 
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <PageContainer gap={5}>
+          {/* Heading row */}
+          <div className="flex items-center gap-2 fade-in opacity-0">
+            <button
               onClick={() => navigate("/home")}
-              className="p-1.5 -ml-1.5 hover:bg-muted rounded-lg transition-colors"
+              aria-label="Back"
+              className="flex h-9 w-9 -ml-1.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
-              <ArrowLeft size={18} className="text-foreground" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-base font-bold text-foreground">{t("trades.today")}</h1>
-              <p className="text-2xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                Today's trades
+              </h1>
+              <p className="mt-0.5 text-xs text-muted-foreground nums">{formatDateLabel()}</p>
             </div>
           </div>
-          <SamaiLogo size="sm" showText={false} />
-        </div>
 
-        {/* Summary Card */}
-        <div className="bg-card rounded-xl p-3 shadow-card mb-3 animate-slide-up">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xs text-muted-foreground">{t("trades.earnedSoFar")}</p>
-              <p className="text-xl font-bold text-primary">₹{Math.round(totalEarnings)}</p>
-              <p className="text-2xs text-muted-foreground">{Math.round(totalUnits)} {t("trades.kwhSold")}</p>
+          {/* Summary — blue hero amount, green confirmed chip */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Earned so far
+              </p>
+              {confirmedTrades.length > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent nums">
+                  <CheckCircle className="h-2.5 w-2.5" />
+                  {confirmedTrades.length} confirmed
+                </span>
+              )}
             </div>
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Zap size={20} className="text-primary" />
+
+            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              <p className="text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+                ₹{confirmedEarnings.toLocaleString("en-IN")}
+              </p>
+              <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
+              <p className="mt-2 text-xs text-muted-foreground nums">
+                {confirmedUnits.toFixed(2)} kWh sold to buyers today.
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Trade Sections */}
-        <div className="flex-1 overflow-y-auto space-y-3 pb-4">
-          {renderSection(t("trades.completed"), groupedTrades.completed)}
-          {renderSection(t("trades.confirmed"), groupedTrades.confirmed)}
-          {renderSection(t("trades.plannedTrades"), groupedTrades.searching)}
-          {renderSection(t("trades.expired"), groupedTrades.expired)}
-
-          {trades.length === 0 && (
-            <div className="text-center py-6">
-              <p className="text-xs text-muted-foreground">{t("trades.noTradesScheduled")}</p>
+          {/* Confirmed section */}
+          {confirmedTrades.length > 0 && (
+            <div className="space-y-2">
+              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Confirmed
+              </p>
+              <div className="space-y-2">
+                {confirmedTrades.map((t, i) => (
+                  <div
+                    key={`c-${t.time}-${i}`}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                      <Zap className="h-4 w-4 fill-current" strokeWidth={0} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{t.time}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground nums">
+                        {t.kWh.toFixed(2)} kWh · ₹{t.rate.toFixed(2)}/kWh
+                        {t.buyer && (
+                          <>
+                            {" · "}
+                            <span className="text-foreground">{t.buyer}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-base font-semibold text-accent nums">
+                      ₹{t.earnings.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </div>
-        </div>
+
+          {/* Awaiting buyers section */}
+          {plannedTrades.length > 0 && (
+            <div className="space-y-2">
+              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Awaiting buyers
+              </p>
+              <div className="space-y-2">
+                {plannedTrades.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                      <Timer className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{t.time}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground nums">
+                        {t.kWh.toFixed(2)} kWh · ₹{t.rate.toFixed(2)}/kWh
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold text-foreground nums">
+                      ₹{Math.round(t.kWh * t.rate).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="px-1 pt-1 text-[10px] text-muted-foreground nums">
+                {plannedUnits.toFixed(2)} kWh listed · expected ₹{plannedEarnings.toLocaleString("en-IN")}
+              </p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!hasAnything && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                <Timer className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-foreground">Nothing live today</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Publish tomorrow's catalog to start matching with buyers.
+                </p>
+              </div>
+              <Button onClick={() => navigate("/tomorrow-trades")} size="sm" className="mt-1">
+                Prepare catalog
+              </Button>
+            </div>
+          )}
+        </PageContainer>
       </div>
     </MainAppShell>
   );

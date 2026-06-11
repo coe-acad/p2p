@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Bell } from "lucide-react";
-import SamaiLogo from "../SamaiLogo";
+import { Bell, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PublishConfirmationScreenProps {
   onGoHome: () => void;
@@ -17,46 +17,45 @@ const PublishConfirmationScreen = ({ onGoHome }: PublishConfirmationScreenProps)
   }, []);
 
   useEffect(() => {
-    if (autoRedirect <= 0) {
-      onGoHome();
-    }
+    if (autoRedirect <= 0) onGoHome();
   }, [autoRedirect, onGoHome]);
 
   return (
-    <div className="screen-container">
-      <div className="w-full max-w-sm flex flex-col items-center gap-5 px-4">
-        {/* Success Icon */}
-        <div className="relative animate-scale-in">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-glow-green">
-            <Check className="text-accent-foreground" size={28} strokeWidth={2.5} />
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-sm flex flex-col items-center gap-6">
+        {/* Success check — solid green with ping ring. No gradients. */}
+        <div className="relative">
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full bg-accent/30 animate-ping"
+          />
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-accent shadow-[0_10px_24px_-10px_rgba(31,138,82,0.55)]">
+            <Check className="h-7 w-7 text-accent-foreground" strokeWidth={2.5} />
           </div>
         </div>
 
-        {/* Message */}
-        <div className="text-center animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <h2 className="text-lg font-semibold text-foreground tracking-tight">
+        {/* Title + note */}
+        <div className="text-center">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             Your energy is now listed
           </h2>
-          <div className="flex items-start gap-2 p-2.5 bg-primary/5 rounded-lg text-left mt-3">
-            <Bell className="text-primary flex-shrink-0 mt-0.5" size={14} />
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/[0.05] p-3 text-left">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Bell className="h-3.5 w-3.5" />
+            </span>
             <p className="text-xs text-muted-foreground">
-              Samai will find the best buyers and notify you daily.
+              Samai will find the best buyers and notify you as trades confirm.
             </p>
           </div>
         </div>
 
-        {/* Logo */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <SamaiLogo size="sm" />
-        </div>
-
         {/* CTA */}
-        <div className="w-full animate-slide-up" style={{ animationDelay: "0.3s" }}>
-          <button onClick={onGoHome} className="btn-solar w-full text-sm !py-2.5">
-            Go to Home
-          </button>
-          <p className="text-2xs text-center text-muted-foreground mt-2">
-            Redirecting in {autoRedirect}s...
+        <div className="w-full">
+          <Button onClick={onGoHome} className="w-full" size="lg">
+            Go to home
+          </Button>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground nums">
+            Redirecting in {autoRedirect}s…
           </p>
         </div>
       </div>

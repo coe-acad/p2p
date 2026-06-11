@@ -1,33 +1,32 @@
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { TradeHistory } from "@/components/TradeHistory";
+import { ReceiptText } from "lucide-react";
 
 const BuyerOrderHistoryPage = () => {
-  const navigate = useNavigate();
   const { userData } = useUserData();
 
   return (
     <MainAppShell>
-      <div className="screen-container !justify-start !pt-4 !pb-6">
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={4}>
-          {/* Header */}
-          <div className="flex items-center gap-3 animate-fade-in">
-            <button
-              onClick={() => navigate("/buyer-profile")}
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-            >
-              <ChevronLeft size={20} className="text-foreground" />
-            </button>
-            <h1 className="text-lg font-bold text-foreground">Purchase History</h1>
+          {/* Page heading */}
+          <div className="flex items-center gap-3 fade-in opacity-0">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <ReceiptText className="h-5 w-5" />
+            </span>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                Purchase history
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Past trades and ongoing orders.
+              </p>
+            </div>
           </div>
 
-          {/* Trade History */}
-          <div className="animate-slide-up">
-            <TradeHistory role="buyer" buyerPhone={userData.phone} />
-          </div>
+          <TradeHistory role="buyer" buyerPhone={(userData as any)?.phone} />
         </PageContainer>
       </div>
     </MainAppShell>
