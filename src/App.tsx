@@ -10,6 +10,7 @@ import {
   IntentAccessRoute,
 } from "@/components/layout/ProtectedRoute";
 import { Toaster } from "@/components/ui/toaster";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -26,7 +27,53 @@ import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      retry: 1,
+    },
+  },
+});
+
+const AppRoutes = () => {
+  useAndroidBackButton();
+  return (
+    <Routes>
+      {/* Single auth entry: phone+OTP. Returning users with intent set are
+          redirected to their home by PublicOnlyRoute. */}
+      <Route path="/" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
+      <Route path="/verify" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
+      <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
+
+      {/* Onboarding Steps - Both buyers and sellers */}
+      <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
+
+      {/* VC details (post-upload management) - both intents */}
+      <Route path="/vc" element={<VCPage />} />
+
+      {/* Seller Main App */}
+      <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
+      <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
+      <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
+      <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
+      <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
+      <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+
+      {/* Buyer Main App */}
+      <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
+      <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
+      <Route path="/buyer-payment" element={<RoleProtectedRoute requiredIntent="buy"><PaymentPage /></RoleProtectedRoute>} />
+      <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
+
+      {/* Catch-all */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -35,37 +82,8 @@ const App = () => (
       <SnackbarProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="app-viewport-min bg-background">
-          <Routes>
-            {/* Single auth entry: phone+OTP. Returning users with intent set are
-                redirected to their home by PublicOnlyRoute. */}
-            <Route path="/" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
-            <Route path="/verify" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
-            <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
-
-            {/* Onboarding Steps - Both buyers and sellers */}
-            <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
-
-            {/* VC details (post-upload management) - both intents */}
-            <Route path="/vc" element={<VCPage />} />
-
-            {/* Seller Main App */}
-            <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />
-            <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
-            <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
-            <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
-            <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
-            <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
-
-            {/* Buyer Main App */}
-            <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
-            <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
-            <Route path="/buyer-payment" element={<RoleProtectedRoute requiredIntent="buy"><PaymentPage /></RoleProtectedRoute>} />
-            <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
-
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
+            <AppRoutes />
+            <Toaster />
         </div>
       </BrowserRouter>
       </SnackbarProvider>

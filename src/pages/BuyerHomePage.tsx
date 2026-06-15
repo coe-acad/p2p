@@ -342,7 +342,7 @@ const BuyerHomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-screen overflow-x-hidden bg-background">
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Greeting — profile now lives in the shell's top header. Only the
               refresh action stays on the page since it's contextual to listings. */}
@@ -419,7 +419,7 @@ const BuyerHomePage = () => {
                     <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
                     listing{groupedListings.length === 1 ? "" : "s"} available
                   </p>
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 max-h-[calc(100dvh-15rem)] overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
                     {paginatedGroupedListings.map((listing, idx) => (
                       <div
                         key={listing.id}

@@ -108,22 +108,6 @@ const TomorrowTradesPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Refetch VC status on load to ensure latest.
-  useEffect(() => {
-    const refetchVCStatus = async () => {
-      try {
-        const token = await user?.getIdToken();
-        if (!token) return;
-        await fetch(`${backendUrl}/api/vc/status`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (err) {
-        console.error("Error refreshing VC status:", err);
-      }
-    };
-    refetchVCStatus();
-  }, [user, backendUrl]);
-
   useEffect(() => {
     const fetchTomorrowCatalog = async () => {
       if (!profileHydrated) return;

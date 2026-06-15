@@ -32,8 +32,13 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
         </div>
       )}
 
-      {/* Sticky header */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      {/* Sticky header — safe-area padding keeps the bar clear of the device
+          status bar on Android/iOS (Capacitor uses overlay=false, but the env
+          variable still adds a couple of pixels on notched landscape). */}
+      <header
+        className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <SamaiHeaderBrand />
           <ProfileMenu />

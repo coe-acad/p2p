@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
 import { FileText, Loader2, Upload, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
+import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import {
@@ -29,6 +31,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { userData, setUserData } = useUserData();
+  const queryClient = useQueryClient();
 
   const intent = (userData as any)?.intent;
   const credentialLabel = intent === "buy" ? "Consumption" : "Generation";
@@ -118,6 +121,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
       }
 
       setUploadedFile(null);
+      await queryClient.invalidateQueries({ queryKey: VC_STATUS_QUERY_KEY });
       onSuccess?.();
       onClose();
     } catch (error) {

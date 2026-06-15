@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Loader2, Upload, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ const OnboardingVCPage = () => {
   const { userData, setUserData } = useUserData();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -126,6 +129,8 @@ const OnboardingVCPage = () => {
           ...(userName ? { name: userName } : {}),
         } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
       }
+
+      await queryClient.invalidateQueries({ queryKey: VC_STATUS_QUERY_KEY });
 
       navigate(homeRoute, { replace: true });
     } catch (error) {
