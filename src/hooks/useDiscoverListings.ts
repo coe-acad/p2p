@@ -79,7 +79,7 @@ export const useDiscoverListings = () => {
 
   const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
   const NETWORK_ID =
-    import.meta.env.VITE_NETWORK_ID || "p2p-interdiscom-trading-test-network";
+    import.meta.env.VITE_NETWORK_ID || "test-ies-p2p-trading-network";
   const PAGE_SIZE = 10;
   const RAW_FETCH_LIMIT = 500;
   const discoverClientRef = useRef(createApiClient(BAP_URL));
