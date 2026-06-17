@@ -139,7 +139,7 @@ const BuyerHomePage = () => {
     setIsRefreshing(true);
     // Silent so the catalog list doesn't get replaced by skeletons — the
     // spinning icon on the refresh button is feedback enough.
-    await fetchListings(0, {}, { silent: true });
+    await fetchListings(0, {}, { silent: true, refreshFromNetwork: true });
     setIsRefreshing(false);
   };
 
@@ -274,7 +274,7 @@ const BuyerHomePage = () => {
           return next;
         });
       }
-      await fetchListings();
+      await fetchListings(0, {}, { refreshFromNetwork: true });
 
       setTimeout(() => {
         setShowQuoteModal(false);
@@ -326,7 +326,7 @@ const BuyerHomePage = () => {
     // Re-hydrate every API-driven piece of state on the home page after a
     // confirmed transaction — listings (the offer might be sold out / updated)
     // and VC status — without a physical page reload.
-    void fetchListings();
+    void fetchListings(0, {}, { refreshFromNetwork: true });
     void refetchVCStatus();
   };
 
@@ -492,7 +492,7 @@ const BuyerHomePage = () => {
           onClose={() => setShowVCUploadModal(false)}
           onSuccess={() => {
             setShowVCUploadModal(false);
-            fetchListings();
+            fetchListings(0, {}, { refreshFromNetwork: true });
           }}
         />
       </div>

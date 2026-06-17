@@ -66,12 +66,20 @@ const TomorrowTradesPage = () => {
   const [approvingDraftId, setApprovingDraftId] = useState<string | null>(null);
   const [catalogView, setCatalogView] = useState<"draft" | "real">("real");
 
-  // Form state for creating draft trades
-  const [draftForm, setDraftForm] = useState({
-    startTime: "2026-06-12T10:00:00Z",
-    endTime: "2026-06-12T11:00:00Z",
-    kWh: 5.5,
-    price: 8.5,
+  // Form state for creating draft trades. Default to tomorrow 10:00–11:00
+  // (wall-clock) so sellers can hit "Add" without first picking a date.
+  const [draftForm, setDraftForm] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const dd = String(tomorrow.getDate()).padStart(2, "0");
+    return {
+      startTime: `${yyyy}-${mm}-${dd}T10:00:00Z`,
+      endTime: `${yyyy}-${mm}-${dd}T11:00:00Z`,
+      kWh: 5.5,
+      price: 8.5,
+    };
   });
 
   // Countdown to the 7 PM IST catalog refresh.
