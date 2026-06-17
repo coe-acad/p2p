@@ -71,9 +71,9 @@ export const usePublishedTrades = () => {
     });
   }, []);
 
-  const publishTrades = async (trades: PlannedTrade[]) => {
-    // Persist immediately (prevents race conditions when navigating)
-    // Backend submission is handled by the caller (e.g. PreparedTomorrowScreen)
+  // Memoized: HomePage uses this in a useEffect dep array; a new identity
+  // every render would cause /api/trades on BPP to be polled in a loop.
+  const publishTrades = useCallback(async (trades: PlannedTrade[]) => {
     const publishedAt = new Date().toISOString();
     setTradesDataState(prev => {
       const newData: PublishedTradesData = {
@@ -85,7 +85,7 @@ export const usePublishedTrades = () => {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
       return newData;
     });
-  };
+  }, []);
 
   const confirmTrades = (trades: ConfirmedTrade[]) => {
     setTradesDataState(prev => ({
