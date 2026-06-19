@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, serverTimestamp, onSnapshot, Unsubscribe } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
@@ -55,28 +55,6 @@ export const loadUser = async (phone: string): Promise<Partial<UserData> | null>
     return snap.data() as Partial<UserData>;
   }
   return null;
-};
-
-// Subscribe to real-time user data changes from Firestore
-export const subscribeToUser = (
-  phone: string,
-  onUpdate: (data: Partial<UserData> | null) => void
-): Unsubscribe => {
-  const userRef = doc(db, COLLECTION, phone);
-  return onSnapshot(
-    userRef,
-    (snap) => {
-      if (snap.exists()) {
-        onUpdate(snap.data() as Partial<UserData>);
-      } else {
-        // User document was deleted
-        onUpdate(null);
-      }
-    },
-    (error) => {
-      console.error("Error subscribing to user data:", error);
-    }
-  );
 };
 
 export type EnsureUserPayload = {

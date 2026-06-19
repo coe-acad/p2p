@@ -88,9 +88,9 @@ export const useDiscoverListings = () => {
   const fetchListings = async (
     pageNumber: number = 0,
     searchFilters: SearchFilters = {},
-    opts: { silent?: boolean } = {},
+    opts: { silent?: boolean; refreshFromNetwork?: boolean } = {},
   ) => {
-    const { silent = false } = opts;
+    const { silent = false, refreshFromNetwork = false } = opts;
     try {
       activeRequestRef.current?.abort();
       const controller = new AbortController();
@@ -104,13 +104,12 @@ export const useDiscoverListings = () => {
         setError(null);
       }
 
-      // Refresh from CDS via BAP adapter when loading the first page (new session, filters, or pull-to-refresh pattern).
-      if (pageNumber === 0) {
+      const refreshCatalogs = async (force: boolean) => {
         console.log('[useDiscoverListings] Triggering POST /discover to refresh catalogs');
         await requestWithRetry<unknown>(
           discoverClientRef.current,
           {
-            url: "/discover",
+            url: force ? "/discover?force=true" : "/discover",
             method: "POST",
             headers: { "Content-Type": "application/json" },
             data: {},
@@ -125,47 +124,66 @@ export const useDiscoverListings = () => {
         console.log('[useDiscoverListings] POST /discover completed, waiting 2s for catalog storage');
         // Wait for on_discover callback to store catalogs in backend
         await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      };
 
-      const params = new URLSearchParams();
+      const buildParams = () => {
+        const params = new URLSearchParams();
 
-      // Fetch a broad raw offer set, then paginate grouped catalogs in the UI.
-      params.append("limit", RAW_FETCH_LIMIT.toString());
-      params.append("offset", "0");
+        // Fetch a broad raw offer set, then paginate grouped catalogs in the UI.
+        params.append("limit", RAW_FETCH_LIMIT.toString());
+        params.append("offset", "0");
 
-      // Add filters
-      if (searchFilters.seller_name) {
-        params.append("seller_name", searchFilters.seller_name);
-      }
-      if (searchFilters.min_price !== undefined) {
-        params.append("min_price", searchFilters.min_price.toString());
-      }
-      if (searchFilters.max_price !== undefined) {
-        params.append("max_price", searchFilters.max_price.toString());
-      }
-      if (searchFilters.min_quantity !== undefined) {
-        params.append("min_quantity", searchFilters.min_quantity.toString());
-      }
-      if (searchFilters.max_quantity !== undefined) {
-        params.append("max_quantity", searchFilters.max_quantity.toString());
-      }
-      if (searchFilters.source_type) {
-        params.append("source_type", searchFilters.source_type);
-      }
-
-      console.log('[useDiscoverListings] Fetching GET /discover with params:', params.toString());
-      const data = await requestWithRetry<ListingsResponse>(
-        discoverClientRef.current,
-        {
-          url: `/discover?${params.toString()}`,
-          method: "GET",
-        },
-        {
-          signal: controller.signal,
-          timeoutMs: 10000,
-          retries: 2,
+        // Add filters
+        if (searchFilters.seller_name) {
+          params.append("seller_name", searchFilters.seller_name);
         }
-      );
+        if (searchFilters.min_price !== undefined) {
+          params.append("min_price", searchFilters.min_price.toString());
+        }
+        if (searchFilters.max_price !== undefined) {
+          params.append("max_price", searchFilters.max_price.toString());
+        }
+        if (searchFilters.min_quantity !== undefined) {
+          params.append("min_quantity", searchFilters.min_quantity.toString());
+        }
+        if (searchFilters.max_quantity !== undefined) {
+          params.append("max_quantity", searchFilters.max_quantity.toString());
+        }
+        if (searchFilters.source_type) {
+          params.append("source_type", searchFilters.source_type);
+        }
+
+        return params;
+      };
+
+      const getCachedListings = async () => {
+        const params = buildParams();
+        console.log('[useDiscoverListings] Fetching GET /discover with params:', params.toString());
+        return requestWithRetry<ListingsResponse>(
+          discoverClientRef.current,
+          {
+            url: `/discover?${params.toString()}`,
+            method: "GET",
+          },
+          {
+            signal: controller.signal,
+            timeoutMs: 10000,
+            retries: 2,
+          }
+        );
+      };
+
+      if (pageNumber === 0 && refreshFromNetwork) {
+        await refreshCatalogs(true);
+      }
+
+      let data = await getCachedListings();
+
+      const hasFilters = Object.values(searchFilters).some((value) => value !== undefined && value !== "");
+      if (pageNumber === 0 && !refreshFromNetwork && !hasFilters && (data.listings?.length || 0) === 0) {
+        await refreshCatalogs(false);
+        data = await getCachedListings();
+      }
 
       console.log('[useDiscoverListings] GET /discover returned', data.listings?.length || 0, 'listings');
       const sanitizedListings = sanitizeListings(data.listings);
