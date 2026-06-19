@@ -8,8 +8,8 @@ const sizeClasses: Record<Size, { wrap: string; icon: string }> = {
 };
 
 /**
- * The Samai wordmark — Atria-blue text with an accent-green Zap glyph.
- * Samai is the product brand; the AU blue+green palette is the visual scheme.
+ * The CharzPe wordmark — Atria-blue text with an accent-green Zap glyph.
+ * CharzPe is the product brand; the AU blue+green palette is the visual scheme.
  *
  * Use `size="lg"` for hero/centered placements (auth, onboarding entry).
  * Use `size="sm"` for compact header/nav placements inside the app.
@@ -24,7 +24,7 @@ const BrandMark = ({ size = "sm", className = "" }: { size?: Size; className?: s
         <span aria-hidden className="electric-pulse absolute inset-0" />
         <Zap className={`relative ${s.icon} fill-accent text-accent`} strokeWidth={0} />
       </span>
-      <span className="text-primary">Samai</span>
+      <span className="text-primary">CharzPe</span>
     </span>
   );
 };
