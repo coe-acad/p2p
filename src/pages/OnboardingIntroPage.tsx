@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, MapPin, Cpu, MessageCircle, Sun, Sparkles } from "lucide-react";
-import SamaiLogo from "@/components/SamaiLogo";
+import SVMCLogo from "@/components/SVMCLogo";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 const OnboardingIntroPage = () => {
@@ -47,7 +47,7 @@ const OnboardingIntroPage = () => {
       <PageContainer gap={8} className="items-center relative z-10">
         {/* Logo */}
         <div>
-          <SamaiLogo size="md" />
+          <SVMCLogo size="md" />
         </div>
 
         {/* Message */}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronRight, Loader2, ShoppingBag, Sun } from "lucide-react";
-import SamaiLogo from "@/components/SamaiLogo";
+import SVMCLogo from "@/components/SVMCLogo";
 
 interface IntentSelectionScreenProps {
   onSelect: (intents: ("sell" | "buy")[]) => void;
@@ -87,7 +87,7 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <SamaiLogo size="lg" showText={true} />
+            <SVMCLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">

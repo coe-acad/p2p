@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import SamaiHeaderBrand from "@/components/SamaiHeaderBrand";
+import SVMCHeaderBrand from "@/components/SVMCHeaderBrand";
 import { ProfileMenu } from "./ProfileMenu";
 
 interface MainAppShellProps {
@@ -35,7 +35,7 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
       {/* Sticky header */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <SamaiHeaderBrand />
+          <SVMCHeaderBrand />
           <ProfileMenu />
         </div>
       </header>

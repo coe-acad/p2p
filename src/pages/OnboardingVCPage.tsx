@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import SamaiLogo from "@/components/SamaiLogo";
+import SVMCLogo from "@/components/SVMCLogo";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 
@@ -252,7 +252,7 @@ const OnboardingVCPage = () => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <SamaiLogo size="lg" showText={true} />
+            <SVMCLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">
