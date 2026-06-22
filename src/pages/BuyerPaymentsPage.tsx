@@ -76,49 +76,54 @@ const BuyerPaymentsPage = () => {
     <MainAppShell>
       <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
-          {/* Heading */}
-          <div className="flex items-center gap-3 fade-in opacity-0">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-              <Wallet className="h-5 w-5" />
-            </span>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                Payments
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Settlements and recent receipts.
-              </p>
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 animate-slide-up" style={{ animationDelay: "0s" }}>
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 text-accent shadow-sm">
+                <CreditCard className="h-6 w-6" />
+              </span>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  Payment History
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Track your purchases and payments
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Summary — calm card, hero amount in Atria blue (money = structural) */}
-          <div className="rounded-2xl border border-primary/15 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+          {/* Summary card — payment overview */}
+          <div className="group rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-background p-6 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)] transition-all duration-300 ease-out hover:border-primary/25 hover:shadow-[0_12px_28px_-12px_rgba(36,40,128,0.30)]">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Confirmed purchases
+              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Total Spent
               </p>
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent nums">
-                <CheckCircle className="h-2.5 w-2.5" />
-                {completed.length}
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-accent nums">
+                <CheckCircle className="h-3 w-3" />
+                {completed.length} settled
               </span>
             </div>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-primary nums sm:text-5xl">
+            <p className="mt-4 text-5xl font-bold tracking-tight text-primary nums sm:text-6xl">
               ₹{totalConfirmed.toLocaleString("en-IN")}
             </p>
-            {/* Short blue accent line — emphasises the financial total */}
-            <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
-            <p className="mt-2 text-xs text-muted-foreground">Total settled across your trades.</p>
+            <div className="mt-4 flex items-center gap-4">
+              <span aria-hidden className="block h-1 w-12 rounded-full bg-gradient-to-r from-primary to-accent opacity-100 group-hover:w-16 transition-all duration-300" />
+              <p className="text-sm text-muted-foreground">across all purchases</p>
+            </div>
           </div>
 
           {/* Recent transactions */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Recent transactions
-              </p>
-              {!loading && payments.length > 0 && (
-                <p className="text-xs text-muted-foreground nums">{payments.length} total</p>
-              )}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold tracking-tight text-foreground">
+                  Recent Transactions
+                </p>
+                {!loading && payments.length > 0 && (
+                  <p className="mt-0.5 text-xs text-muted-foreground nums">{payments.length} payment{payments.length !== 1 ? 's' : ''} recorded</p>
+                )}
+              </div>
             </div>
 
             {loading ? (
