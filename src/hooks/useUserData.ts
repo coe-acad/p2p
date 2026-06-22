@@ -133,12 +133,19 @@ export const useUserData = () => {
 
       const phone = firebaseUser.phoneNumber;
 
+      // Seed the authenticated phone immediately so phone-gated flows (e.g.
+      // /intent) work for new users whose Firestore doc doesn't exist yet —
+      // otherwise phone stays empty until a remote doc loads and the user is
+      // stranded on the intent screen.
+      setUserDataState((prev) => ({ ...prev, phone }));
+
       // Set up REAL-TIME listener for user data changes
       unsubUser = subscribeToUser(phone, (remote) => {
         if (remote === null) {
-          // User document was deleted from Firestore
-          console.warn("User document deleted from Firestore");
-          setUserDataState({ ...DEFAULT_USER_DATA });
+          // No Firestore doc yet (new user) or doc deleted — reset the profile
+          // but KEEP the authenticated phone so /intent stays usable (saveUser
+          // creates the doc on first action). Wiping phone here strands new users.
+          setUserDataState((prev) => ({ ...DEFAULT_USER_DATA, phone }));
         } else if (Object.keys(remote).length > 0) {
           const { intent: _remoteIntentField, name: _oldName, ...remoteRest } = remote as Record<string, unknown>;
           setUserDataState((prev) => ({
