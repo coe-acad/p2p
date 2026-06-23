@@ -100,7 +100,7 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-500/10 flex items-center justify-center">
                 <MessageCircle className="text-purple-500" size={14} />
               </div>
-              <h2 className="text-base font-semibold text-foreground">Help Samai understand you</h2>
+              <h2 className="text-base font-semibold text-foreground">Help CharzPe understand you</h2>
             </div>
           </div>
         </div>
@@ -208,7 +208,7 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
 
         {/* Automation Toggle - Compact */}
         <div className="bg-card rounded-xl border border-border p-2.5 shadow-card animate-slide-up">
-          <p className="text-xs font-semibold text-foreground mb-2 text-center">How should Samai help?</p>
+          <p className="text-xs font-semibold text-foreground mb-2 text-center">How should CharzPe help?</p>
           
           <div className="grid grid-cols-2 gap-2">
             <button

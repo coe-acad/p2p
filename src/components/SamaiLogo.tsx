@@ -35,7 +35,7 @@ const SamaiLogo = ({ size = "md", showText = true, animated = false }: SamaiLogo
           {/* Logo image */}
           <img
             src={samaiLogoSvg}
-            alt="Samai"
+            alt="CharzPe"
             className={`w-full h-full object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
           />
         </div>
@@ -43,7 +43,7 @@ const SamaiLogo = ({ size = "md", showText = true, animated = false }: SamaiLogo
       
       {showText && (
         <h1 className={`${sizes[size].text} font-semibold text-foreground tracking-tight`}>
-          Samai
+          CharzPe
         </h1>
       )}
     </div>

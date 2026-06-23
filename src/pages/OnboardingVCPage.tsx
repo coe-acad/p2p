@@ -9,7 +9,7 @@ import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import BrandMark from "@/components/BrandMark";
+import SamaiLogo from "@/components/SamaiLogo";
 import { unwrapCredential } from "@/utils/vcCredential";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
@@ -168,7 +168,7 @@ const OnboardingVCPage = () => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <BrandMark size="lg" />
+            <SamaiLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">

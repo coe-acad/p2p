@@ -8,7 +8,7 @@ const OnboardingIntroPage = () => {
 
   const steps = [
     { step: 1, title: "Verify your electricity connection", icon: MapPin, color: "from-orange-400 to-amber-500" },
-    { step: 2, title: "Help Samai understand you", icon: MessageCircle, color: "from-purple-400 to-indigo-500" },
+    { step: 2, title: "Help CharzPe understand you", icon: MessageCircle, color: "from-purple-400 to-indigo-500" },
     { step: 3, title: "Upload your credentials", icon: Sparkles, color: "from-teal-400 to-cyan-500" },
   ];
 
@@ -46,7 +46,7 @@ const OnboardingIntroPage = () => {
 
       <PageContainer gap={8} className="items-center relative z-10">
         {/* Logo */}
-        <div className="animate-fade-in">
+        <div>
           <SamaiLogo size="md" />
         </div>
 
@@ -56,7 +56,7 @@ const OnboardingIntroPage = () => {
             <Sparkles className="text-primary" size={26} />
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            Your Samai account is ready!
+            Your CharzPe account is ready!
           </h2>
           <p className="text-sm text-muted-foreground">
             Complete 3 quick steps before you start earning.

@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import BrandMark from "@/components/BrandMark";
+import SamaiLogo from "@/components/SamaiLogo";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -196,7 +196,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <SamaiLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">
@@ -252,7 +252,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                By continuing you agree to Samai's{" "}
+                By continuing you agree to CharzPe's{" "}
                 <a href="#" className="text-foreground underline-offset-4 hover:underline">
                   Terms
                 </a>{" "}
@@ -268,7 +268,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <SamaiLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">

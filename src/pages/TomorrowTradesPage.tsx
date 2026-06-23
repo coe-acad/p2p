@@ -40,9 +40,8 @@ interface DraftCatalog extends TomorrowCatalog {
   status: 'draft' | 'published';
 }
 
-const resolveBackendUrl = (envUrl?: string): string => {
-  if (envUrl) return envUrl;
-  return "http://localhost:3002";
+const getBackendUrl = (): string => {
+  return import.meta.env.VITE_BACKEND_URL || "https://atria-bpp.atriauniversity.ai";
 };
 
 const TomorrowTradesPage = () => {
@@ -52,7 +51,7 @@ const TomorrowTradesPage = () => {
   const { user } = useAuth();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
   const { publishTrades } = usePublishedTrades();
-  const backendUrl = resolveBackendUrl(import.meta.env.VITE_BACKEND_URL);
+  const backendUrl = getBackendUrl();
 
   const isVCVerified = Boolean((userData as any)?.is_vc_verified);
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);

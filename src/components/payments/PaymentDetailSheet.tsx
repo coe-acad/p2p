@@ -149,11 +149,11 @@ const PaymentDetailSheet = ({ transaction, open, onOpenChange }: PaymentDetailSh
             </div>
           </div>
 
-          {/* Samai Insights */}
+          {/* CharzPe Insights */}
           <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-accent/5 rounded-xl p-4 border border-primary/10">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Samai Insights</h3>
+              <h3 className="text-sm font-semibold text-foreground">CharzPe Insights</h3>
             </div>
             
             <div className="space-y-3">
