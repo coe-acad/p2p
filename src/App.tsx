@@ -21,7 +21,6 @@ import BuyerHomePage from "./pages/BuyerHomePage";
 import TodayTradesPage from "./pages/TodayTradesPage";
 import TomorrowTradesPage from "./pages/TomorrowTradesPage";
 import PaymentsPage from "./pages/PaymentsPage";
-import PaymentPage from "./pages/PaymentPage";
 import BuyerPaymentsPage from "./pages/BuyerPaymentsPage";
 import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
@@ -60,13 +59,11 @@ const AppRoutes = () => {
       <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
       <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
       <Route path="/payments" element={<RoleProtectedRoute requiredIntent="sell"><PaymentsPage /></RoleProtectedRoute>} />
-      <Route path="/payment" element={<RoleProtectedRoute requiredIntent="sell"><PaymentPage /></RoleProtectedRoute>} />
       <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
 
       {/* Buyer Main App */}
       <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
       <Route path="/buyer-payments" element={<RoleProtectedRoute requiredIntent="buy"><BuyerPaymentsPage /></RoleProtectedRoute>} />
-      <Route path="/buyer-payment" element={<RoleProtectedRoute requiredIntent="buy"><PaymentPage /></RoleProtectedRoute>} />
       <Route path="/buyer-order-history" element={<RoleProtectedRoute requiredIntent="buy"><BuyerOrderHistoryPage /></RoleProtectedRoute>} />
 
       {/* Catch-all */}

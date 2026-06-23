@@ -13,6 +13,8 @@ import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
+import { paymentIntentService } from "@/services/paymentIntentService";
+import { openRazorpayCheckout, RazorpayDismissed } from "@/lib/razorpay";
 import VCUploadModal from "@/components/modals/VCUploadModal";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw, ShieldAlert, Zap } from "lucide-react";
@@ -89,7 +91,15 @@ const BuyerHomePage = () => {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<
-    "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed"
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed"
   >("idle");
   const [currentTransactionId, setCurrentTransactionId] = useState<string>("");
   const [currentOrderData, setCurrentOrderData] = useState<any>(null);
@@ -238,35 +248,60 @@ const BuyerHomePage = () => {
 
   const handleConfirmOrder = async () => {
     if (!selectedOffer || !currentTransactionId) return;
-    setOrderStatus("confirming");
     setOrderError(null);
 
+    // Buyer-driven confirm now goes through atria-payments. The BAP /confirm
+    // route is gated on the payment_intent record, so calling it directly
+    // (the old path) would 402. The flow:
+    //   paying   → create Razorpay order + open checkout
+    //   verifying → server-side signature check + flips PENDING→PAID
+    //   finalising → poll until atria-payments confirms BAP forwarded /confirm
+    //   confirmed → on_confirm has landed on BAP
     try {
-      await orderService.confirm(
+      setOrderStatus("paying");
+      const paymentOrder = await paymentIntentService.createPaymentOrder(
         currentTransactionId,
-        {
-          offer_id: selectedOffer.offer_id,
-          seller_id: selectedOffer.seller_id,
-          bpp_id: selectedOffer.bpp_id,
-          bpp_uri: selectedOffer.bpp_uri,
-          offer_item_ids: selectedOffer.offer_item_ids,
-          offer_provider: selectedOffer.offer_provider,
-          offer_descriptor: selectedOffer.offer_descriptor,
-          offer_price: selectedOffer.offer_price,
-          offer_attributes: selectedOffer.offer_attributes,
-          quantity: selectedOffer.quantity_available,
-          price_per_unit: selectedOffer.price_per_unit,
-          seller_name: selectedOffer.seller_name,
-          delivery_start: selectedOffer.delivery_start,
-          delivery_end: selectedOffer.delivery_end,
-        },
-        currentOrderData,
       );
 
+      let razorpayResponse;
+      try {
+        razorpayResponse = await openRazorpayCheckout({
+          keyId: paymentOrder.key_id,
+          orderId: paymentOrder.order_id,
+          amount: paymentOrder.amount,
+          currency: paymentOrder.currency,
+          description: `Energy purchase from ${selectedOffer.seller_name ?? "seller"}`,
+          prefill: {
+            name: userData?.name || undefined,
+            contact: userData?.phone_number || userData?.phone || undefined,
+            email: userData?.email || undefined,
+          },
+        });
+      } catch (modalError) {
+        // Dismiss is a buyer choice, not an error. The PENDING payment record
+        // stays on the server so a re-click reuses it instead of charging
+        // them again.
+        if (modalError instanceof RazorpayDismissed) {
+          setOrderStatus("quoted");
+          return;
+        }
+        throw modalError;
+      }
+
+      setOrderStatus("verifying");
+      const verifyResult = await paymentIntentService.verifyPayment(razorpayResponse);
+
+      if (!verifyResult.bap_confirmed) {
+        setOrderStatus("finalising");
+        await paymentIntentService.waitForBapConfirmation(currentTransactionId);
+      }
+
+      // Defense in depth: payments service says BAP confirm-paid was forwarded,
+      // but we still wait for on_confirm to land on BAP before declaring victory.
+      // This is what guarantees the seller's offer is locked.
       await orderService.waitForConfirmation(currentTransactionId);
+
       setOrderStatus("confirmed");
-      // Hide the bought offer locally before the refetch — guarantees it
-      // disappears even if the BPP catalog hasn't synced yet.
       if (selectedOffer?.offer_id) {
         setPurchasedOfferIds((prev) => {
           const next = new Set(prev);
@@ -284,6 +319,8 @@ const BuyerHomePage = () => {
       }, 2000);
     } catch (e) {
       setOrderError(e instanceof Error ? e.message : "Failed to confirm order");
+      // Land back on the quote screen so the buyer can retry — the PENDING
+      // payment record on the server keeps the same Razorpay order alive.
       setOrderStatus("quoted");
     }
   };
