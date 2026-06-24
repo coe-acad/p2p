@@ -247,13 +247,24 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
       ) : (
         <div className="space-y-3">
           {filteredTrades.map((trade) => {
+            const isPendingClickable =
+              role === "buyer" && trade.status === "PENDING" && trade.type === "trade";
             const tradeId = trade.transactionId || trade.catalogId;
+            const idShort = tradeId ? tradeId.slice(0, 18) + (tradeId.length > 18 ? "…" : "") : "";
 
             return (
-              <div
+              <button
                 key={tradeId}
-                className="block w-full overflow-hidden rounded-xl border border-primary/12 bg-card text-left
-                           shadow-[0_6px_18px_-12px_rgba(36,40,128,0.18)]"
+                type="button"
+                onClick={() => void openPendingTrade(trade)}
+                disabled={!isPendingClickable}
+                className="group block w-full overflow-hidden rounded-xl border border-primary/12 bg-card text-left
+                           shadow-[0_6px_18px_-12px_rgba(36,40,128,0.18)]
+                           transition-all duration-200 ease-out
+                           enabled:hover:-translate-y-0.5 enabled:hover:border-primary/40
+                           enabled:hover:shadow-[0_12px_28px_-18px_rgba(36,40,128,0.28)]
+                           disabled:cursor-default
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {/* Persona-coloured stripe — green for buyer, blue for seller */}
                 <div className={`${stripeBgFor(role)} px-4 py-3`}>
@@ -289,14 +300,20 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
                     </div>
                   )}
 
-                  {tradeId && (
-                    <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
-                      <span className="shrink-0 font-medium uppercase tracking-wider">ID</span>
-                      <span className="min-w-0 flex-1 break-all nums">{tradeId}</span>
+                  {idShort && (
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-medium uppercase tracking-wider">ID</span>
+                      <span className="truncate nums">{idShort}</span>
                     </div>
                   )}
+
+                  {isPendingClickable && (
+                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-primary">
+                      Tap to resume →
+                    </p>
+                  )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

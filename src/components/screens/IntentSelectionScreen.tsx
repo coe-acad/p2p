@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ChevronRight, Loader2, ShoppingBag, Sun } from "lucide-react";
-import SVMCLogo from "@/components/SVMCLogo";
+import SamaiLogo from "@/components/SamaiLogo";
 
 interface IntentSelectionScreenProps {
-  onSelect: (intents: ("sell" | "buy")[]) => void | Promise<void>;
+  onSelect: (intents: ("sell" | "buy")[]) => void;
   onBack?: () => void;
 }
 
@@ -14,16 +14,10 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
   // double-taps while the save call is in flight in the parent IntentPage.
   const [submitting, setSubmitting] = useState<Choice | null>(null);
 
-  const handleChoice = async (choice: Choice) => {
+  const handleChoice = (choice: Choice) => {
     if (submitting) return;
     setSubmitting(choice);
-    try {
-      await onSelect([choice]);
-    } finally {
-      // If the parent didn't navigate (e.g. missing phone in userData), clear
-      // the spinner so the user can retry instead of being stuck forever.
-      setSubmitting(null);
-    }
+    onSelect([choice]);
   };
 
   // Each card has its own brand identity color, applied at rest (not just on hover).
@@ -93,7 +87,7 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <SVMCLogo size="lg" showText={true} />
+            <SamaiLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">

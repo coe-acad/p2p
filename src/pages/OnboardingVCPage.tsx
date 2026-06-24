@@ -1,30 +1,69 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, Upload, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { FileText, Loader2, ShieldAlert, Upload, X } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import SVMCLogo from "@/components/SVMCLogo";
-import { unwrapCredential } from "@/utils/vcCredential";
+import SamaiLogo from "@/components/SamaiLogo";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
+
+const detectVCType = (credential: any): "consumption" | "generation" | null => {
+  const types = credential.type || [];
+  const subjectType = credential.credentialSubject?.type;
+  const credentialType = credential.credentialType || "";
+
+  if (
+    types.includes("ConsumptionProfileCredential") ||
+    subjectType === "ConsumptionProfileCredential" ||
+    credentialType.includes("Consumption")
+  ) {
+    return "consumption";
+  }
+  if (
+    types.includes("GenerationProfileCredential") ||
+    subjectType === "GenerationProfileCredential" ||
+    credentialType.includes("Generation")
+  ) {
+    return "generation";
+  }
+  return null;
+};
+
+const validateRequiredFields = (credential: any, type: "consumption" | "generation"): string[] => {
+  const errors: string[] = [];
+  const subject = credential.credentialSubject || {};
+
+  if (!subject.fullName) errors.push("Full name is missing");
+  if (!subject.issuerName) errors.push("Issuer name is missing");
+
+  if (type === "consumption") {
+    if (!subject.meterNumber) errors.push("Meter number is missing");
+    if (!subject.consumerNumber) errors.push("Consumer number is missing");
+  } else if (type === "generation") {
+    if (!subject.inverterNumber && !subject.systemId) {
+      errors.push("System ID or inverter number is missing");
+    }
+  }
+
+  return errors;
+};
 
 const OnboardingVCPage = () => {
   const navigate = useNavigate();
   const { userData, setUserData } = useUserData();
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [wrongVCModal, setWrongVCModal] = useState(false);
+  const [wrongVCMessage, setWrongVCMessage] = useState("");
 
   const intent = (userData as any)?.intent;
   const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
@@ -84,7 +123,56 @@ const OnboardingVCPage = () => {
         return;
       }
 
-      const credential = unwrapCredential(parsedData);
+      // Some issuers wrap the credential one level deep.
+      const credential = parsedData.credential && !parsedData.type ? parsedData.credential : parsedData;
+
+      const detectedType = detectVCType(credential);
+      if (!detectedType) {
+        toast({
+          title: "Unsupported credential type",
+          description: "Upload a ConsumptionProfileCredential or GenerationProfileCredential.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (intent === "sell" && detectedType !== "generation") {
+        setWrongVCMessage("Sellers must upload a Generation Profile credential. Please choose a valid file.");
+        setWrongVCModal(true);
+        setUploadedFile(null);
+        setIsLoading(false);
+        return;
+      }
+      if (intent === "buy" && detectedType !== "consumption") {
+        setWrongVCMessage("Buyers must upload a Consumption Profile credential. Please choose a valid file.");
+        setWrongVCModal(true);
+        setUploadedFile(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const validationErrors = validateRequiredFields(credential, detectedType);
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Missing required information",
+          description: validationErrors.join(". ") + ".",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const userName: string | null = credential.credentialSubject?.fullName || null;
+      if (!userName) {
+        toast({
+          title: "Invalid credential",
+          description: "Couldn't extract a name from the credential.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       const token = await user?.getIdToken();
       if (!token) throw new Error("Unable to get authentication token");
@@ -105,11 +193,9 @@ const OnboardingVCPage = () => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
-      const userName: string | null = credential.credentialSubject?.fullName || null;
-
       toast({
         title: "Credential uploaded",
-        description: `${credentialLabel} profile saved.`,
+        description: `${detectedType === "consumption" ? "Consumption" : "Generation"} profile saved.`,
       });
 
       localStorage.setItem(ONBOARDING_VC_KEY, "true");
@@ -118,7 +204,7 @@ const OnboardingVCPage = () => {
       setUserData({
         isVCVerified: false,
         onboardingComplete: true,
-        ...(userName ? { name: userName } : {}),
+        name: userName,
       } as any);
 
       if (userData?.phone && intent) {
@@ -126,11 +212,9 @@ const OnboardingVCPage = () => {
           phone: userData.phone,
           intent,
           onboardingComplete: true,
-          ...(userName ? { name: userName } : {}),
+          name: userName,
         } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
       }
-
-      await queryClient.invalidateQueries({ queryKey: VC_STATUS_QUERY_KEY });
 
       navigate(homeRoute, { replace: true });
     } catch (error) {
@@ -168,7 +252,7 @@ const OnboardingVCPage = () => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <SVMCLogo size="lg" showText={true} />
+            <SamaiLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">
@@ -264,6 +348,36 @@ const OnboardingVCPage = () => {
           </div>
         </div>
       </main>
+
+      {wrongVCModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 px-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-card slide-up">
+            <div className="flex flex-col items-center text-center gap-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <ShieldAlert className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Wrong credential type</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{wrongVCMessage}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  setWrongVCModal(false);
+                  inputRef.current?.click();
+                }}
+                className="w-full"
+              >
+                Choose another file
+              </Button>
+              <Button variant="outline" onClick={() => setWrongVCModal(false)} className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

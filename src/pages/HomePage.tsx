@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { getAuthHeaders } from "@/services/authHeaders";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
@@ -30,76 +29,14 @@ const HomePage = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { displayName, userData } = useUserData();
-  const {
-    tradesData,
-    plannedUnits,
-    plannedEarnings,
-    confirmedUnits,
-    confirmedEarnings,
-    publishTrades,
-  } = usePublishedTrades();
+  const { tradesData, totalUnits, totalEarnings, avgRate, confirmedEarnings, confirmedUnits } =
+    usePublishedTrades();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
-  const [earningsView, setEarningsView] = useState<"published" | "completed">("published");
 
   const justPublished = location.state?.justPublished ?? false;
   const isVCVerified = Boolean((userData as any)?.is_vc_verified);
   const hasPublished = tradesData.plannedTrades.length > 0;
   const confirmedCount = tradesData.confirmedTrades.length;
-
-  // Calculate metrics based on view
-  const publishedAvgRate = plannedUnits > 0 ? plannedEarnings / plannedUnits : 0;
-  const completedAvgRate = confirmedUnits > 0 ? confirmedEarnings / confirmedUnits : 0;
-
-  const viewData = {
-    published: {
-      earnings: plannedEarnings,
-      units: plannedUnits,
-      avgRate: publishedAvgRate,
-      confirmed: confirmedUnits,
-      description: "Total earnings from your published catalog.",
-    },
-    completed: {
-      earnings: confirmedEarnings,
-      units: confirmedUnits,
-      avgRate: completedAvgRate,
-      confirmed: confirmedUnits,
-      description: "Total earnings from confirmed trades.",
-    },
-  };
-
-  const currentData = viewData[earningsView];
-
-  // Fetch published trades from backend on mount
-  useEffect(() => {
-    const fetchPublishedTrades = async () => {
-      if (!userData?.phone_number) return;
-      try {
-        const headers = await getAuthHeaders();
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const response = await fetch(`${backendUrl}/api/trades`, { headers });
-        if (response.ok) {
-          const data = await response.json();
-          // Extract published trades from response
-          const trades = data.items
-            ?.filter((item: any) => item.status === "PUBLISHED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-            })) || [];
-
-          if (trades.length > 0) {
-            publishTrades(trades);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch published trades:", err);
-      }
-    };
-
-    fetchPublishedTrades();
-  }, [userData?.phone_number, publishTrades]);
 
   useEffect(() => {
     if (justPublished) {
@@ -129,7 +66,7 @@ const HomePage = () => {
                     <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
                   </span>
-                  <span className="nums font-semibold text-primary">{plannedUnits.toFixed(2)}</span> ⚡kWh
+                  <span className="nums font-semibold text-primary">{totalUnits.toFixed(2)}</span> ⚡kWh
                   prepared for tomorrow
                 </p>
               ) : (
@@ -177,37 +114,21 @@ const HomePage = () => {
               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Earnings overview
               </p>
-              <div className="flex items-center gap-1 rounded-full bg-muted p-0.5">
-                <button
-                  onClick={() => setEarningsView("published")}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider transition-all ${
-                    earningsView === "published"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Published
-                </button>
-                <button
-                  onClick={() => setEarningsView("completed")}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider transition-all ${
-                    earningsView === "completed"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Completed
-                </button>
-              </div>
+              {confirmedCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent nums">
+                  <CheckCircle className="h-2.5 w-2.5" />
+                  {confirmedCount} confirmed
+                </span>
+              )}
             </div>
 
             <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
               <p className="flex items-baseline gap-1 text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
-                ₹{currentData.earnings.toLocaleString("en-IN")}
+                ₹{totalEarnings.toLocaleString("en-IN")}
               </p>
               <span aria-hidden className="mt-1 block h-[2px] w-8 rounded-full bg-primary" />
               <p className="mt-2 text-xs text-muted-foreground">
-                {currentData.description}
+                Total earnings across published and confirmed slots.
               </p>
 
               {/* Hairline divider — replaces the stripe pattern */}
@@ -216,10 +137,10 @@ const HomePage = () => {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    {earningsView === "published" ? "Units prepared" : "Units confirmed"}
+                    Units prepared
                   </p>
                   <p className="mt-0.5 text-sm font-semibold text-foreground nums">
-                    {currentData.units.toFixed(2)}{" "}
+                    {totalUnits.toFixed(2)}{" "}
                     <span className="text-xs font-medium text-muted-foreground">kWh</span>
                   </p>
                 </div>
@@ -228,7 +149,7 @@ const HomePage = () => {
                     Avg rate
                   </p>
                   <p className="mt-0.5 text-sm font-semibold text-foreground nums">
-                    ₹{currentData.avgRate.toFixed(2)}
+                    ₹{avgRate.toFixed(2)}
                     <span className="text-xs font-medium text-muted-foreground">/kWh</span>
                   </p>
                 </div>
@@ -237,7 +158,7 @@ const HomePage = () => {
                     Confirmed
                   </p>
                   <p className="mt-0.5 text-sm font-semibold text-accent nums">
-                    {currentData.confirmed.toFixed(2)}{" "}
+                    {confirmedUnits.toFixed(2)}{" "}
                     <span className="text-xs font-medium text-muted-foreground">kWh</span>
                   </p>
                 </div>

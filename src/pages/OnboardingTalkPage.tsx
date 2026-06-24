@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
-import TalkToSVMCScreen from "@/components/screens/TalkToSVMCScreen";
+import TalkToSamaiScreen from "@/components/screens/TalkToSamaiScreen";
 
 const ONBOARDING_TALK_KEY = "samai_onboarding_talk_done";
 
@@ -16,7 +16,7 @@ const OnboardingTalkPage = () => {
   };
 
   return (
-    <TalkToSVMCScreen
+    <TalkToSamaiScreen
       onContinue={handleContinue}
       onBack={() => navigate(-1)}
     />
