@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Mic, MicOff, MessageSquare, ChevronLeft, Bell, Zap, MessageCircle, AlertCircle } from "lucide-react";
-import SamaiLogo from "../SamaiLogo";
+import SVMCLogo from "../SVMCLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
-interface TalkToSamaiScreenProps {
+interface TalkToSVMCScreenProps {
   onContinue: () => void;
   onBack: () => void;
 }
@@ -15,7 +15,7 @@ const GHOST_TEXTS = [
   "This solar is for my school",
 ];
 
-const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
+const TalkToSVMCScreen = ({ onContinue, onBack }: TalkToSVMCScreenProps) => {
   const { userData, setUserData } = useUserData();
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [userInput, setUserInput] = useState(userData.userContext || "");
@@ -86,7 +86,7 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
               <ChevronLeft size={14} />
               Back
             </button>
-            <SamaiLogo size="xs" showText={false} />
+            <SVMCLogo size="xs" showText={false} />
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
@@ -276,4 +276,4 @@ const TalkToSamaiScreen = ({ onContinue, onBack }: TalkToSamaiScreenProps) => {
   );
 };
 
-export default TalkToSamaiScreen;
+export default TalkToSVMCScreen;

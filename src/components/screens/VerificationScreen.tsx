@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import SamaiLogo from "@/components/SamaiLogo";
+import SVMCLogo from "@/components/SVMCLogo";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -33,10 +33,24 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   const resetRecaptchaVerifier = () => {
-    recaptchaVerifierRef.current?.clear();
+    try {
+      recaptchaVerifierRef.current?.clear();
+    } catch {
+      // clear() can throw if the widget never finished rendering; ignore and
+      // still reset the DOM so the next attempt starts from a clean slate.
+    }
     recaptchaVerifierRef.current = null;
-    const container = document.getElementById(RECAPTCHA_CONTAINER_ID);
-    if (container) container.innerHTML = "";
+
+    // grecaptcha tracks "already rendered" by element reference, not by
+    // contents — so innerHTML = "" isn't enough. After a failed OTP + Edit,
+    // the next render() would throw "reCAPTCHA has already been rendered in
+    // this element". Swap the node for a fresh one with the same id.
+    const old = document.getElementById(RECAPTCHA_CONTAINER_ID);
+    if (old?.parentNode) {
+      const fresh = document.createElement("div");
+      fresh.id = RECAPTCHA_CONTAINER_ID;
+      old.parentNode.replaceChild(fresh, old);
+    }
   };
 
   useEffect(() => () => resetRecaptchaVerifier(), []);
@@ -182,7 +196,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SamaiLogo size="md" showText={true} />
+                <SVMCLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">
@@ -254,7 +268,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SamaiLogo size="md" showText={true} />
+                <SVMCLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">

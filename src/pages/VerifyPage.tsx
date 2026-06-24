@@ -1,7 +1,7 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
-import { ensureUserOnServer, loadUser } from "@/services/userService";
+import { ensureUserOnServer, loadUser, saveUser } from "@/services/userService";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" => value === "sell" || value === "buy";
 

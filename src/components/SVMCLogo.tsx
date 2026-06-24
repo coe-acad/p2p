@@ -1,12 +1,12 @@
 const samaiLogoSvg = "/logo.svg";
 
-interface SamaiLogoProps {
+interface SVMCLogoProps {
   size?: "xs" | "sm" | "md" | "lg";
   showText?: boolean;
   animated?: boolean;
 }
 
-const SamaiLogo = ({ size = "md", showText = true, animated = false }: SamaiLogoProps) => {
+const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoProps) => {
   const sizes = {
     xs: { container: 28, text: "text-sm" },
     sm: { container: 39, text: "text-xl" },
@@ -50,4 +50,4 @@ const SamaiLogo = ({ size = "md", showText = true, animated = false }: SamaiLogo
   );
 };
 
-export default SamaiLogo;
+export default SVMCLogo;
