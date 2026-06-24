@@ -1,4 +1,4 @@
-// Note: Vacation prompts moved to Ask Samai card; onboarding prompts stay in TalkToSamaiScreen
+// Note: Vacation prompts moved to Ask SVMC card; onboarding prompts stay in TalkToSVMCScreen
 export const translations = {
   en: {
     translation: {
@@ -58,11 +58,11 @@ export const translations = {
       "home.summerVacation": "My school will go on vacation soon",
       "home.holidaySoon": "Going on a holiday soon?",
       "home.upcomingEvents": "Any upcoming events?",
-      "home.askSamai": "Ask CharzPe anything...",
+      "home.askSVMC": "Ask CharzPe anything...",
       "home.speakAnyLanguage": "Speak in any language",
       "home.quickspeak": "QuickSpeak",
       "home.listeningNow": "Listening now...",
-      "home.talkToSamai": "Talk to CharzPe",
+      "home.talkToSVMC": "Talk to CharzPe",
       "home.suggestWhoUses": "Who uses this solar?",
       "home.suggestHomeType": "Home, shop or office?",
       "home.suggestWeek": "Your typical week",
@@ -78,7 +78,7 @@ export const translations = {
       
       // Navigation
       "nav.home": "Home",
-      "nav.askSamai": "Ask CharzPe",
+      "nav.askSVMC": "Ask CharzPe",
       "nav.trades": "Trades",
       "nav.payments": "Payments",
       "nav.profile": "Profile",
@@ -200,7 +200,7 @@ export const translations = {
       "profile.viewAllTrades": "View all published trades",
       "profile.setUpPayment": "Set up payment method",
       "profile.preferences": "Preferences",
-      "profile.howSamaiHelps": "How CharzPe Helps",
+      "profile.howSVMCHelps": "How CharzPe Helps",
       "profile.autoPlaceOrders": "Auto-place orders",
       "profile.showRecommendations": "Show recommendations",
       "profile.yourContext": "Your Context",
@@ -296,11 +296,11 @@ export const translations = {
       "home.summerVacation": "मेरा स्कूल जल्द छुट्टी पर जाएगा",
       "home.holidaySoon": "जल्द छुट्टी पर जा रहे हैं?",
       "home.upcomingEvents": "कोई आगामी कार्यक्रम?",
-      "home.askSamai": "चार्ज़पी से कुछ भी पूछें...",
+      "home.askSVMC": "चार्ज़पी से कुछ भी पूछें...",
       "home.speakAnyLanguage": "किसी भी भाषा में बोलें",
       "home.quickspeak": "क्विकस्पीक",
       "home.listeningNow": "अभी सुन रहा हूँ...",
-      "home.talkToSamai": "चार्ज़पी से बात करें",
+      "home.talkToSVMC": "चार्ज़पी से बात करें",
       "home.suggestWhoUses": "यह सोलर कौन उपयोग करता है?",
       "home.suggestHomeType": "घर, दुकान या ऑफिस?",
       "home.suggestWeek": "आपका सामान्य सप्ताह",
@@ -316,7 +316,7 @@ export const translations = {
       
       // Navigation
       "nav.home": "होम",
-      "nav.askSamai": "चार्ज़पी से पूछें",
+      "nav.askSVMC": "चार्ज़पी से पूछें",
       "nav.trades": "ट्रेड",
       "nav.payments": "भुगतान",
       "nav.profile": "प्रोफ़ाइल",
@@ -438,7 +438,7 @@ export const translations = {
       "profile.viewAllTrades": "सभी प्रकाशित ट्रेड देखें",
       "profile.setUpPayment": "भुगतान विधि सेट करें",
       "profile.preferences": "प्राथमिकताएं",
-      "profile.howSamaiHelps": "चार्ज़पी कैसे मदद करता है",
+      "profile.howSVMCHelps": "चार्ज़पी कैसे मदद करता है",
       "profile.autoPlaceOrders": "स्वचालित ऑर्डर",
       "profile.showRecommendations": "सिफारिशें दिखाएं",
       "profile.yourContext": "आपका संदर्भ",

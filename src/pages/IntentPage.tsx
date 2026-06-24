@@ -9,19 +9,29 @@ const IntentPage = () => {
 
   const handleIntentSelect = async (intents: string[]) => {
     const intent = intents[0] as "sell" | "buy";
-    if (intent && userData?.phone) {
-      // Save intent to user data and Firestore
+    if (!intent) return;
+
+    try {
+      // Update intent in user data
       setUserData({ ...userData, intent });
 
-      await saveUser({
-        phone: userData.phone,
-        intent,
-      } as any).catch((err) =>
-        console.error("Failed to save user intent to Firestore:", err)
-      );
+      // Only attempt to save if phone is available, but don't block on it
+      if (userData?.phone) {
+        const savePromise = saveUser({
+          phone: userData.phone,
+          intent,
+        } as any);
 
-      // If the user has already verified their VC (Firestore source of truth),
-      // skip the onboarding upload step and go straight to their home.
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Save timeout")), 5000)
+        );
+
+        await Promise.race([savePromise, timeoutPromise]).catch((err) => {
+          console.error("Failed to save user intent:", err);
+        });
+      }
+
+      // Navigate regardless of save success
       const isVCVerified = Boolean((userData as any)?.is_vc_verified);
       const hasCompletedOnboarding = Boolean((userData as any)?.onboardingComplete);
       const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
@@ -31,6 +41,9 @@ const IntentPage = () => {
       } else {
         navigate("/onboarding/vc", { replace: true });
       }
+    } catch (error) {
+      console.error("Intent selection error:", error);
+      navigate("/onboarding/vc", { replace: true });
     }
   };
 

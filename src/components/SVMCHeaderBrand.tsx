@@ -8,7 +8,7 @@ import { useUserData } from "@/hooks/useUserData";
  * - Click behaviour: navigates to the persona-aware home; if the user is
  *   ALREADY on home, performs a full reload so they get fresh data.
  */
-const SamaiHeaderBrand = () => {
+const SVMCHeaderBrand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData } = useUserData();
@@ -49,4 +49,4 @@ const SamaiHeaderBrand = () => {
   );
 };
 
-export default SamaiHeaderBrand;
+export default SVMCHeaderBrand;

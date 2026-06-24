@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import SamaiLogo from "@/components/SamaiLogo";
+import SVMCLogo from "@/components/SVMCLogo";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
@@ -196,7 +196,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SamaiLogo size="md" showText={true} />
+                <SVMCLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">
@@ -268,7 +268,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SamaiLogo size="md" showText={true} />
+                <SVMCLogo size="md" showText={true} />
               </div>
 
               <div className="text-center">
