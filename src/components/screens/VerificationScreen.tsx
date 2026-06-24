@@ -257,11 +257,11 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
                 By continuing you agree to CharzPe's{" "}
-                <a href="/policy documents/P2P _ SVMC - Terms and Conditions.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
+                <a href="/P2P _ SVMC - Terms and Conditions.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Terms
                 </a>{" "}
                 and{" "}
-                <a href="/policy documents/P2P _ SVMC - Privacy Policy Document.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
+                <a href="/P2P _ SVMC - Privacy Policy Document.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Privacy Policy
                 </a>
                 .
