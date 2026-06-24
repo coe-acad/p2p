@@ -13,7 +13,16 @@ interface SelectedOrderModalProps {
   isOpen: boolean;
   listing: EnergyListing | null;
   error: string | null;
-  status: "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed";
+  status:
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed";
   onRequestInit: () => Promise<void>;
   onBack: () => void;
 }

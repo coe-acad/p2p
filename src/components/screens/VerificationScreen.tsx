@@ -33,10 +33,24 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   const resetRecaptchaVerifier = () => {
-    recaptchaVerifierRef.current?.clear();
+    try {
+      recaptchaVerifierRef.current?.clear();
+    } catch {
+      // clear() can throw if the widget never finished rendering; ignore and
+      // still reset the DOM so the next attempt starts from a clean slate.
+    }
     recaptchaVerifierRef.current = null;
-    const container = document.getElementById(RECAPTCHA_CONTAINER_ID);
-    if (container) container.innerHTML = "";
+
+    // grecaptcha tracks "already rendered" by element reference, not by
+    // contents — so innerHTML = "" isn't enough. After a failed OTP + Edit,
+    // the next render() would throw "reCAPTCHA has already been rendered in
+    // this element". Swap the node for a fresh one with the same id.
+    const old = document.getElementById(RECAPTCHA_CONTAINER_ID);
+    if (old?.parentNode) {
+      const fresh = document.createElement("div");
+      fresh.id = RECAPTCHA_CONTAINER_ID;
+      old.parentNode.replaceChild(fresh, old);
+    }
   };
 
   useEffect(() => () => resetRecaptchaVerifier(), []);
@@ -158,7 +172,11 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     if (resendIn > 0) return;
     setOtp("");
     setOtpError("");
-    resetRecaptchaVerifier();
+    // Do NOT reset the verifier here. Firebase's invisible reCAPTCHA is
+    // designed to be reused across sends — signInWithPhoneNumber pulls a
+    // fresh token from the existing widget. Tearing it down and re-rendering
+    // burns a token Firebase hasn't seen yet; after 2–3 such resends Firebase
+    // escalates to a visible challenge and eventually flags the device.
     await sendOtp();
   };
 
