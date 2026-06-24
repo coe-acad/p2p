@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
-  ArrowUpRight,
   CheckCircle,
   Clock,
-  CreditCard,
   History,
   Wallet,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
-import { Button } from "@/components/ui/button";
 import { getPayments, Payment } from "@/services/paymentService";
 import type { LucideIcon } from "lucide-react";
 
@@ -50,7 +46,6 @@ const PaymentSkeleton = () => (
 );
 
 const BuyerPaymentsPage = () => {
-  const navigate = useNavigate();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -196,16 +191,6 @@ const BuyerPaymentsPage = () => {
             )}
           </div>
 
-          {/* CTA */}
-          <Button
-            onClick={() => navigate("/buyer-payment")}
-            size="lg"
-            className="w-full gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <CreditCard className="h-4 w-4" />
-            Make a payment
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
         </PageContainer>
       </div>
     </MainAppShell>
