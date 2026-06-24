@@ -263,6 +263,13 @@ const BuyerHomePage = () => {
         currentTransactionId,
       );
 
+      // Close the Radix Dialog (QuoteOrderModal + its child ConfirmDialog)
+      // BEFORE opening Razorpay. Radix's focus-trap puts aria-hidden +
+      // pointer-events:none on siblings, which freezes the Razorpay iframe
+      // (it renders on document.body and Radix treats it as a sibling to
+      // hide). Reopen on dismiss/error so the buyer lands back on the quote.
+      setShowQuoteModal(false);
+
       let razorpayResponse;
       try {
         razorpayResponse = await openRazorpayCheckout({
@@ -282,12 +289,18 @@ const BuyerHomePage = () => {
         // stays on the server so a re-click reuses it instead of charging
         // them again.
         if (modalError instanceof RazorpayDismissed) {
+          setShowQuoteModal(true);
           setOrderStatus("quoted");
           return;
         }
+        setShowQuoteModal(true);
         throw modalError;
       }
 
+      // Razorpay succeeded — bring back the quote modal so the buyer sees the
+      // "Verifying payment" / "Finalising order" copy while the BAP confirm
+      // flow finishes.
+      setShowQuoteModal(true);
       setOrderStatus("verifying");
       const verifyResult = await paymentIntentService.verifyPayment(razorpayResponse);
 
