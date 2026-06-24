@@ -116,9 +116,10 @@ const BuyerHomePage = () => {
   }, [isVCVerified]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
-  // catalog without manually pulling. Suspended while a buy flow is in
-  // progress or any modal is open — don't rip data out from under the user
-  // mid-transaction.
+  // catalog without manually pulling. Silent mode keeps the existing
+  // catalogs on screen while the new fetch is in flight — no skeleton, no
+  // page-blink. Suspended while a buy flow is in progress or any modal is
+  // open — don't rip data out from under the user mid-transaction.
   useEffect(() => {
     if (!isVCVerified) return;
     const interval = setInterval(() => {
@@ -129,14 +130,16 @@ const BuyerHomePage = () => {
         showVCUploadModal ||
         orderStatus !== "idle";
       if (buyFlowActive) return;
-      void fetchListings();
+      void fetchListings(0, {}, { silent: true });
     }, 30_000);
     return () => clearInterval(interval);
   }, [isVCVerified, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchListings();
+    // Silent so the catalog list doesn't get replaced by skeletons — the
+    // spinning icon on the refresh button is feedback enough.
+    await fetchListings(0, {}, { silent: true, refreshFromNetwork: true });
     setIsRefreshing(false);
   };
 
@@ -271,7 +274,7 @@ const BuyerHomePage = () => {
           return next;
         });
       }
-      await fetchListings();
+      await fetchListings(0, {}, { refreshFromNetwork: true });
 
       setTimeout(() => {
         setShowQuoteModal(false);
@@ -323,7 +326,7 @@ const BuyerHomePage = () => {
     // Re-hydrate every API-driven piece of state on the home page after a
     // confirmed transaction — listings (the offer might be sold out / updated)
     // and VC status — without a physical page reload.
-    void fetchListings();
+    void fetchListings(0, {}, { refreshFromNetwork: true });
     void refetchVCStatus();
   };
 
@@ -339,7 +342,7 @@ const BuyerHomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-screen overflow-x-hidden bg-background">
+      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Greeting — profile now lives in the shell's top header. Only the
               refresh action stays on the page since it's contextual to listings. */}
@@ -416,7 +419,7 @@ const BuyerHomePage = () => {
                     <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
                     listing{groupedListings.length === 1 ? "" : "s"} available
                   </p>
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 max-h-[calc(100dvh-15rem)] overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
                     {paginatedGroupedListings.map((listing, idx) => (
                       <div
                         key={listing.id}
@@ -489,7 +492,7 @@ const BuyerHomePage = () => {
           onClose={() => setShowVCUploadModal(false)}
           onSuccess={() => {
             setShowVCUploadModal(false);
-            fetchListings();
+            fetchListings(0, {}, { refreshFromNetwork: true });
           }}
         />
       </div>

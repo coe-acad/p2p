@@ -109,7 +109,7 @@ export const QuoteOrderModal = ({
             </div>
 
             <p className="-mt-1 text-center text-sm font-medium text-foreground/80 fade-in opacity-0" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
-              Payment successful
+              Order confirmed
             </p>
 
             <p
@@ -123,7 +123,7 @@ export const QuoteOrderModal = ({
               className="mt-1 text-xs text-muted-foreground fade-in opacity-0"
               style={{ animationDelay: "0.65s", animationFillMode: "forwards" }}
             >
-              Paid to{" "}
+              Confirmed with{" "}
               <span className="font-medium text-foreground">
                 {listing.seller_name || "Unknown seller"}
               </span>
@@ -284,7 +284,6 @@ export const QuoteOrderModal = ({
           </div>
         )}
 
-        {/* CTAs — commitment-language pay button */}
         <div className="mt-5 flex items-center gap-3 px-6 pb-6">
           <Button
             variant="ghost"
@@ -307,7 +306,7 @@ export const QuoteOrderModal = ({
               </>
             ) : (
               <>
-                Pay <span className="nums">₹{quotedAmount.toFixed(2)}</span>
+                Confirm <span className="nums">₹{quotedAmount.toFixed(2)}</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -318,15 +317,15 @@ export const QuoteOrderModal = ({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={(open) => !isBusy && setConfirmOpen(open)}
-        title="Are you sure you want to confirm and pay?"
+        title="Confirm this order?"
         description={
           <>
-            You'll be charged{" "}
-            <span className="font-medium text-foreground nums">₹{quotedAmount.toFixed(2)}</span>{" "}
-            and the order will be finalised.
+            The order will be finalised at{" "}
+            <span className="font-medium text-foreground nums">₹{quotedAmount.toFixed(2)}</span>
+            .
           </>
         }
-        proceedLabel="Pay now"
+        proceedLabel="Confirm"
         loading={isBusy}
         onProceed={() => {
           setConfirmOpen(false);

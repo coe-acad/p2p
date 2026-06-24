@@ -10,6 +10,8 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+const RECORDED_LOGIN_SESSION_KEY = "samai_recorded_login_uid";
+
 export const useAuth = (): AuthState => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,12 +54,18 @@ export const useAuth = (): AuthState => {
 
         if (firebaseUser) {
           setupSessionTimeout();
-          recordLogin().catch(error => {
-            console.error("Failed to record login:", error);
-          });
+          const loginKey = `${firebaseUser.uid}:${firebaseUser.metadata.lastSignInTime || ""}`;
+          if (sessionStorage.getItem(RECORDED_LOGIN_SESSION_KEY) !== loginKey) {
+            sessionStorage.setItem(RECORDED_LOGIN_SESSION_KEY, loginKey);
+            recordLogin().catch(error => {
+              console.error("Failed to record login:", error);
+            });
+          }
         } else {
           clearTimeout(sessionTimeoutId);
           localStorage.removeItem("samai_session_start");
+          localStorage.removeItem("samai_app_state");
+          sessionStorage.removeItem(RECORDED_LOGIN_SESSION_KEY);
         }
       }
     });
@@ -91,7 +99,9 @@ export const useAuth = (): AuthState => {
       localStorage.removeItem("samai_user_data");
       localStorage.removeItem("samai_user_prefs");
       localStorage.removeItem("samai_selected_intent");
+      localStorage.removeItem("samai_app_state");
       sessionStorage.removeItem("samai_user_data_session");
+      sessionStorage.removeItem(RECORDED_LOGIN_SESSION_KEY);
       localStorage.removeItem("samai_onboarding_complete");
       localStorage.removeItem("samai_aadhaar_verified");
       localStorage.removeItem("samai_onboarding_location_done");
