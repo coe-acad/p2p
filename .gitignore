@@ -28,7 +28,3 @@ node_modules
 .env
 .env.*
 !.env.example
-
-# Capacitor — generated native projects (re-created by `npx cap add android` / sync)
-android
-ios

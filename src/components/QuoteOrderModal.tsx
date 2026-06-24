@@ -24,16 +24,7 @@ interface QuoteOrderModalProps {
   listing: EnergyListing | null;
   quote: any;
   error: string | null;
-  status:
-    | "idle"
-    | "selecting"
-    | "selected"
-    | "quoting"
-    | "quoted"
-    | "paying"
-    | "verifying"
-    | "finalising"
-    | "confirmed";
+  status: "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed";
   onGetQuote: () => Promise<void>;
   onConfirm: () => Promise<void>;
   onBack: () => void;
@@ -66,23 +57,9 @@ export const QuoteOrderModal = ({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isConfirmed = status === "confirmed";
-  const isPaying = status === "paying";
-  const isVerifying = status === "verifying";
-  const isFinalising = status === "finalising";
-  // "confirming" used to be a single state pre-payment-integration. Anything
-  // post-Razorpay-modal (verify, BAP confirm-paid, on_confirm wait) keeps the
-  // CTA disabled to avoid double-submit.
-  const isConfirming = isPaying || isVerifying || isFinalising;
+  const isConfirming = status === "confirming";
   const isQuoting = status === "quoting";
   const isBusy = isConfirming || isQuoting;
-
-  const confirmingLabel = isPaying
-    ? "Opening payment"
-    : isVerifying
-      ? "Verifying payment"
-      : isFinalising
-        ? "Finalising order"
-        : "Processing";
 
   if (!listing) return null;
 
@@ -132,7 +109,7 @@ export const QuoteOrderModal = ({
             </div>
 
             <p className="-mt-1 text-center text-sm font-medium text-foreground/80 fade-in opacity-0" style={{ animationDelay: "0.4s", animationFillMode: "forwards" }}>
-              Order confirmed
+              Payment successful
             </p>
 
             <p
@@ -146,7 +123,7 @@ export const QuoteOrderModal = ({
               className="mt-1 text-xs text-muted-foreground fade-in opacity-0"
               style={{ animationDelay: "0.65s", animationFillMode: "forwards" }}
             >
-              Confirmed with{" "}
+              Paid to{" "}
               <span className="font-medium text-foreground">
                 {listing.seller_name || "Unknown seller"}
               </span>
@@ -307,6 +284,7 @@ export const QuoteOrderModal = ({
           </div>
         )}
 
+        {/* CTAs — commitment-language pay button */}
         <div className="mt-5 flex items-center gap-3 px-6 pb-6">
           <Button
             variant="ghost"
@@ -325,7 +303,7 @@ export const QuoteOrderModal = ({
             {isConfirming ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {confirmingLabel}
+                Confirming
               </>
             ) : (
               <>
@@ -340,12 +318,12 @@ export const QuoteOrderModal = ({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={(open) => !isBusy && setConfirmOpen(open)}
-        title="Proceed to payment?"
+        title="Are you sure you want to confirm and pay?"
         description={
           <>
             You'll be charged{" "}
             <span className="font-medium text-foreground nums">₹{quotedAmount.toFixed(2)}</span>{" "}
-            via Razorpay. The order is finalised once payment is captured.
+            and the order will be finalised.
           </>
         }
         proceedLabel="Pay now"

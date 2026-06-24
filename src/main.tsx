@@ -3,9 +3,6 @@ import "./i18n"; // Initialize i18n before app renders
 import App from "./App.tsx";
 import "./index.css";
 import AppErrorBoundary from "./components/layout/AppErrorBoundary.tsx";
-import { setupNativePlatform } from "./lib/platform";
-
-void setupNativePlatform();
 
 createRoot(document.getElementById("root")!).render(
   <AppErrorBoundary>

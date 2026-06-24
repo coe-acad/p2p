@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import SVMCLogo from "../SVMCLogo";
+import SamaiLogo from "../SamaiLogo";
 
 interface SuccessScreenProps {
   onContinue: () => void;
@@ -42,7 +42,7 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
 
         {/* Logo */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
-          <SVMCLogo size="sm" />
+          <SamaiLogo size="sm" />
         </div>
 
         {/* CTA */}
