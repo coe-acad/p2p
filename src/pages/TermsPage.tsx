@@ -253,6 +253,31 @@ const TermsPage = () => {
             </p>
           </section>
 
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">18. Pricing Policy</h2>
+            <p className="mb-4">
+              Pricing will be displayed within the CharzPe app, website, transaction page, invoice, dashboard, or commercial agreement, as applicable. All pricing will generally be displayed in Indian Rupees, unless specifically stated otherwise.
+            </p>
+            <p className="mb-4">
+              Energy prices on CharzPe may vary based on buyer category, seller category, DISCOM area, location, time of transaction, time block or settlement period, type of energy source, demand and supply conditions, energy quantity, applicable DISCOM charges, wheeling, banking, open access, or settlement charges, regulatory charges, duties, taxes, or surcharges, and marketplace rules and commercial arrangements. Energy prices displayed in the app may be indicative until the transaction is confirmed and finally settled.
+            </p>
+            <p className="mb-4">
+              CharzPe may charge platform fees, convenience fees, transaction fees, subscription fees, onboarding fees, service charges, technology fees, settlement fees, or other applicable charges. Such fees may be charged to buyers, sellers, or both, depending on the transaction type, user category, commercial arrangement, and marketplace rules.
+            </p>
+            <p className="mb-4">
+              All applicable taxes, duties, levies, cess, GST, electricity duty, TDS, or other statutory charges shall be payable by the user, as applicable. The final invoice or settlement statement may include taxes, deductions, surcharges, regulatory charges, or other applicable amounts.
+            </p>
+            <p className="mb-4">
+              Users may also be required to pay third-party charges, including payment gateway charges, bank charges, DISCOM charges, metering charges, open access charges, wheeling charges, banking charges, cross-subsidy surcharge, additional surcharge, regulatory or settlement charges, and documentation, verification, or processing charges. CharzPe is not responsible for any charges imposed by third parties, DISCOMs, banks, payment gateways, or regulators.
+            </p>
+            <p className="mb-4">
+              CharzPe reserves the right to change, revise, update, or withdraw prices, platform fees, service charges, and commercial terms from time to time. Any such changes will be displayed on the app, website, invoice, transaction page, or commercial agreement, as applicable.
+            </p>
+            <p>
+              The final payable or receivable amount may differ from indicative pricing displayed in the app due to metering corrections, DISCOM settlement, regulatory charges, taxes, payment gateway charges, revised readings, transaction adjustments, or other operational factors.
+            </p>
+          </section>
+
           <section className="mt-12 pt-8 border-t border-border">
             <h2 className="text-xl font-semibold mb-4">Contact Us</h2>
             <p className="mb-4">
