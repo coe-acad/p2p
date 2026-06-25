@@ -26,6 +26,7 @@ import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import PricingPolicyPage from "./pages/PricingPolicyPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -53,6 +54,7 @@ const AppRoutes = () => {
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/pricing" element={<PricingPolicyPage />} />
 
       {/* Onboarding Steps - Both buyers and sellers */}
       <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
