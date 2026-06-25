@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
@@ -257,13 +258,13 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
                 By continuing you agree to CharzPe's{" "}
-                <a href="/P2P _ SVMC - Terms and Conditions.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
+                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Terms
-                </a>{" "}
+                </Link>{" "}
                 and{" "}
-                <a href="/P2P _ SVMC - Privacy Policy Document.pdf" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
             </form>

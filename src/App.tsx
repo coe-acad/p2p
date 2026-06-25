@@ -24,6 +24,8 @@ import PaymentsPage from "./pages/PaymentsPage";
 import BuyerPaymentsPage from "./pages/BuyerPaymentsPage";
 import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -47,6 +49,10 @@ const AppRoutes = () => {
       <Route path="/" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
       <Route path="/verify" element={<PublicOnlyRoute><VerifyPage /></PublicOnlyRoute>} />
       <Route path="/intent" element={<IntentAccessRoute><IntentPage /></IntentAccessRoute>} />
+
+      {/* Legal Pages */}
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
       {/* Onboarding Steps - Both buyers and sellers */}
       <Route path="/onboarding/vc" element={<OnboardingVCPage />} />
