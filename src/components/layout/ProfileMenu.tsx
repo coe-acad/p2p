@@ -16,7 +16,6 @@ import {
   Phone,
   ReceiptText,
   Sun,
-  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -141,7 +140,6 @@ export const ProfileMenu = () => {
   // shows the credential details OR redirects to /onboarding/vc to upload.
   const vcRoute = "/vc";
   const ordersRoute = isBuyer ? "/buyer-order-history" : "/order-history";
-  const paymentsRoute = isBuyer ? "/buyer-payments" : "/payments";
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -225,15 +223,6 @@ export const ProfileMenu = () => {
             label={isBuyer ? "Purchase history" : "Trade history"}
             hint={isBuyer ? "Past purchases and orders" : "Past trades and orders"}
             onClick={() => navigate(ordersRoute)}
-            iconTileClass={tone.iconTile}
-            hoverBgClass={tone.rowHover}
-          />
-
-          <MenuItem
-            icon={Wallet}
-            label="Payments"
-            hint="Settlements and receipts"
-            onClick={() => navigate(paymentsRoute)}
             iconTileClass={tone.iconTile}
             hoverBgClass={tone.rowHover}
           />
