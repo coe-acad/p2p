@@ -201,7 +201,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SVMCLogo size="md" showText={true} />
+                <SVMCLogo size="lg" showText={false} />
               </div>
 
               <div className="text-center">
@@ -273,7 +273,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <SVMCLogo size="md" showText={true} />
+                <SVMCLogo size="lg" showText={false} />
               </div>
 
               <div className="text-center">
