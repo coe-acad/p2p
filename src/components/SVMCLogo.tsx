@@ -41,7 +41,7 @@ const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoPr
           <img
             src={samaiLogoSvg}
             alt="CharzPe"
-            className={`w-[85%] h-[85%] object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
+            className={`w-[95%] h-[95%] object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
           />
         </div>
       </div>
