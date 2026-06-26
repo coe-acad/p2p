@@ -4,9 +4,10 @@ interface SVMCLogoProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   animated?: boolean;
+  showBorder?: boolean;
 }
 
-const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoProps) => {
+const SVMCLogo = ({ size = "md", showText = true, animated = false, showBorder = false }: SVMCLogoProps) => {
   const sizes = {
     xs: { container: 28, text: "text-sm", border: 2 },
     sm: { container: 39, text: "text-xl", border: 2 },
@@ -30,18 +31,20 @@ const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoPr
         
         {/* Main logo container */}
         <div
-          className="relative flex items-center justify-center rounded-full border border-primary/20 bg-primary/5"
+          className={`relative flex items-center justify-center rounded-full ${
+            showBorder ? "border border-primary/10 bg-primary/5" : ""
+          }`}
           style={{
             width: containerSize,
             height: containerSize,
-            borderWidth: sizes[size].border
+            ...(showBorder && { borderWidth: sizes[size].border })
           }}
         >
           {/* Logo image */}
           <img
             src={samaiLogoSvg}
             alt="CharzPe"
-            className={`w-[95%] h-[95%] object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
+            className={`w-[99%] h-[99%] rounded-full object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
           />
         </div>
       </div>
