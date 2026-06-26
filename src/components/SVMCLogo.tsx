@@ -1,17 +1,18 @@
 const samaiLogoSvg = "/charzpe_embedded.svg";
 
 interface SVMCLogoProps {
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   animated?: boolean;
 }
 
 const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoProps) => {
   const sizes = {
-    xs: { container: 28, text: "text-sm" },
-    sm: { container: 39, text: "text-xl" },
-    md: { container: 67, text: "text-3xl" },
-    lg: { container: 89, text: "text-4xl" },
+    xs: { container: 28, text: "text-sm", border: 2 },
+    sm: { container: 39, text: "text-xl", border: 2 },
+    md: { container: 67, text: "text-3xl", border: 2 },
+    lg: { container: 120, text: "text-4xl", border: 3 },
+    xl: { container: 160, text: "text-5xl", border: 3 },
   };
 
   const containerSize = sizes[size].container;
@@ -28,15 +29,19 @@ const SVMCLogo = ({ size = "md", showText = true, animated = false }: SVMCLogoPr
         )}
         
         {/* Main logo container */}
-        <div 
-          className="relative flex items-center justify-center"
-          style={{ width: containerSize, height: containerSize }}
+        <div
+          className="relative flex items-center justify-center rounded-full border border-primary/20 bg-primary/5"
+          style={{
+            width: containerSize,
+            height: containerSize,
+            borderWidth: sizes[size].border
+          }}
         >
           {/* Logo image */}
           <img
             src={samaiLogoSvg}
             alt="CharzPe"
-            className={`w-full h-full object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
+            className={`w-[85%] h-[85%] object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
           />
         </div>
       </div>
