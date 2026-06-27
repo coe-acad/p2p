@@ -44,6 +44,40 @@ const getBackendUrl = (): string => {
   return import.meta.env.VITE_BACKEND_URL || "https://atria-bpp.atriauniversity.ai";
 };
 
+const convertUTC_to_IST = (utcTimestamp: string): string => {
+  try {
+    if (!utcTimestamp) return "";
+    const utcDate = new Date(utcTimestamp);
+    if (isNaN(utcDate.getTime())) return "";
+    const istDate = new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(istDate.getUTCDate()).padStart(2, "0");
+    const hours = String(istDate.getUTCHours()).padStart(2, "0");
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return "";
+  }
+};
+
+const convertIST_to_UTC = (istDatetimeStr: string): string => {
+  try {
+    if (!istDatetimeStr) return "";
+    const istDate = new Date(`${istDatetimeStr}:00Z`);
+    if (isNaN(istDate.getTime())) return "";
+    const utcDate = new Date(istDate.getTime() - 5.5 * 60 * 60 * 1000);
+    const year = utcDate.getUTCFullYear();
+    const month = String(utcDate.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(utcDate.getUTCDate()).padStart(2, "0");
+    const hours = String(utcDate.getUTCHours()).padStart(2, "0");
+    const minutes = String(utcDate.getUTCMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}:00Z`;
+  } catch {
+    return "";
+  }
+};
+
 const TomorrowTradesPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -451,21 +485,35 @@ const TomorrowTradesPage = () => {
             <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">Start time</label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">Start time</label>
+                    <span className="text-[10px] text-muted-foreground">(IST)</span>
+                  </div>
                   <input
                     type="datetime-local"
-                    value={draftForm.startTime.slice(0, 16)}
-                    onChange={(e) => setDraftForm({ ...draftForm, startTime: e.target.value + ":00Z" })}
-                    className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background"
+                    value={convertUTC_to_IST(draftForm.startTime)}
+                    onChange={(e) => {
+                      const istValue = e.target.value;
+                      const utcValue = convertIST_to_UTC(istValue);
+                      setDraftForm({ ...draftForm, startTime: utcValue });
+                    }}
+                    className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">End time</label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">End time</label>
+                    <span className="text-[10px] text-muted-foreground">(IST)</span>
+                  </div>
                   <input
                     type="datetime-local"
-                    value={draftForm.endTime.slice(0, 16)}
-                    onChange={(e) => setDraftForm({ ...draftForm, endTime: e.target.value + ":00Z" })}
-                    className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background"
+                    value={convertUTC_to_IST(draftForm.endTime)}
+                    onChange={(e) => {
+                      const istValue = e.target.value;
+                      const utcValue = convertIST_to_UTC(istValue);
+                      setDraftForm({ ...draftForm, endTime: utcValue });
+                    }}
+                    className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
               </div>
