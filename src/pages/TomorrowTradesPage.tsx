@@ -539,15 +539,14 @@ const TomorrowTradesPage = () => {
                   <input
                     type="text"
                     placeholder="DD/MM/YYYY, 3 PM"
-                    value={convertUTC_to_IST_display(draftForm.startTime)}
-                    onChange={(e) => {
-                      const utcValue = convertIST_to_UTC(e.target.value);
-                      if (utcValue) setDraftForm({ ...draftForm, startTime: utcValue });
-                    }}
+                    defaultValue={convertUTC_to_IST_display(draftForm.startTime)}
                     onBlur={(e) => {
                       const utcValue = convertIST_to_UTC(e.target.value);
                       if (utcValue) {
                         setDraftForm({ ...draftForm, startTime: utcValue });
+                        e.target.value = convertUTC_to_IST_display(utcValue);
+                      } else {
+                        e.target.value = convertUTC_to_IST_display(draftForm.startTime);
                       }
                     }}
                     className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -558,15 +557,14 @@ const TomorrowTradesPage = () => {
                   <input
                     type="text"
                     placeholder="DD/MM/YYYY, 4 PM"
-                    value={convertUTC_to_IST_display(draftForm.endTime)}
-                    onChange={(e) => {
-                      const utcValue = convertIST_to_UTC(e.target.value);
-                      if (utcValue) setDraftForm({ ...draftForm, endTime: utcValue });
-                    }}
+                    defaultValue={convertUTC_to_IST_display(draftForm.endTime)}
                     onBlur={(e) => {
                       const utcValue = convertIST_to_UTC(e.target.value);
                       if (utcValue) {
                         setDraftForm({ ...draftForm, endTime: utcValue });
+                        e.target.value = convertUTC_to_IST_display(utcValue);
+                      } else {
+                        e.target.value = convertUTC_to_IST_display(draftForm.endTime);
                       }
                     }}
                     className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
