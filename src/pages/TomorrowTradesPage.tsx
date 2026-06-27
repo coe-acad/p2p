@@ -59,17 +59,26 @@ const convertUTC_to_IST_display = (utcTimestamp: string): { date: string; time: 
     const istDate = new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000);
     const date = formatDateDDMMYYYY(istDate);
     const hours = String(istDate.getUTCHours()).padStart(2, "0");
-    return { date, time: `${hours}:00` };
+    return { date, time: hours };
   } catch {
     return { date: "", time: "" };
   }
 };
 
-const convertIST_to_UTC = (istDate: string, istTime: string): string => {
+const parseTimeInput = (input: string): string => {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  let hours = parseInt(trimmed, 10);
+  if (isNaN(hours) || hours < 0 || hours > 23) return "";
+  return String(hours).padStart(2, "0");
+};
+
+const convertIST_to_UTC = (istDate: string, istTimeHours: string): string => {
   try {
-    if (!istDate || !istTime) return "";
+    if (!istDate || !istTimeHours) return "";
     const [day, month, year] = istDate.split("/");
-    const [hours] = istTime.split(":");
+    const hours = parseTimeInput(istTimeHours);
+    if (!hours) return "";
     const dateStr = `${year}-${month}-${day}T${hours}:00:00Z`;
     const istDateTime = new Date(dateStr);
     if (isNaN(istDateTime.getTime())) return "";
@@ -500,18 +509,30 @@ const TomorrowTradesPage = () => {
                       type="text"
                       placeholder="DD/MM/YYYY"
                       value={convertUTC_to_IST_display(draftForm.startTime).date}
-                      readOnly
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-muted text-muted-foreground text-center"
+                      onChange={(e) => {
+                        const time = convertUTC_to_IST_display(draftForm.startTime).time;
+                        const utcValue = convertIST_to_UTC(e.target.value, time);
+                        if (utcValue) setDraftForm({ ...draftForm, startTime: utcValue });
+                      }}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center text-xs"
                     />
                     <input
-                      type="time"
+                      type="text"
+                      placeholder="Hour"
                       value={convertUTC_to_IST_display(draftForm.startTime).time}
                       onChange={(e) => {
                         const date = convertUTC_to_IST_display(draftForm.startTime).date;
                         const utcValue = convertIST_to_UTC(date, e.target.value);
-                        setDraftForm({ ...draftForm, startTime: utcValue });
+                        if (utcValue) setDraftForm({ ...draftForm, startTime: utcValue });
                       }}
-                      step="3600"
+                      onBlur={(e) => {
+                        const date = convertUTC_to_IST_display(draftForm.startTime).date;
+                        const formatted = parseTimeInput(e.target.value);
+                        if (formatted) {
+                          const utcValue = convertIST_to_UTC(date, formatted);
+                          if (utcValue) setDraftForm({ ...draftForm, startTime: utcValue });
+                        }
+                      }}
                       className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center col-span-2"
                     />
                   </div>
@@ -526,18 +547,30 @@ const TomorrowTradesPage = () => {
                       type="text"
                       placeholder="DD/MM/YYYY"
                       value={convertUTC_to_IST_display(draftForm.endTime).date}
-                      readOnly
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-muted text-muted-foreground text-center"
+                      onChange={(e) => {
+                        const time = convertUTC_to_IST_display(draftForm.endTime).time;
+                        const utcValue = convertIST_to_UTC(e.target.value, time);
+                        if (utcValue) setDraftForm({ ...draftForm, endTime: utcValue });
+                      }}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center text-xs"
                     />
                     <input
-                      type="time"
+                      type="text"
+                      placeholder="Hour"
                       value={convertUTC_to_IST_display(draftForm.endTime).time}
                       onChange={(e) => {
                         const date = convertUTC_to_IST_display(draftForm.endTime).date;
                         const utcValue = convertIST_to_UTC(date, e.target.value);
-                        setDraftForm({ ...draftForm, endTime: utcValue });
+                        if (utcValue) setDraftForm({ ...draftForm, endTime: utcValue });
                       }}
-                      step="3600"
+                      onBlur={(e) => {
+                        const date = convertUTC_to_IST_display(draftForm.endTime).date;
+                        const formatted = parseTimeInput(e.target.value);
+                        if (formatted) {
+                          const utcValue = convertIST_to_UTC(date, formatted);
+                          if (utcValue) setDraftForm({ ...draftForm, endTime: utcValue });
+                        }
+                      }}
                       className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center col-span-2"
                     />
                   </div>
