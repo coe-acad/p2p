@@ -51,6 +51,20 @@ const formatDateDDMMYYYY = (istDate: Date): string => {
   return `${day}/${month}/${year}`;
 };
 
+const convertTo12Hour = (hours24: number): { hour: number; period: string } => {
+  const period = hours24 >= 12 ? "PM" : "AM";
+  const hour = hours24 % 12 || 12;
+  return { hour, period };
+};
+
+const convert12HourTo24Hour = (hour12: number, period: string): number => {
+  let hour24 = parseInt(String(hour12), 10);
+  if (isNaN(hour24) || hour24 < 1 || hour24 > 12) return -1;
+  if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
+  if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
+  return hour24;
+};
+
 const convertUTC_to_IST_display = (utcTimestamp: string): string => {
   try {
     if (!utcTimestamp) return "";
@@ -58,8 +72,9 @@ const convertUTC_to_IST_display = (utcTimestamp: string): string => {
     if (isNaN(utcDate.getTime())) return "";
     const istDate = new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000);
     const date = formatDateDDMMYYYY(istDate);
-    const hours = String(istDate.getUTCHours()).padStart(2, "0");
-    return `${date}, ${hours}:00`;
+    const hours24 = istDate.getUTCHours();
+    const { hour, period } = convertTo12Hour(hours24);
+    return `${date}, ${hour} ${period}`;
   } catch {
     return "";
   }
@@ -75,16 +90,20 @@ const parseDateTimeInput = (input: string): { date: string; hours: string } | nu
     const [day, month, year] = dateStr.split("/");
     if (!day || !month || !year) return null;
 
-    let hours = 0;
+    let hours24 = 0;
     if (timeStr) {
-      const timeMatch = timeStr.match(/^(\d{1,2})/);
-      hours = timeMatch ? parseInt(timeMatch[1], 10) : 0;
+      const ampmMatch = timeStr.match(/(\d{1,2})\s*(am|pm)?/i);
+      if (ampmMatch) {
+        const hour12 = parseInt(ampmMatch[1], 10);
+        const period = ampmMatch[2] ? ampmMatch[2].toUpperCase() : "AM";
+        hours24 = convert12HourTo24Hour(hour12, period);
+        if (hours24 === -1) return null;
+      }
     }
 
-    if (isNaN(hours) || hours < 0 || hours > 23) return null;
     return {
       date: `${day}/${month}/${year}`,
-      hours: String(hours).padStart(2, "0")
+      hours: String(hours24).padStart(2, "0")
     };
   } catch {
     return null;
@@ -264,10 +283,9 @@ const TomorrowTradesPage = () => {
       if (!date || isNaN(date.getTime())) return "Invalid time";
 
       const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-      const hours = istDate.getUTCHours();
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHours = hours % 12 || 12;
-      return `${displayHours}:00 ${ampm}`;
+      const hours24 = istDate.getUTCHours();
+      const { hour, period } = convertTo12Hour(hours24);
+      return `${hour} ${period}`;
     } catch {
       return "Invalid time";
     }
@@ -520,7 +538,7 @@ const TomorrowTradesPage = () => {
                   <label className="text-xs font-medium text-muted-foreground">Start time (IST)</label>
                   <input
                     type="text"
-                    placeholder="DD/MM/YYYY, HH"
+                    placeholder="DD/MM/YYYY, 3 PM"
                     value={convertUTC_to_IST_display(draftForm.startTime)}
                     onChange={(e) => {
                       const utcValue = convertIST_to_UTC(e.target.value);
@@ -539,7 +557,7 @@ const TomorrowTradesPage = () => {
                   <label className="text-xs font-medium text-muted-foreground">End time (IST)</label>
                   <input
                     type="text"
-                    placeholder="DD/MM/YYYY, HH"
+                    placeholder="DD/MM/YYYY, 4 PM"
                     value={convertUTC_to_IST_display(draftForm.endTime)}
                     onChange={(e) => {
                       const utcValue = convertIST_to_UTC(e.target.value);
