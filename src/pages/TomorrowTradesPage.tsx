@@ -152,8 +152,7 @@ const TomorrowTradesPage = () => {
   const [approvingDraftId, setApprovingDraftId] = useState<string | null>(null);
   const [catalogView, setCatalogView] = useState<"draft" | "real">("real");
 
-  // Form state for creating draft trades. Default to tomorrow 10:00–11:00
-  // (wall-clock) so sellers can hit "Add" without first picking a date.
+  // Form state for creating draft trades. Default to tomorrow 10:00–11:00 IST.
   const [draftForm, setDraftForm] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -161,12 +160,46 @@ const TomorrowTradesPage = () => {
     const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
     const dd = String(tomorrow.getDate()).padStart(2, "0");
     return {
-      startTime: `${yyyy}-${mm}-${dd}T10:00:00Z`,
-      endTime: `${yyyy}-${mm}-${dd}T11:00:00Z`,
+      startTime: `${yyyy}-${mm}-${dd}T10:00`,
+      endTime: `${yyyy}-${mm}-${dd}T11:00`,
       kWh: 5.5,
       price: 8.5,
     };
   });
+
+  const getMinDeliveryTimeIST = (): string => {
+    const now = new Date();
+    const minDeliveryMs = now.getTime() + (5 * 60 * 60 * 1000);
+    const minDelivery = new Date(minDeliveryMs);
+
+    let istHours = minDelivery.getUTCHours() + 5;
+    let istMinutes = minDelivery.getUTCMinutes() + 30;
+
+    if (istMinutes >= 60) {
+      istMinutes -= 60;
+      istHours += 1;
+    }
+    if (istHours >= 24) {
+      istHours -= 24;
+    }
+
+    const yyyy = minDelivery.getUTCFullYear();
+    const mm = String(minDelivery.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(minDelivery.getUTCDate()).padStart(2, "0");
+    const hh = String(istHours).padStart(2, "0");
+    const mi = String(istMinutes).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  };
+
+  const validateStartTimeIST = (startTimeIST: string): string | null => {
+    if (!startTimeIST) return null;
+    const minTime = getMinDeliveryTimeIST();
+    if (startTimeIST < minTime) {
+      return `Delivery must be at least 5 hours from now. Earliest allowed: ${minTime}`;
+    }
+    return null;
+  };
 
   // Countdown to the 7 PM IST catalog refresh.
   const calculateRefreshCountdown = () => {
@@ -221,7 +254,7 @@ const TomorrowTradesPage = () => {
         setLoading(true);
         setError(null);
 
-        const token = await user?.getIdToken();
+        const headers = await getAuthHeaders();
         const encodedPhone = encodeURIComponent(userData.phone);
         const apiUrl = `${backendUrl}/api/sellers/${encodedPhone}/tomorrow`;
 
@@ -229,7 +262,7 @@ const TomorrowTradesPage = () => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
+            ...headers,
           },
         });
 
@@ -255,6 +288,20 @@ const TomorrowTradesPage = () => {
 
     fetchTomorrowCatalog();
   }, [userData.phone, profileHydrated, hasGenerationVC]);
+
+  const formatDatetimeLocal = (datetimeLocal: string): string => {
+    try {
+      if (!datetimeLocal) return "Invalid time";
+      const [datePart, timePart] = datetimeLocal.split('T');
+      if (!timePart) return "Invalid time";
+      const [hoursStr, minutesStr] = timePart.split(':');
+      const hours24 = parseInt(hoursStr, 10);
+      const { hour, period } = convertTo12Hour(hours24);
+      return `${hour}:${minutesStr} ${period}`;
+    } catch {
+      return "Invalid time";
+    }
+  };
 
   const formatTimeInIST = (utcTimestamp: unknown): string => {
     try {
@@ -307,6 +354,12 @@ const TomorrowTradesPage = () => {
     { kWh: 0, earnings: 0 }
   ) || { kWh: 0, earnings: 0 };
 
+  const istToUtc = (istDateTime: string): string => {
+    const dt = new Date(istDateTime + ":00Z");
+    const utcDt = new Date(dt.getTime() - 5.5 * 60 * 60 * 1000);
+    return utcDt.toISOString();
+  };
+
   const handleApprove = async () => {
     if (!catalog?.trades || catalog.trades.length === 0) {
       setError("No trades to approve");
@@ -354,6 +407,12 @@ const TomorrowTradesPage = () => {
 
   // Add offer to current draft
   const handleAddToDraft = () => {
+    const startTimeError = validateStartTimeIST(draftForm.startTime);
+    if (startTimeError) {
+      setError(startTimeError);
+      return;
+    }
+
     const newOffer: TradeItem = {
       startTime: draftForm.startTime,
       endTime: draftForm.endTime,
@@ -414,21 +473,36 @@ const TomorrowTradesPage = () => {
     setSubmitting(true);
     try {
       const headers = await getAuthHeaders();
+      const tradesForBackend = draft.trades.map(trade => ({
+        ...trade,
+        startTime: istToUtc(trade.startTime),
+        endTime: istToUtc(trade.endTime),
+      }));
+      console.log("Sending trades to backend:", { trades: tradesForBackend });
       const response = await fetch(`${backendUrl}/api/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({ trades: draft.trades }),
+        body: JSON.stringify({ trades: tradesForBackend }),
       });
+      console.log("Response status:", response.status);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to publish catalog");
+        const errorText = await response.text();
+        console.error("Backend error response:", errorText);
+        let errorMsg = `HTTP ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.detail || errorData.error || errorData.message || errorText;
+        } catch {
+          errorMsg = errorText || `HTTP ${response.status}`;
+        }
+        throw new Error(errorMsg);
       }
 
       // Convert trades to PlannedTrade format and update session storage
       const plannedTrades = draft.trades.map((trade, idx) => ({
         id: `trade-${idx}`,
-        time: `${formatTimeInIST(trade.startTime)} – ${formatTimeInIST(trade.endTime)}`,
+        time: `${formatDatetimeLocal(trade.startTime)} – ${formatDatetimeLocal(trade.endTime)}`,
         kWh: trade.kWh,
         rate: trade.price,
       }));
@@ -444,7 +518,7 @@ const TomorrowTradesPage = () => {
         description: "Buyers can now discover your tomorrow's energy.",
       });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to publish catalog";
+      const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
       console.error("Approve draft error:", err);
       toast({ title: "Error", description: errorMsg, variant: "destructive" });
     } finally {
@@ -537,36 +611,18 @@ const TomorrowTradesPage = () => {
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Start time (IST)</label>
                   <input
-                    type="text"
-                    placeholder="DD/MM/YYYY, 3 PM"
-                    defaultValue={convertUTC_to_IST_display(draftForm.startTime)}
-                    onBlur={(e) => {
-                      const utcValue = convertIST_to_UTC(e.target.value);
-                      if (utcValue) {
-                        setDraftForm({ ...draftForm, startTime: utcValue });
-                        e.target.value = convertUTC_to_IST_display(utcValue);
-                      } else {
-                        e.target.value = convertUTC_to_IST_display(draftForm.startTime);
-                      }
-                    }}
+                    type="datetime-local"
+                    value={draftForm.startTime}
+                    onChange={(e) => setDraftForm({ ...draftForm, startTime: e.target.value })}
                     className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">End time (IST)</label>
                   <input
-                    type="text"
-                    placeholder="DD/MM/YYYY, 4 PM"
-                    defaultValue={convertUTC_to_IST_display(draftForm.endTime)}
-                    onBlur={(e) => {
-                      const utcValue = convertIST_to_UTC(e.target.value);
-                      if (utcValue) {
-                        setDraftForm({ ...draftForm, endTime: utcValue });
-                        e.target.value = convertUTC_to_IST_display(utcValue);
-                      } else {
-                        e.target.value = convertUTC_to_IST_display(draftForm.endTime);
-                      }
-                    }}
+                    type="datetime-local"
+                    value={draftForm.endTime}
+                    onChange={(e) => setDraftForm({ ...draftForm, endTime: e.target.value })}
                     className="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>

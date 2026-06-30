@@ -151,7 +151,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
     try {
       await orderService.init(selectedTrade.transactionId, {
         offer_id: selectedTrade.offerId,
-        bpp_id: selectedTrade.bppId || 'atria-p2p-trading-bpp',
+        bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
         bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
         quantity: selectedTrade.quantity,
         price_per_unit: selectedTrade.pricePerUnit,
@@ -180,7 +180,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
         selectedTrade.transactionId,
         {
           offer_id: selectedTrade.offerId,
-          bpp_id: selectedTrade.bppId || 'atria-p2p-trading-bpp',
+          bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
           bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
           quantity: selectedTrade.quantity,
           price_per_unit: selectedTrade.pricePerUnit,

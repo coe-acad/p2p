@@ -55,13 +55,13 @@ export interface OrderStateResponse {
   order: any;
 }
 
-const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
+const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'svmc-p2p-bap.com';
 const DEFAULT_BAP_URI = resolveRequiredEnv(
   import.meta.env.VITE_ORDER_BAP_URI,
   'https://stage-atria-bap.atriauniversity.ai/bap/receiver',
   'VITE_ORDER_BAP_URI'
 );
-const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
+const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'svmc-p2p-bpp.com';
 const DEFAULT_BPP_URI = resolveRequiredEnv(
   import.meta.env.VITE_ORDER_BPP_URI,
   'https://stage-atria-bpp.atriauniversity.ai',
