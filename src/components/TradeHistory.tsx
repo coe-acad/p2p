@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTradeHistory, type Trade } from "@/hooks/useTradeHistory";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
@@ -57,11 +57,24 @@ const TradeSkeleton = ({ role = "buyer" }: { role?: "buyer" | "seller" }) => (
 
 export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
   const { trades, loading, error, refresh } = useTradeHistory(role, buyerPhone);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  // Default to CONFIRMED so the page opens with completed purchases (what
+  // users most often come here for). If the first load returns no confirmed
+  // trades, fall back to "show all" so a user with only pending orders isn't
+  // greeted by an empty view. The ref guards against clobbering a manual
+  // filter selection on later refreshes.
+  const [selectedStatus, setSelectedStatus] = useState<string | null>("CONFIRMED");
+  const filterInitializedRef = useRef(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteStatus, setQuoteStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
+
+  useEffect(() => {
+    if (filterInitializedRef.current || loading || trades.length === 0) return;
+    filterInitializedRef.current = true;
+    const hasConfirmed = trades.some((t) => t.backendStatus === "CONFIRMED");
+    if (!hasConfirmed) setSelectedStatus(null);
+  }, [loading, trades]);
 
   const statuses = Array.from(new Set(trades.map((trade) => trade.backendStatus))).filter(Boolean);
   const filteredTrades = selectedStatus

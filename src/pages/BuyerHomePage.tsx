@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
@@ -122,7 +121,10 @@ const BuyerHomePage = () => {
   useEffect(() => {
     // Only fetch listings if the user is VC-verified. Otherwise discover is
     // blocked and we shouldn't be making the request at all.
-    if (isVCVerified) fetchListings();
+    // Force a network refresh on landing so buyers see the freshest catalog
+    // without having to hit the refresh button — matches what handleRefresh
+    // does (POST /discover?force=true → then GET).
+    if (isVCVerified) fetchListings(0, {}, { refreshFromNetwork: true });
   }, [isVCVerified]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
@@ -392,8 +394,16 @@ const BuyerHomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
-        <PageContainer gap={5}>
+      {/* Fixed container sits under the sticky header. The header is h-14 with
+          paddingTop: env(safe-area-inset-top) — that env value is the Android
+          status bar height (or the iOS notch), so top-14 alone leaves the top
+          of our content behind the status bar. Match the header's total height
+          so the greeting + refresh button sit fully below it. */}
+      <div
+        className="fixed inset-x-0 bottom-0 flex flex-col overflow-hidden bg-background"
+        style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}
+      >
+        <div className="mx-auto flex w-full max-w-[900px] flex-1 min-h-0 flex-col gap-5 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           {/* Greeting — profile now lives in the shell's top header. Only the
               refresh action stays on the page since it's contextual to listings. */}
           <div className="flex items-center justify-between fade-in opacity-0">
@@ -464,12 +474,12 @@ const BuyerHomePage = () => {
               {loading && !showListings && <ListingSkeletonList count={4} />}
 
               {showListings && (
-                <div className="-mt-3 space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                <div className="-mt-3 flex min-h-0 flex-1 flex-col gap-2">
+                  <p className="shrink-0 text-xs text-muted-foreground">
                     <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
                     listing{groupedListings.length === 1 ? "" : "s"} available
                   </p>
-                  <div className="grid gap-4 max-h-[calc(100dvh-15rem)] overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
+                  <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
                     {paginatedGroupedListings.map((listing, idx) => (
                       <div
                         key={listing.id}
@@ -482,7 +492,9 @@ const BuyerHomePage = () => {
                   </div>
 
                   {totalPages > 1 && (
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} isLoading={loading} />
+                    <div className="shrink-0">
+                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} isLoading={loading} />
+                    </div>
                   )}
                 </div>
               )}
@@ -506,7 +518,7 @@ const BuyerHomePage = () => {
               )}
             </>
           )}
-        </PageContainer>
+        </div>
 
         {/* Buy-flow modals — untouched (separate roadmap task) */}
         <ConfirmOrderModal
