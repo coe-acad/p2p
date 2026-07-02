@@ -100,6 +100,19 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
+      // Backend response tells us which VC bucket got updated and the
+      // extracted fields — use it as the source of truth for the in-memory
+      // state so the "Verification required" banner clears without needing
+      // a logout/login round-trip.
+      const result: {
+        vc_type?: string;
+        stored_under?: string;
+        fields?: Record<string, unknown>;
+        is_vc_verified?: boolean;
+      } = await response.json().catch(() => ({}));
+
+      const vcBucket: "consumption" | "generation" =
+        result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
       const userName: string | null = credential.credentialSubject?.fullName || null;
 
       toast({
@@ -108,7 +121,11 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
       });
 
       setUserData({
-        isVCVerified: false,
+        is_vc_verified: result.is_vc_verified ?? true,
+        vc_data: {
+          ...(userData?.vc_data || {}),
+          [vcBucket]: result.fields || { fullName: userName || "" },
+        },
         ...(userName ? { name: userName } : {}),
       } as any);
 

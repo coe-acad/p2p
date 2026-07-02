@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  PhoneAuthProvider,
+  signInWithCredential,
+} from "firebase/auth";
+import { Capacitor, PluginListenerHandle } from "@capacitor/core";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +41,20 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
+  // Native phone-auth state. On Android the Capacitor Firebase plugin uses
+  // PhoneAuthProvider directly — no reCAPTCHA — so we skip the web verifier
+  // setup entirely and track the verificationId returned by phoneCodeSent.
+  const isNative = Capacitor.isNativePlatform();
+  const verificationIdRef = useRef<string | null>(null);
+  const nativeListenersRef = useRef<PluginListenerHandle[]>([]);
+
+  const removeNativeListeners = async () => {
+    for (const h of nativeListenersRef.current) {
+      try { await h.remove(); } catch { /* listener may already be torn down */ }
+    }
+    nativeListenersRef.current = [];
+  };
+
   const resetRecaptchaVerifier = () => {
     try {
       recaptchaVerifierRef.current?.clear();
@@ -54,7 +76,10 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     }
   };
 
-  useEffect(() => () => resetRecaptchaVerifier(), []);
+  useEffect(() => () => {
+    resetRecaptchaVerifier();
+    void removeNativeListeners();
+  }, []);
 
   // Resend countdown — ticks once per second while > 0.
   useEffect(() => {
@@ -79,7 +104,51 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     if (phoneError) setPhoneError("");
   };
 
-  const sendOtp = async () => {
+  const sendOtpNative = async (resend: boolean) => {
+    // Replace any prior listeners — leftovers from a previous send would fire
+    // for stale verification IDs and clobber the current attempt.
+    await removeNativeListeners();
+
+    let resolveCodeSent: (verificationId: string) => void;
+    let rejectCodeSent: (err: Error) => void;
+    const codeSentPromise = new Promise<string>((res, rej) => {
+      resolveCodeSent = res;
+      rejectCodeSent = rej;
+    });
+
+    const sentHandle = await FirebaseAuthentication.addListener("phoneCodeSent", (event) => {
+      verificationIdRef.current = event.verificationId;
+      resolveCodeSent(event.verificationId);
+    });
+    const failHandle = await FirebaseAuthentication.addListener("phoneVerificationFailed", (event) => {
+      rejectCodeSent(new Error(event.message || "Verification failed"));
+    });
+    // Android can auto-retrieve the SMS code. When that fires we surface the
+    // code in the UI and feed it through the normal verifyOtp path so the
+    // signInWithCredential step still runs and auth.currentUser ends up set.
+    const completedHandle = await FirebaseAuthentication.addListener("phoneVerificationCompleted", (event) => {
+      const code = (event as { verificationCode?: string }).verificationCode;
+      if (code && verificationIdRef.current) {
+        setOtp(code);
+        void verifyOtp(code);
+      }
+    });
+    nativeListenersRef.current = [sentHandle, failHandle, completedHandle];
+
+    // Kick the native flow off. signInWithPhoneNumber returns void; the
+    // verificationId arrives via the phoneCodeSent listener.
+    await FirebaseAuthentication.signInWithPhoneNumber({
+      phoneNumber: `+91${phoneNumber}`,
+      resendCode: resend,
+    });
+
+    const timeout = new Promise<string>((_, rej) =>
+      setTimeout(() => rej(new Error("Request timed out. Please try again.")), 30000),
+    );
+    await Promise.race([codeSentPromise, timeout]);
+  };
+
+  const sendOtp = async (resend = false) => {
     if (!isValidIndianMobile(phoneNumber)) {
       setPhoneError("Indian mobile numbers start with 6, 7, 8, or 9.");
       return;
@@ -88,6 +157,14 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     setPhoneError("");
 
     try {
+      if (isNative) {
+        await sendOtpNative(resend);
+        logger.devLog("OTP sent (native)");
+        setStep("otp");
+        setResendIn(RESEND_COOLDOWN_SECONDS);
+        return;
+      }
+
       const isTestingMode = import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
 
       if (!recaptchaVerifierRef.current) {
@@ -121,19 +198,45 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     } catch (err: any) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(getPhoneAuthErrorMessage(err));
-      resetRecaptchaVerifier();
+      if (isNative) {
+        await removeNativeListeners();
+      } else {
+        resetRecaptchaVerifier();
+      }
     } finally {
       setIsSendingOtp(false);
     }
   };
 
   const verifyOtp = async (enteredOtp: string) => {
-    if (!confirmationResultRef.current || isVerifying) return;
+    if (isVerifying) return;
+    if (isNative) {
+      if (!verificationIdRef.current) return;
+    } else {
+      if (!confirmationResultRef.current) return;
+    }
     setIsVerifying(true);
     setOtpError("");
 
     try {
-      await confirmationResultRef.current.confirm(enteredOtp);
+      if (isNative) {
+        // With skipNativeAuth: true the plugin's confirmVerificationCode just
+        // validates inputs without signing in. The actual sign-in (which is
+        // what populates auth.currentUser and lets the rest of the app issue
+        // authed backend calls) is done by signInWithCredential on the JS SDK.
+        // The SMS code is consumed exactly once — here, by signInWithCredential.
+        await FirebaseAuthentication.confirmVerificationCode({
+          verificationId: verificationIdRef.current!,
+          verificationCode: enteredOtp,
+        });
+        const credential = PhoneAuthProvider.credential(
+          verificationIdRef.current!,
+          enteredOtp,
+        );
+        await signInWithCredential(auth, credential);
+      } else {
+        await confirmationResultRef.current!.confirm(enteredOtp);
+      }
 
       // Set the phone_number custom claim on Firebase so backend can authorize.
       const BACKEND_URL = resolveRequiredEnv(
@@ -173,12 +276,14 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     if (resendIn > 0) return;
     setOtp("");
     setOtpError("");
-    // Do NOT reset the verifier here. Firebase's invisible reCAPTCHA is
+    // Do NOT reset the verifier on web. Firebase's invisible reCAPTCHA is
     // designed to be reused across sends — signInWithPhoneNumber pulls a
     // fresh token from the existing widget. Tearing it down and re-rendering
     // burns a token Firebase hasn't seen yet; after 2–3 such resends Firebase
     // escalates to a visible challenge and eventually flags the device.
-    await sendOtp();
+    // On native, the plugin needs resendCode=true to use the prior session
+    // instead of starting a fresh PhoneAuthProvider attempt.
+    await sendOtp(true);
   };
 
   const handlePhoneFormSubmit = (e: React.FormEvent) => {
@@ -191,7 +296,12 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     setOtp("");
     setOtpError("");
     confirmationResultRef.current = null;
-    resetRecaptchaVerifier();
+    verificationIdRef.current = null;
+    if (isNative) {
+      void removeNativeListeners();
+    } else {
+      resetRecaptchaVerifier();
+    }
   };
 
   return (
