@@ -20,7 +20,6 @@ interface TradeHistoryProps {
 const statusTone = (status: string): string => {
   switch (status) {
     case "CONFIRMED":
-    case "COMPLETED":
       return "bg-accent/12 text-accent";
     case "PUBLISHED":
     case "INITIATED":

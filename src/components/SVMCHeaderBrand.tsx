@@ -34,16 +34,23 @@ const SVMCHeaderBrand = () => {
                  transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-100
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      {/* CharzPe logo */}
+      {/* CharzPe logo — the SVG in public/ is a raster-to-vector conversion
+          artifact with a black rectangle behind the circle. Use the PNG we
+          re-masked with a transparent-outside-circle alpha so it composites
+          cleanly on the header's off-white background. */}
       <img
-        src="/logo.svg"
+        src="/logo_charzpe_round.png"
         alt="CharzPe"
         className="h-5 w-5 object-contain transition-transform duration-200 ease-out group-hover:scale-110"
       />
 
-      {/* Wordmark — Atria blue, slightly bolder for header presence. */}
-      <span className="text-base font-semibold tracking-tight text-primary sm:text-lg">
-        CharzPe
+      {/* Wordmark — matches the logo's two-tone design. Uses the exact
+          brand hex (#0172BD) for "Charz" instead of Tailwind's --primary so
+          it lines up with the logo mark's blue, and the accent green for
+          "Pe". Keep in sync with the color used on the login screen. */}
+      <span className="text-base font-semibold tracking-tight sm:text-lg">
+        <span style={{ color: "#0172BD" }}>Charz</span>
+        <span className="text-accent">Pe</span>
       </span>
     </button>
   );

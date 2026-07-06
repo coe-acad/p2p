@@ -11,6 +11,7 @@ import {
 } from "@/components/layout/ProtectedRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useLastPathRestore } from "@/hooks/useLastPathRestore";
 
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -41,6 +42,7 @@ const queryClient = new QueryClient({
 
 const AppRoutes = () => {
   useAndroidBackButton();
+  useLastPathRestore();
   return (
     <Routes>
       {/* Single auth entry: phone+OTP. Returning users with intent set are
@@ -78,7 +80,7 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <ThemeProvider theme={muiTheme}>
       <SnackbarProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

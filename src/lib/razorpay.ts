@@ -93,15 +93,16 @@ export const openRazorpayCheckout = async (
     // afterwards is a no-op; if dismiss fires first, we reject.
     let settled = false;
 
-    const options = {
+    // Only set fields the caller explicitly passes — anything omitted lets
+    // Razorpay fall back to the merchant dashboard config (business name,
+    // logo, theme color, checkout branding). Hardcoding fallbacks here would
+    // silently override those dashboard customizations on every checkout.
+    const options: Record<string, unknown> = {
       key: params.keyId,
       amount: params.amount,
       currency: params.currency,
       order_id: params.orderId,
-      name: params.name ?? "Atria Energy Trading",
-      description: params.description ?? "Energy purchase",
       prefill: params.prefill,
-      theme: { color: params.themeColor ?? "#1FA855" },
       handler: (response: RazorpaySuccess) => {
         if (settled) return;
         settled = true;
@@ -115,6 +116,9 @@ export const openRazorpayCheckout = async (
         },
       },
     };
+    if (params.name !== undefined) options.name = params.name;
+    if (params.description !== undefined) options.description = params.description;
+    if (params.themeColor !== undefined) options.theme = { color: params.themeColor };
 
     try {
       const razorpay = new window.Razorpay(options);
