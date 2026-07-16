@@ -23,6 +23,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { getAuthHeaders } from "@/services/authHeaders";
+import { getPayoutDetails } from "@/services/settlementService";
 
 interface TradeItem {
   startTime: string;
@@ -376,9 +377,32 @@ const TomorrowTradesPage = () => {
     return utcDt.toISOString();
   };
 
+  /**
+   * STRICT publish gate: a seller must have a payout method on file before
+   * any catalog goes live (the backend enforces this too with a 403).
+   * Returns true when publishing may proceed; otherwise routes the seller to
+   * the one-screen payout form, which bounces back here via ?next=.
+   * On a lookup failure we let the attempt through — the backend gate is the
+   * authority and will reject if needed.
+   */
+  const ensurePayoutMethod = async (): Promise<boolean> => {
+    try {
+      const account = await getPayoutDetails();
+      if (account) return true;
+    } catch {
+      return true; // network hiccup — defer to the backend gate
+    }
+    navigate(`/payout-method?next=${encodeURIComponent("/tomorrow-trades")}`);
+    return false;
+  };
+
   const handleApprove = async () => {
     if (!catalog?.trades || catalog.trades.length === 0) {
       setError("No trades to approve");
+      setConfirmingApprove(false);
+      return;
+    }
+    if (!(await ensurePayoutMethod())) {
       setConfirmingApprove(false);
       return;
     }
@@ -393,7 +417,14 @@ const TomorrowTradesPage = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to approve catalog");
+        // Backend publish gate (deep-links / stale state) — send the seller
+        // to the payout form instead of surfacing an error string.
+        if (errorData?.detail?.error === "payout_method_required") {
+          setConfirmingApprove(false);
+          navigate(`/payout-method?next=${encodeURIComponent("/tomorrow-trades")}`);
+          return;
+        }
+        throw new Error(errorData?.detail?.message || errorData.detail || "Failed to approve catalog");
       }
 
       // Convert trades to PlannedTrade format and update session storage
@@ -516,6 +547,10 @@ const TomorrowTradesPage = () => {
       setConfirmingPublishDraft(false);
       return;
     }
+    if (!(await ensurePayoutMethod())) {
+      setConfirmingPublishDraft(false);
+      return;
+    }
     setSubmitting(true);
     try {
       const headers = await getAuthHeaders();
@@ -535,7 +570,13 @@ const TomorrowTradesPage = () => {
         let errorMsg = `HTTP ${response.status}`;
         try {
           const errorData = JSON.parse(errorText);
-          errorMsg = errorData.detail || errorData.error || errorData.message || errorText;
+          // Backend publish gate — route to the payout form, not an error.
+          if (errorData?.detail?.error === "payout_method_required") {
+            setConfirmingPublishDraft(false);
+            navigate(`/payout-method?next=${encodeURIComponent("/tomorrow-trades")}`);
+            return;
+          }
+          errorMsg = errorData?.detail?.message || errorData.detail || errorData.error || errorData.message || errorText;
         } catch {
           errorMsg = errorText || `HTTP ${response.status}`;
         }

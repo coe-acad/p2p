@@ -23,6 +23,8 @@ import TodayTradesPage from "./pages/TodayTradesPage";
 import TomorrowTradesPage from "./pages/TomorrowTradesPage";
 import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import EarningsPage from "./pages/EarningsPage";
+import PayoutMethodPage from "./pages/PayoutMethodPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import PricingPolicyPage from "./pages/PricingPolicyPage";
@@ -67,6 +69,8 @@ const AppRoutes = () => {
       <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
       <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
       <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+      <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsPage /></RoleProtectedRoute>} />
+      <Route path="/payout-method" element={<RoleProtectedRoute requiredIntent="sell"><PayoutMethodPage /></RoleProtectedRoute>} />
 
       {/* Buyer Main App */}
       <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
