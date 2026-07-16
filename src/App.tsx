@@ -11,6 +11,7 @@ import {
 } from "@/components/layout/ProtectedRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useLastPathRestore } from "@/hooks/useLastPathRestore";
 
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -22,6 +23,8 @@ import TodayTradesPage from "./pages/TodayTradesPage";
 import TomorrowTradesPage from "./pages/TomorrowTradesPage";
 import BuyerOrderHistoryPage from "./pages/BuyerOrderHistoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import EarningsPage from "./pages/EarningsPage";
+import PayoutMethodPage from "./pages/PayoutMethodPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import PricingPolicyPage from "./pages/PricingPolicyPage";
@@ -41,6 +44,7 @@ const queryClient = new QueryClient({
 
 const AppRoutes = () => {
   useAndroidBackButton();
+  useLastPathRestore();
   return (
     <Routes>
       {/* Single auth entry: phone+OTP. Returning users with intent set are
@@ -65,6 +69,8 @@ const AppRoutes = () => {
       <Route path="/today-trades" element={<RoleProtectedRoute requiredIntent="sell"><TodayTradesPage /></RoleProtectedRoute>} />
       <Route path="/tomorrow-trades" element={<RoleProtectedRoute requiredIntent="sell"><TomorrowTradesPage /></RoleProtectedRoute>} />
       <Route path="/order-history" element={<RoleProtectedRoute requiredIntent="sell"><OrderHistoryPage /></RoleProtectedRoute>} />
+      <Route path="/earnings" element={<RoleProtectedRoute requiredIntent="sell"><EarningsPage /></RoleProtectedRoute>} />
+      <Route path="/payout-method" element={<RoleProtectedRoute requiredIntent="sell"><PayoutMethodPage /></RoleProtectedRoute>} />
 
       {/* Buyer Main App */}
       <Route path="/buyer-home" element={<RoleProtectedRoute requiredIntent="buy"><BuyerHomePage /></RoleProtectedRoute>} />
@@ -78,7 +84,7 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <ThemeProvider theme={muiTheme}>
       <SnackbarProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

@@ -11,11 +11,13 @@ import { useUserData } from "@/hooks/useUserData";
 import {
   BadgeCheck,
   ChevronRight,
+  Landmark,
   LogOut,
   Moon,
   Phone,
   ReceiptText,
   Sun,
+  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -226,6 +228,29 @@ export const ProfileMenu = () => {
             iconTileClass={tone.iconTile}
             hoverBgClass={tone.rowHover}
           />
+
+          {/* Seller money surfaces — settlements are seller-only; buyers see
+              refunds inline on their purchase history instead. */}
+          {!isBuyer && (
+            <>
+              <MenuItem
+                icon={Wallet}
+                label="Earnings"
+                hint="Settlement payouts for completed trades"
+                onClick={() => navigate("/earnings")}
+                iconTileClass={tone.iconTile}
+                hoverBgClass={tone.rowHover}
+              />
+              <MenuItem
+                icon={Landmark}
+                label="Payout method"
+                hint="Where we send your money"
+                onClick={() => navigate("/payout-method")}
+                iconTileClass={tone.iconTile}
+                hoverBgClass={tone.rowHover}
+              />
+            </>
+          )}
 
           <Divider />
 

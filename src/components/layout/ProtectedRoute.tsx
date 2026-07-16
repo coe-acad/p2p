@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
+import { getSavedRestorePath } from "@/hooks/useLastPathRestore";
 
 interface RouteProps {
   children: ReactNode;
@@ -92,7 +93,12 @@ export const PublicOnlyRoute = ({ children }: RouteProps) => {
   }
 
   if (user) {
-    return <Navigate to={homePathForIntent(userData.intent)} replace />;
+    // If the user is coming back from a cold start (Android killed the
+    // process while backgrounded, or the tab reloaded), restore them to the
+    // last screen they were on instead of dumping them at home. The stored
+    // path is cleared on logout so a different user's session starts fresh.
+    const savedPath = getSavedRestorePath();
+    return <Navigate to={savedPath || homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;

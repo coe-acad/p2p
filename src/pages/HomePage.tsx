@@ -56,14 +56,14 @@ const HomePage = () => {
       units: plannedUnits,
       avgRate: publishedAvgRate,
       confirmed: confirmedUnits,
-      description: "Total earnings from your published catalog.",
+      description: "Total value of your published catalog.",
     },
     completed: {
       earnings: confirmedEarnings,
       units: confirmedUnits,
       avgRate: completedAvgRate,
       confirmed: confirmedUnits,
-      description: "Total earnings from confirmed trades.",
+      description: "Value of confirmed trades. Actual payouts appear in Earnings.",
     },
   };
 
@@ -175,7 +175,7 @@ const HomePage = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Earnings overview
+                Trade value
               </p>
               <div className="flex items-center gap-1 rounded-full bg-muted p-0.5">
                 <button

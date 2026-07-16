@@ -1,4 +1,4 @@
-const samaiLogoSvg = "/charzpe_embedded.svg";
+const samaiLogoSvg = "/logo_charzpe_round.png";
 
 interface SVMCLogoProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
