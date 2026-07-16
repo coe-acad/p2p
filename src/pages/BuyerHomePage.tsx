@@ -20,24 +20,6 @@ import { AlertTriangle, RefreshCw, ShieldAlert, Zap } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
 
-// One-shot flag: force a fresh POST /discover?force=true on the *first*
-// buyer-home landing after login, and only that landing. Subsequent
-// remounts (user navigates to an order screen and comes back) skip the
-// force refresh — the 30s background poll handles keeping data fresh.
-// Reset from useUserData when the auth state clears so the next login
-// gets its own initial refresh again.
-let initialBuyerHomeRefreshPending = true;
-
-const consumeInitialBuyerHomeRefresh = (): boolean => {
-  if (!initialBuyerHomeRefreshPending) return false;
-  initialBuyerHomeRefreshPending = false;
-  return true;
-};
-
-export const resetInitialBuyerHomeRefresh = () => {
-  initialBuyerHomeRefreshPending = true;
-};
-
 const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
   const grouped = new Map<string, EnergyListing>();
 
@@ -139,15 +121,10 @@ const BuyerHomePage = () => {
   useEffect(() => {
     // Only fetch listings if the user is VC-verified. Otherwise discover is
     // blocked and we shouldn't be making the request at all.
-    //
-    // Force a network refresh ONCE per login (first time this hook runs
-    // after the user signs in). Subsequent landings — e.g. after visiting
-    // an order details page and coming back — use whatever's already
-    // cached; the 30s background poll keeps it warm without another
-    // POST /discover?force=true burst.
-    if (!isVCVerified) return;
-    const force = consumeInitialBuyerHomeRefresh();
-    void fetchListings(0, {}, { refreshFromNetwork: force });
+    // Force a network refresh on landing so buyers see the freshest catalog
+    // without having to hit the refresh button — matches what handleRefresh
+    // does (POST /discover?force=true → then GET).
+    if (isVCVerified) fetchListings(0, {}, { refreshFromNetwork: true });
   }, [isVCVerified]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
@@ -502,7 +479,7 @@ const BuyerHomePage = () => {
                     <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
                     listing{groupedListings.length === 1 ? "" : "s"} available
                   </p>
-                  <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
+                  <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
                     {paginatedGroupedListings.map((listing, idx) => (
                       <div
                         key={listing.id}

@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { resolveRequiredEnv } from "@/services/apiClient";
-import { resetInitialBuyerHomeRefresh } from "@/pages/BuyerHomePage";
-import { clearSavedRestorePath } from "@/hooks/useLastPathRestore";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" =>
   value === "sell" || value === "buy";
@@ -233,13 +231,6 @@ const startAuthProfileBootstrap = () => {
     if (!firebaseUser) {
       replaceUserData({ ...DEFAULT_USER_DATA }, false);
       clearPersistedUserData();
-      // Rearm the one-shot buyer-home refresh flag so the next login gets
-      // its own POST /discover?force=true burst on landing.
-      resetInitialBuyerHomeRefresh();
-      // Drop the last-visited-path record so the next user's session starts
-      // at their intent-appropriate home rather than the previous user's
-      // last screen.
-      clearSavedRestorePath();
       setProfileHydrated(true);
       return;
     }
