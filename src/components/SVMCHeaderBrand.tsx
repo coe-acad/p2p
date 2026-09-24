@@ -1,17 +1,14 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Zap } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 
 /**
  * Compact brand mark for the app shell header.
  *
- * - Renders the Samai wordmark in Atria blue with a Zap glyph that pulses with
- *   a soft electric aura (single-color, no gradient).
- * - A small green status dot trails the wordmark to signal "live".
+ * - Renders the CharzPe wordmark with the circular logo emblem.
  * - Click behaviour: navigates to the persona-aware home; if the user is
  *   ALREADY on home, performs a full reload so they get fresh data.
  */
-const SamaiHeaderBrand = () => {
+const SVMCHeaderBrand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData } = useUserData();
@@ -37,24 +34,26 @@ const SamaiHeaderBrand = () => {
                  transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-100
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      {/* Zap with a soft electric aura that pulses on a 2.2s loop. */}
-      <span className="relative inline-flex h-5 w-5 items-center justify-center">
-        <span aria-hidden className="electric-pulse absolute inset-0" />
-        <Zap
-          aria-hidden
-          strokeWidth={0}
-          className="relative h-4 w-4 fill-accent text-accent
-                     transition-transform duration-200 ease-out
-                     group-hover:scale-110"
-        />
-      </span>
+      {/* CharzPe logo — the SVG in public/ is a raster-to-vector conversion
+          artifact with a black rectangle behind the circle. Use the PNG we
+          re-masked with a transparent-outside-circle alpha so it composites
+          cleanly on the header's off-white background. */}
+      <img
+        src="/logo_charzpe_round.png"
+        alt="CharzPe"
+        className="h-5 w-5 object-contain transition-transform duration-200 ease-out group-hover:scale-110"
+      />
 
-      {/* Wordmark — Atria blue, slightly bolder for header presence. */}
-      <span className="text-base font-semibold tracking-tight text-primary sm:text-lg">
-        Samai
+      {/* Wordmark — matches the logo's two-tone design. Uses the exact
+          brand hex (#0172BD) for "Charz" instead of Tailwind's --primary so
+          it lines up with the logo mark's blue, and the accent green for
+          "Pe". Keep in sync with the color used on the login screen. */}
+      <span className="text-base font-semibold tracking-tight sm:text-lg">
+        <span style={{ color: "#0172BD" }}>Charz</span>
+        <span className="text-accent">Pe</span>
       </span>
     </button>
   );
 };
 
-export default SamaiHeaderBrand;
+export default SVMCHeaderBrand;

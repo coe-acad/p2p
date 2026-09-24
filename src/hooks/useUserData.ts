@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { loadUser } from "@/services/userService";
+import { resolveRequiredEnv } from "@/services/apiClient";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" =>
   value === "sell" || value === "buy";
@@ -174,25 +174,53 @@ const shouldHydrateFromRemote = (phone: string) => {
   );
 };
 
-const applyRemoteUserData = (
-  phone: string,
-  uid: string | undefined,
-  remote: Partial<UserData> | null,
-) => {
-  if (!remote || Object.keys(remote).length === 0) {
+// Backend-driven hydration: fetch the user's full profile from the BPP
+// (GET /api/user/me, token-authed). This replaces the previous Firestore
+// direct read so the frontend never talks to Firestore for profile data.
+// The endpoint returns the underlying users/{phone} doc verbatim — name,
+// intent, vc_data fields, etc. — or {} when no profile exists yet.
+const hydrateFromBackend = async (phone: string, uid: string | undefined) => {
+  const BACKEND_URL = resolveRequiredEnv(
+    import.meta.env.VITE_BACKEND_URL,
+    "http://localhost:3002",
+    "VITE_BACKEND_URL",
+  );
+
+  let token: string | undefined;
+  try {
+    token = await auth.currentUser?.getIdToken();
+  } catch {
+    token = undefined;
+  }
+  if (!token) {
     mergeUserData({ phone, phone_number: phone, uid });
     return;
   }
 
-  const { intent: remoteIntent, name: remoteName, ...remoteRest } = remote as Record<string, unknown>;
-  mergeUserData({
-    ...(remoteRest as Partial<UserData>),
-    uid,
-    intent: isIntentValue(remoteIntent) ? remoteIntent : currentUserData.intent,
-    name: typeof remoteName === "string" ? remoteName : currentUserData.name,
-    phone: (remote.phone as string) || (remote.phone_number as string) || phone,
-    phone_number: (remote.phone_number as string) || phone,
-  });
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/user/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      mergeUserData({ phone, phone_number: phone, uid });
+      return;
+    }
+    const remote = (await response.json()) as Record<string, unknown>;
+    const remoteIntent = remote.intent;
+    const remoteName = remote.name;
+
+    mergeUserData({
+      ...(remote as Partial<UserData>),
+      uid,
+      intent: isIntentValue(remoteIntent) ? remoteIntent : currentUserData.intent,
+      name: typeof remoteName === "string" ? remoteName : currentUserData.name,
+      phone: (remote.phone as string) || (remote.phone_number as string) || phone,
+      phone_number: (remote.phone_number as string) || phone,
+    });
+  } catch (err) {
+    console.error("Failed to fetch user profile:", err);
+    mergeUserData({ phone, phone_number: phone, uid });
+  }
 };
 
 const startAuthProfileBootstrap = () => {
@@ -206,6 +234,15 @@ const startAuthProfileBootstrap = () => {
       setProfileHydrated(true);
       return;
     }
+
+    // Reset hydrated=false the moment a real user shows up, before touching
+    // anything else. Firebase's onAuthStateChanged fires with null first
+    // during boot and sets hydrated=true; if we don't reset here, the very
+    // next fire (real user) leaves guards seeing user+hydrated+intent=undefined
+    // for the couple hundred ms it takes /api/user/me to resolve → they briefly
+    // Navigate the user to /intent before we correct course. Holding
+    // LoadingSpinner during hydration keeps the route stable.
+    setProfileHydrated(false);
 
     if (!firebaseUser.phoneNumber) {
       mergeUserData({ uid: firebaseUser.uid });
@@ -223,10 +260,9 @@ const startAuthProfileBootstrap = () => {
     }
 
     try {
-      const remote = await loadUser(phone);
-      applyRemoteUserData(phone, firebaseUser.uid, remote);
+      await hydrateFromBackend(phone, firebaseUser.uid);
     } catch (err) {
-      console.error("Failed to hydrate user profile from Firestore:", err);
+      console.error("Failed to hydrate user profile from backend:", err);
     } finally {
       setProfileHydrated(true);
     }
@@ -253,5 +289,3 @@ export const useUserData = () => {
   };
 };
 
-// Re-export loadUser for components that need to fetch by phone during login.
-export { loadUser as loadUserFromFirestore };

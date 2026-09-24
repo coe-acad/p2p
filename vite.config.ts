@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Samai - P2P Energy Trading",
-        short_name: "Samai",
+        name: "SVMC - P2P Energy Trading",
+        short_name: "SVMC",
         theme_color: "#4F69C6",
         background_color: "#ffffff",
         display: "standalone",

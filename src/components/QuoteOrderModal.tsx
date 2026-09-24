@@ -24,7 +24,16 @@ interface QuoteOrderModalProps {
   listing: EnergyListing | null;
   quote: any;
   error: string | null;
-  status: "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed";
+  status:
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed";
   onGetQuote: () => Promise<void>;
   onConfirm: () => Promise<void>;
   onBack: () => void;
@@ -57,9 +66,23 @@ export const QuoteOrderModal = ({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isConfirmed = status === "confirmed";
-  const isConfirming = status === "confirming";
+  const isPaying = status === "paying";
+  const isVerifying = status === "verifying";
+  const isFinalising = status === "finalising";
+  // "confirming" used to be a single state pre-payment-integration. Anything
+  // post-Razorpay-modal (verify, BAP confirm-paid, on_confirm wait) keeps the
+  // CTA disabled to avoid double-submit.
+  const isConfirming = isPaying || isVerifying || isFinalising;
   const isQuoting = status === "quoting";
   const isBusy = isConfirming || isQuoting;
+
+  const confirmingLabel = isPaying
+    ? "Opening payment"
+    : isVerifying
+      ? "Verifying payment"
+      : isFinalising
+        ? "Finalising order"
+        : "Processing";
 
   if (!listing) return null;
 
@@ -302,11 +325,11 @@ export const QuoteOrderModal = ({
             {isConfirming ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Confirming
+                {confirmingLabel}
               </>
             ) : (
               <>
-                Confirm <span className="nums">₹{quotedAmount.toFixed(2)}</span>
+                Pay <span className="nums">₹{quotedAmount.toFixed(2)}</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -317,15 +340,15 @@ export const QuoteOrderModal = ({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={(open) => !isBusy && setConfirmOpen(open)}
-        title="Confirm this order?"
+        title="Proceed to payment?"
         description={
           <>
-            The order will be finalised at{" "}
-            <span className="font-medium text-foreground nums">₹{quotedAmount.toFixed(2)}</span>
-            .
+            You'll be charged{" "}
+            <span className="font-medium text-foreground nums">₹{quotedAmount.toFixed(2)}</span>{" "}
+            via Razorpay. The order is finalised once payment is captured.
           </>
         }
-        proceedLabel="Confirm"
+        proceedLabel="Pay now"
         loading={isBusy}
         onProceed={() => {
           setConfirmOpen(false);

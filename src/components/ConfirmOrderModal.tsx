@@ -16,7 +16,16 @@ interface ConfirmOrderModalProps {
   listing: EnergyListing | null;
   offers: EnergyListing[];
   error: string | null;
-  status: "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed";
+  status:
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed";
   onSelectOffer: (offer: EnergyListing) => Promise<void>;
   onCancel: () => void;
 }

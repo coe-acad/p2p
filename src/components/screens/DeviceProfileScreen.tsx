@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Zap, Battery, Gauge, User, Check, ChevronDown, ChevronUp, ChevronLeft, Sun, Sparkles, Cpu } from "lucide-react";
-import SamaiLogo from "../SamaiLogo";
+import SVMCLogo from "../SVMCLogo";
 import { useUserData } from "@/hooks/useUserData";
 
 interface LocationData {
@@ -113,7 +113,7 @@ const DeviceProfileScreen = ({ locationData, onContinue, onBack }: DeviceProfile
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back
             </button>
-            <SamaiLogo size="sm" showText={false} />
+            <SVMCLogo size="sm" showText={false} />
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1.5">

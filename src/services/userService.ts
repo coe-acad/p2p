@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
@@ -45,16 +45,6 @@ export const saveUser = async (data: UserData): Promise<void> => {
     { ...cleanData, updatedAt: serverTimestamp() },
     { merge: true }
   );
-};
-
-// Load user data from Firestore by phone number (one-time read)
-export const loadUser = async (phone: string): Promise<Partial<UserData> | null> => {
-  const userRef = doc(db, COLLECTION, phone);
-  const snap = await getDoc(userRef);
-  if (snap.exists()) {
-    return snap.data() as Partial<UserData>;
-  }
-  return null;
 };
 
 export type EnsureUserPayload = {

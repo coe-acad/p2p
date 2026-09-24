@@ -9,7 +9,7 @@ import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
 import { resolveRequiredEnv } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import BrandMark from "@/components/BrandMark";
+import SVMCLogo from "@/components/SVMCLogo";
 import { unwrapCredential } from "@/utils/vcCredential";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
@@ -105,6 +105,20 @@ const OnboardingVCPage = () => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
+      // Backend response tells us which VC bucket was written and what
+      // fields it extracted. Mirror it into userData so the "Verification
+      // required" banner clears immediately after re-upload without
+      // needing a logout/login round-trip (was writing `isVCVerified` —
+      // wrong field name and wrong value — leaving the banner stuck).
+      const result: {
+        vc_type?: string;
+        stored_under?: string;
+        fields?: Record<string, unknown>;
+        is_vc_verified?: boolean;
+      } = await response.json().catch(() => ({}));
+
+      const vcBucket: "consumption" | "generation" =
+        result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
       const userName: string | null = credential.credentialSubject?.fullName || null;
 
       toast({
@@ -116,7 +130,11 @@ const OnboardingVCPage = () => {
       localStorage.setItem("samai_onboarding_complete", "true");
 
       setUserData({
-        isVCVerified: false,
+        is_vc_verified: result.is_vc_verified ?? true,
+        vc_data: {
+          ...((userData as any)?.vc_data || {}),
+          [vcBucket]: result.fields || { fullName: userName || "" },
+        },
         onboardingComplete: true,
         ...(userName ? { name: userName } : {}),
       } as any);
@@ -168,7 +186,7 @@ const OnboardingVCPage = () => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <BrandMark size="lg" />
+            <SVMCLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Zap, Battery, Gauge, User, ChevronUp, FileCheck, Shield } from "lucide-react";
-import SamaiLogo from "../SamaiLogo";
+import SVMCLogo from "../SVMCLogo";
 import { useUserData } from "@/hooks/useUserData";
 import { parseVCJson, parseVCPdf, formatDevicesFromVC, VCExtractedData } from "@/utils/vcPdfParser";
 
@@ -271,7 +271,7 @@ const LocationDeviceScreen = ({ onContinue, onBack }: LocationDeviceScreenProps)
             <ChevronLeft size={16} />
             <span>Back</span>
           </button>
-          <SamaiLogo size="sm" showText={false} />
+          <SVMCLogo size="sm" showText={false} />
         </div>
 
         {/* Title */}

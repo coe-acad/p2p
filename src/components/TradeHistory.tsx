@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTradeHistory, type Trade } from "@/hooks/useTradeHistory";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
 import { orderService } from "@/services/orderService";
+import { formatRupees, getBuyerRefunds, type Refund } from "@/services/settlementService";
 import type { EnergyListing } from "@/hooks/useDiscoverListings";
-import { AlertCircle, Clock, ReceiptText, Zap } from "lucide-react";
+import { AlertCircle, Clock, ReceiptText, Undo2, Zap } from "lucide-react";
 
 interface TradeHistoryProps {
   role: "buyer" | "seller";
@@ -20,7 +21,6 @@ interface TradeHistoryProps {
 const statusTone = (status: string): string => {
   switch (status) {
     case "CONFIRMED":
-    case "COMPLETED":
       return "bg-accent/12 text-accent";
     case "PUBLISHED":
     case "INITIATED":
@@ -57,11 +57,47 @@ const TradeSkeleton = ({ role = "buyer" }: { role?: "buyer" | "seller" }) => (
 
 export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
   const { trades, loading, error, refresh } = useTradeHistory(role, buyerPhone);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  // Default to CONFIRMED so the page opens with completed purchases (what
+  // users most often come here for). If the first load returns no confirmed
+  // trades, fall back to "show all" so a user with only pending orders isn't
+  // greeted by an empty view. The ref guards against clobbering a manual
+  // filter selection on later refreshes.
+  const [selectedStatus, setSelectedStatus] = useState<string | null>("CONFIRMED");
+  const filterInitializedRef = useRef(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [quote, setQuote] = useState<any>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteStatus, setQuoteStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
+  // Refunds keyed by transaction — enrichment only. A lookup failure must
+  // never break the history view, so errors are swallowed silently.
+  const [refundsByTxn, setRefundsByTxn] = useState<Record<string, Refund>>({});
+
+  useEffect(() => {
+    if (role !== "buyer") return;
+    let cancelled = false;
+    getBuyerRefunds()
+      .then((refunds) => {
+        if (cancelled) return;
+        const byTxn: Record<string, Refund> = {};
+        for (const refund of refunds) {
+          if (refund.txn_id) byTxn[refund.txn_id] = refund;
+        }
+        setRefundsByTxn(byTxn);
+      })
+      .catch(() => {
+        /* enrichment only — history renders fine without refund chips */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
+
+  useEffect(() => {
+    if (filterInitializedRef.current || loading || trades.length === 0) return;
+    filterInitializedRef.current = true;
+    const hasConfirmed = trades.some((t) => t.backendStatus === "CONFIRMED");
+    if (!hasConfirmed) setSelectedStatus(null);
+  }, [loading, trades]);
 
   const statuses = Array.from(new Set(trades.map((trade) => trade.backendStatus))).filter(Boolean);
   const filteredTrades = selectedStatus
@@ -151,7 +187,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
     try {
       await orderService.init(selectedTrade.transactionId, {
         offer_id: selectedTrade.offerId,
-        bpp_id: selectedTrade.bppId || 'atria-p2p-trading-bpp',
+        bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
         bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
         quantity: selectedTrade.quantity,
         price_per_unit: selectedTrade.pricePerUnit,
@@ -180,7 +216,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
         selectedTrade.transactionId,
         {
           offer_id: selectedTrade.offerId,
-          bpp_id: selectedTrade.bppId || 'atria-p2p-trading-bpp',
+          bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
           bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
           quantity: selectedTrade.quantity,
           price_per_unit: selectedTrade.pricePerUnit,
@@ -248,6 +284,10 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
         <div className="space-y-3">
           {filteredTrades.map((trade) => {
             const tradeId = trade.transactionId || trade.catalogId;
+            const refund =
+              role === "buyer" && trade.transactionId
+                ? refundsByTxn[trade.transactionId]
+                : undefined;
 
             return (
               <div
@@ -281,6 +321,26 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
                   <p className="text-2xl font-semibold tracking-tight text-foreground nums">
                     ₹{trade.totalAmount.toFixed(2)}
                   </p>
+
+                  {/* Refund chip — real money state from the payments system */}
+                  {refund && (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider nums ${
+                        refund.status === "PROCESSED"
+                          ? "bg-accent/12 text-accent"
+                          : refund.status === "FAILED"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      <Undo2 className="h-2.5 w-2.5" />
+                      {refund.status === "PROCESSED"
+                        ? `Refunded ${formatRupees(refund.amount_paise)}`
+                        : refund.status === "FAILED"
+                          ? "Refund failed — contact support"
+                          : `Refund of ${formatRupees(refund.amount_paise)} processing`}
+                    </span>
+                  )}
 
                   {(trade.deliveryStart || trade.deliveryEnd) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

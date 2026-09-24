@@ -44,7 +44,7 @@ const PublishConfirmationScreen = ({ onGoHome }: PublishConfirmationScreenProps)
               <Bell className="h-3.5 w-3.5" />
             </span>
             <p className="text-xs text-muted-foreground">
-              Samai will find the best buyers and notify you as trades confirm.
+              CharzPe will find the best buyers and notify you as trades confirm.
             </p>
           </div>
         </div>

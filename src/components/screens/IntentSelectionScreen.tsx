@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ChevronRight, Loader2, ShoppingBag, Sun } from "lucide-react";
-import BrandMark from "@/components/BrandMark";
+import SVMCLogo from "@/components/SVMCLogo";
 
 interface IntentSelectionScreenProps {
-  onSelect: (intents: ("sell" | "buy")[]) => void;
+  onSelect: (intents: ("sell" | "buy")[]) => void | Promise<void>;
   onBack?: () => void;
 }
 
@@ -21,7 +21,7 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
       await onSelect([choice]);
     } finally {
       // If the parent didn't navigate (e.g. missing phone in userData), clear
-      // the spinner so the user can retry instead of being stuck.
+      // the spinner so the user can retry instead of being stuck forever.
       setSubmitting(null);
     }
   };
@@ -93,7 +93,7 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <BrandMark size="lg" />
+            <SVMCLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">
@@ -101,7 +101,7 @@ const IntentSelectionScreen = ({ onSelect }: IntentSelectionScreenProps) => {
               Set up your trade intent
             </p>
             <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
-              What would you like Samai to help you do?
+              What would you like CharzPe to help you do?
             </h1>
           </div>
 

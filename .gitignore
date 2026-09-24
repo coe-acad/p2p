@@ -32,3 +32,10 @@ node_modules
 # Capacitor — generated native projects (re-created by `npx cap add android` / sync)
 android
 ios
+
+# Signing secrets — never commit, even if the android/ ignore is later relaxed.
+# Losing these means losing the ability to publish updates to the same Play
+# Store listing, so back them up outside the repo (password manager + offline).
+*.jks
+*.keystore
+keystore.properties

@@ -11,6 +11,7 @@ import { useUserData } from "@/hooks/useUserData";
 import {
   BadgeCheck,
   ChevronRight,
+  Landmark,
   LogOut,
   Moon,
   Phone,
@@ -141,7 +142,6 @@ export const ProfileMenu = () => {
   // shows the credential details OR redirects to /onboarding/vc to upload.
   const vcRoute = "/vc";
   const ordersRoute = isBuyer ? "/buyer-order-history" : "/order-history";
-  const paymentsRoute = isBuyer ? "/buyer-payments" : "/payments";
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -229,14 +229,28 @@ export const ProfileMenu = () => {
             hoverBgClass={tone.rowHover}
           />
 
-          <MenuItem
-            icon={Wallet}
-            label="Payments"
-            hint="Settlements and receipts"
-            onClick={() => navigate(paymentsRoute)}
-            iconTileClass={tone.iconTile}
-            hoverBgClass={tone.rowHover}
-          />
+          {/* Seller money surfaces — settlements are seller-only; buyers see
+              refunds inline on their purchase history instead. */}
+          {!isBuyer && (
+            <>
+              <MenuItem
+                icon={Wallet}
+                label="Earnings"
+                hint="Settlement payouts for completed trades"
+                onClick={() => navigate("/earnings")}
+                iconTileClass={tone.iconTile}
+                hoverBgClass={tone.rowHover}
+              />
+              <MenuItem
+                icon={Landmark}
+                label="Payout method"
+                hint="Where we send your money"
+                onClick={() => navigate("/payout-method")}
+                iconTileClass={tone.iconTile}
+                hoverBgClass={tone.rowHover}
+              />
+            </>
+          )}
 
           <Divider />
 
