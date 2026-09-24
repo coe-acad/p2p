@@ -57,7 +57,7 @@ done
 
 if [[ -z "$SRC_GSI" ]]; then
   echo "!!  GoogleService-Info.plist not found at the repo root."
-  echo "!!  Firebase console -> add iOS app -> bundle id com.charzpe.p2p -> download it,"
+  echo "!!  Firebase console -> add iOS app -> bundle id com.samai.p2p -> download it,"
   echo "!!  drop it in the repo root, and re-run this script."
   exit 1
 fi

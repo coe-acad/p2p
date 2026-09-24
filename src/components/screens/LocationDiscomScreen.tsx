@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Upload, HelpCircle, Check, X, ChevronDown, AlertTriangle, ChevronLeft, Loader2, Navigation, Sun, Sparkles, ExternalLink } from "lucide-react";
-import SVMCLogo from "../SVMCLogo";
+import SamaiLogo from "../SamaiLogo";
 import { useUserData } from "@/hooks/useUserData";
 
 interface LocationDiscomScreenProps {
@@ -273,7 +273,7 @@ const LocationDiscomScreen = ({ onContinue, onBack }: LocationDiscomScreenProps)
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back
             </button>
-            <SVMCLogo size="sm" showText={false} />
+            <SamaiLogo size="sm" showText={false} />
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1.5">

@@ -21,7 +21,7 @@ provisioning, which covers every test below.
 
 **A1. Register the iOS app in Firebase.**
 Console → Project settings → Your apps → **Add app → iOS**.
-- Apple bundle ID: **`com.charzpe.p2p`** — must match `appId` in `capacitor.config.ts` exactly.
+- Apple bundle ID: **`com.samai.p2p`** — must match `appId` in `capacitor.config.ts` exactly.
 - Nickname: anything. App Store ID: leave blank.
 - Click **Register app**, then **Download `GoogleService-Info.plist`**.
 - **Stop there.** The wizard's remaining steps (add the SDK, edit AppDelegate, run `pod install`)
@@ -101,7 +101,7 @@ Team = your personal Apple ID.
 - **Do NOT add the Push Notifications capability.** Free provisioning cannot carry that
   entitlement and it will fail the build. It belongs to the account owner.
 - If Xcode reports the bundle ID is unavailable, someone has already registered
-  `com.charzpe.p2p` to another team. Change the bundle ID to `com.charzpe.p2p.dev` **and**
+  `com.samai.p2p` to another team. Change the bundle ID to `com.samai.p2p.dev` **and**
   register a second iOS app in Firebase for that ID, otherwise the plist stops matching.
 
 **B9. Prepare the iPhone.**
@@ -198,7 +198,7 @@ None of this is development work, and none of it requires the codebase to change
 | # | Task | Where | Notes |
 |---|---|---|---|
 | 1 | Enrol in the Apple Developer Program ($99/yr) | developer.apple.com | Individual ≈24h. Organisation needs a D-U-N-S number and can take **1–2 weeks**. Everything below waits on this — start it first. |
-| 2 | Register the App ID `com.charzpe.p2p` | Certificates, Identifiers & Profiles | Enable the **Push Notifications** capability on the identifier. |
+| 2 | Register the App ID `com.samai.p2p` | Certificates, Identifiers & Profiles | Enable the **Push Notifications** capability on the identifier. |
 | 3 | Create an **APNs auth key** (`.p8`) | Certificates, Identifiers & Profiles → Keys | Download it once — Apple will not let you download it again. |
 | 4 | Upload the `.p8` to Firebase | Firebase console → Project settings → Cloud Messaging | **This is what makes phone-auth OTP work properly.** Without it, users get a reCAPTCHA challenge instead of a silent check. Functional either way, worse UX. |
 | 5 | Enable Push Notifications + Background Modes → Remote notifications | Xcode, App target → Signing & Capabilities | Needs the paid team selected. |

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-const LAST_PATH_KEY = "charzpe:last-path";
+const LAST_PATH_KEY = "samai:last-path";
 
 // Routes we deliberately do NOT save as the restore target — these are auth
 // entry / transient screens, and restoring to them on a cold start would be

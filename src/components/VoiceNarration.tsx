@@ -224,7 +224,7 @@ const VoiceNarration = ({
       {/* Helper text on first visit */}
       {showAttention && (
         <span className="text-2xs text-primary font-medium animate-fade-in">
-          CharzPe is explaining...
+          Samai is explaining...
         </span>
       )}
     </div>

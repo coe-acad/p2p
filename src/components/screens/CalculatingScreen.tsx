@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Sun, Cloud, Users } from "lucide-react";
-import SVMCLogo from "../SVMCLogo";
+import SamaiLogo from "../SamaiLogo";
 
 interface CalculatingScreenProps {
   onComplete: () => void;
@@ -31,7 +31,7 @@ const CalculatingScreen = ({ onComplete }: CalculatingScreenProps) => {
       <div className="w-full max-w-sm flex flex-col items-center gap-6 px-4">
         {/* Logo */}
         <div className="animate-fade-in">
-          <SVMCLogo size="md" showText={false} animated />
+          <SamaiLogo size="md" showText={false} animated />
         </div>
 
         {/* Title */}

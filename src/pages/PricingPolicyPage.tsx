@@ -19,8 +19,8 @@ const PricingPolicyPage = () => {
           <h1 className="text-4xl font-bold mb-4">Pricing Policy</h1>
 
           <p className="text-sm text-muted-foreground mb-8">
-            <strong>CharzPe Legal Information</strong><br />
-            App Name: CharzPe<br />
+            <strong>Samai Legal Information</strong><br />
+            App Name: Samai<br />
             Owner: P2P Energy Trading Private Limited<br />
             Business: Peer-to-peer energy marketplace for buying and selling energy across participating DISCOMs in India<br />
             Last Updated: June 17, 2026
@@ -28,14 +28,14 @@ const PricingPolicyPage = () => {
 
           <section className="mb-8">
             <p className="text-base leading-relaxed">
-              This Pricing Policy explains how pricing, fees, charges, and payments may be displayed and applied on the CharzPe app.
+              This Pricing Policy explains how pricing, fees, charges, and payments may be displayed and applied on the Samai app.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Display of Pricing</h2>
             <p className="mb-4">
-              Pricing will be displayed within the CharzPe app, website, transaction page, invoice, dashboard, or commercial agreement, as applicable.
+              Pricing will be displayed within the Samai app, website, transaction page, invoice, dashboard, or commercial agreement, as applicable.
             </p>
             <p>
               All pricing will generally be displayed in Indian Rupees, unless specifically stated otherwise.
@@ -45,7 +45,7 @@ const PricingPolicyPage = () => {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">2. Energy Pricing</h2>
             <p className="mb-4">
-              Energy prices on CharzPe may vary based on one or more of the following factors:
+              Energy prices on Samai may vary based on one or more of the following factors:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Buyer category</li>
@@ -70,7 +70,7 @@ const PricingPolicyPage = () => {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">3. Platform Fees and Service Charges</h2>
             <p className="mb-4">
-              CharzPe may charge platform fees, convenience fees, transaction fees, subscription fees, onboarding fees, service charges, technology fees, settlement fees, or other applicable charges.
+              Samai may charge platform fees, convenience fees, transaction fees, subscription fees, onboarding fees, service charges, technology fees, settlement fees, or other applicable charges.
             </p>
             <p>
               Such fees may be charged to buyers, sellers, or both, depending on the transaction type, user category, commercial arrangement, and marketplace rules.
@@ -106,14 +106,14 @@ const PricingPolicyPage = () => {
               <li>Documentation, verification, or processing charges</li>
             </ul>
             <p>
-              CharzPe is not responsible for any charges imposed by third parties, DISCOMs, banks, payment gateways, or regulators.
+              Samai is not responsible for any charges imposed by third parties, DISCOMs, banks, payment gateways, or regulators.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">6. Price Changes</h2>
             <p className="mb-4">
-              CharzPe reserves the right to change, revise, update, or withdraw prices, platform fees, service charges, and commercial terms from time to time.
+              Samai reserves the right to change, revise, update, or withdraw prices, platform fees, service charges, and commercial terms from time to time.
             </p>
             <p>
               Any such changes will be displayed on the app, website, invoice, transaction page, or commercial agreement, as applicable.
@@ -144,7 +144,7 @@ const PricingPolicyPage = () => {
             </p>
             <div className="bg-muted p-4 rounded-lg text-sm">
               <p className="mb-2"><strong>P2P Energy Trading Private Limited</strong></p>
-              <p className="mb-2">App Name: CharzPe</p>
+              <p className="mb-2">App Name: Samai</p>
               <p className="mb-2">Registered Office: FF-8O, First Floor, Block-B, Spectrum Metro Mall, Sector-75, Noida, Gautam Budh Nagar, Uttar Pradesh, 201301</p>
               <p className="mb-2">Email: <a href="mailto:info@charzpe.com" className="text-blue-500 hover:underline">info@charzpe.com</a></p>
               <p className="mb-2">Phone: <a href="tel:+918743081001" className="text-blue-500 hover:underline">+91 87430 81001</a></p>

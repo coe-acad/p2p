@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import SVMCHeaderBrand from "@/components/SVMCHeaderBrand";
+import SamaiHeaderBrand from "@/components/SamaiHeaderBrand";
 import { ProfileMenu } from "./ProfileMenu";
 
 interface MainAppShellProps {
@@ -40,7 +40,7 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <SVMCHeaderBrand />
+          <SamaiHeaderBrand />
           <ProfileMenu />
         </div>
       </header>

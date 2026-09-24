@@ -11,6 +11,7 @@ import { Capacitor, PluginListenerHandle } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -310,18 +311,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <img
-                    src="/logo_charzpe_round.png"
-                    alt="CharzPe logo"
-                    className="h-28 w-28 object-contain sm:h-32 sm:w-32"
-                  />
-                  <img
-                    src="/charzpe_text.png"
-                    alt="CharzPe"
-                    className="h-8 w-auto object-contain sm:h-10"
-                  />
-                </div>
+                <BrandMark size="lg" />
               </div>
 
               <div className="text-center">
@@ -377,7 +367,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                By continuing you agree to CharzPe's{" "}
+                By continuing you agree to Samai's{" "}
                 <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Terms
                 </Link>{" "}
@@ -393,18 +383,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <img
-                    src="/logo_charzpe_round.png"
-                    alt="CharzPe logo"
-                    className="h-28 w-28 object-contain sm:h-32 sm:w-32"
-                  />
-                  <img
-                    src="/charzpe_text.png"
-                    alt="CharzPe"
-                    className="h-8 w-auto object-contain sm:h-10"
-                  />
-                </div>
+                <BrandMark size="lg" />
               </div>
 
               <div className="text-center">

@@ -1,13 +1,13 @@
-const samaiLogoSvg = "/logo_charzpe_round.png";
+const samaiLogoSvg = "/logo.svg";
 
-interface SVMCLogoProps {
+interface SamaiLogoProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   animated?: boolean;
   showBorder?: boolean;
 }
 
-const SVMCLogo = ({ size = "md", showText = true, animated = false, showBorder = false }: SVMCLogoProps) => {
+const SamaiLogo = ({ size = "md", showText = true, animated = false, showBorder = false }: SamaiLogoProps) => {
   const sizes = {
     xs: { container: 28, text: "text-sm", border: 2 },
     sm: { container: 39, text: "text-xl", border: 2 },
@@ -43,7 +43,7 @@ const SVMCLogo = ({ size = "md", showText = true, animated = false, showBorder =
           {/* Logo image */}
           <img
             src={samaiLogoSvg}
-            alt="CharzPe"
+            alt="Samai"
             className={`w-[99%] h-[99%] rounded-full object-contain ${animated ? 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]' : ''}`}
           />
         </div>
@@ -51,11 +51,11 @@ const SVMCLogo = ({ size = "md", showText = true, animated = false, showBorder =
       
       {showText && (
         <h1 className={`${sizes[size].text} font-semibold text-foreground tracking-tight`}>
-          CharzPe
+          Samai
         </h1>
       )}
     </div>
   );
 };
 
-export default SVMCLogo;
+export default SamaiLogo;

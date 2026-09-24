@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.charzpe.p2p",
-  appName: "SVMC Charzpe",
+  appId: "com.samai.p2p",
+  appName: "Samai",
   webDir: "dist",
   android: {
     // Capacitor's default WebView user agent contains "wv", which Razorpay

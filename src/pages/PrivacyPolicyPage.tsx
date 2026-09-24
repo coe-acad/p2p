@@ -17,8 +17,8 @@ const PrivacyPolicyPage = () => {
 
         <div className="prose prose-invert max-w-none text-xs leading-relaxed">
           <div className="mb-8">
-            <p className="font-semibold mb-1">CharzPe Legal Information</p>
-            <p className="mb-1">App Name: CharzPe</p>
+            <p className="font-semibold mb-1">Samai Legal Information</p>
+            <p className="mb-1">App Name: Samai</p>
             <p className="mb-1">Owner: P2P Energy Trading Private Limited</p>
             <p className="mb-1">Business: Peer-to-peer energy marketplace for buying and selling energy across participating DISCOMs in India</p>
             <p>Last Updated: June 24, 2026</p>
@@ -27,15 +27,15 @@ const PrivacyPolicyPage = () => {
           <h1 className="text-3xl font-bold mb-8">Privacy Policy</h1>
 
           <p className="mb-4">
-            This Privacy Policy explains how P2P Energy Trading Private Limited, owner and operator of the CharzPe app, collects, uses, stores, shares, and protects user information.
+            This Privacy Policy explains how P2P Energy Trading Private Limited, owner and operator of the Samai app, collects, uses, stores, shares, and protects user information.
           </p>
 
           <p className="mb-4">
-            For the purpose of this Privacy Policy, the terms "we," "us," "our," "Company," and "CharzPe" shall mean P2P Energy Trading Private Limited. The terms "you," "your," "user," "customer," "buyer," "seller," "prosumer," or "marketplace participant" shall mean any individual, business, institution, housing society, energy asset owner, or authorised representative using the CharzPe app or services.
+            For the purpose of this Privacy Policy, the terms "we," "us," "our," "Company," and "Samai" shall mean P2P Energy Trading Private Limited. The terms "you," "your," "user," "customer," "buyer," "seller," "prosumer," or "marketplace participant" shall mean any individual, business, institution, housing society, energy asset owner, or authorised representative using the Samai app or services.
           </p>
 
           <p className="mb-8">
-            By accessing, registering on, or using the CharzPe app, website, dashboard, or related services, you agree to the collection and use of your information in accordance with this Privacy Policy.
+            By accessing, registering on, or using the Samai app, website, dashboard, or related services, you agree to the collection and use of your information in accordance with this Privacy Policy.
           </p>
 
           <h2 className="text-lg font-semibold mb-4">1. Information We Collect</h2>
@@ -89,8 +89,8 @@ const PrivacyPolicyPage = () => {
           <h2 className="text-lg font-semibold mb-3">2. How We Use Your Information</h2>
           <p className="mb-3">We may use your information for the following purposes:</p>
           <ul className="list-disc pl-6 space-y-1 mb-8">
-            <li>To create, verify, and manage your CharzPe account</li>
-            <li>To onboard users for buying or selling energy on the CharzPe marketplace</li>
+            <li>To create, verify, and manage your Samai account</li>
+            <li>To onboard users for buying or selling energy on the Samai marketplace</li>
             <li>To verify your DISCOM connection, meter details, identity, payment details, and eligibility</li>
             <li>To facilitate energy discovery, bids, offers, matching, scheduling, settlement, invoicing, and reporting</li>
             <li>To process payments, refunds, seller payouts, invoices, taxes, and transaction records</li>
@@ -118,7 +118,7 @@ const PrivacyPolicyPage = () => {
 
           <h2 className="text-lg font-semibold mb-3">4. Data Retention</h2>
           <p className="mb-4">
-            We retain your information for as long as necessary to provide CharzPe services, complete energy transactions, comply with legal and regulatory obligations, resolve disputes, maintain tax and accounting records, prevent fraud, and enforce our agreements.
+            We retain your information for as long as necessary to provide Samai services, complete energy transactions, comply with legal and regulatory obligations, resolve disputes, maintain tax and accounting records, prevent fraud, and enforce our agreements.
           </p>
           <p className="mb-8">
             Energy transaction records, invoices, payment records, KYC records, metering data, and settlement records may be retained for longer periods where required under applicable law, DISCOM rules, regulatory directions, tax laws, or audit requirements.
@@ -147,7 +147,7 @@ const PrivacyPolicyPage = () => {
 
           <h2 className="text-lg font-semibold mb-3">7. Cookies and Analytics</h2>
           <p className="mb-4">
-            The CharzPe website and app may use cookies, SDKs, pixels, analytics tools, and similar technologies to improve user experience, understand app usage, enhance security, and improve our services.
+            The Samai website and app may use cookies, SDKs, pixels, analytics tools, and similar technologies to improve user experience, understand app usage, enhance security, and improve our services.
           </p>
           <p className="mb-8">
             You may disable cookies through your browser or device settings, but some features of the app or website may not function properly.
@@ -155,10 +155,10 @@ const PrivacyPolicyPage = () => {
 
           <h2 className="text-lg font-semibold mb-3">8. Changes to Privacy Policy</h2>
           <p className="mb-4">
-            We may update this Privacy Policy from time to time. The updated Privacy Policy will be posted on the CharzPe app or website with the revised "Last Updated" date.
+            We may update this Privacy Policy from time to time. The updated Privacy Policy will be posted on the Samai app or website with the revised "Last Updated" date.
           </p>
           <p className="mb-8">
-            Continued use of CharzPe after any update shall mean that you have accepted the updated Privacy Policy.
+            Continued use of Samai after any update shall mean that you have accepted the updated Privacy Policy.
           </p>
 
           <div className="border-t border-border mt-8 pt-8">
@@ -168,7 +168,7 @@ const PrivacyPolicyPage = () => {
             </p>
             <div className="bg-muted p-4 rounded-lg space-y-1">
               <p className="font-semibold">P2P Energy Trading Private Limited</p>
-              <p>App Name: CharzPe</p>
+              <p>App Name: Samai</p>
               <p>Registered Office: FF-8O, First Floor, Block-B, Spectrum Metro Mall, Sector-75, Noida, Gautam Budh Nagar, Uttar Pradesh, 201301</p>
               <p>Operating Address: FF-8O, First Floor, Block-B, Spectrum Metro Mall, Sector-75, Noida, Gautam Budh Nagar, Uttar Pradesh, 201301</p>
               <p>Email: <a href="mailto:info@charzpe.com" className="text-blue-500 hover:underline">info@charzpe.com</a></p>
