@@ -48,14 +48,14 @@ export class RazorpayDismissed extends Error {
   }
 }
 
-export class RazorpayScriptLoadError extends Error {
+class RazorpayScriptLoadError extends Error {
   constructor() {
     super("Failed to load Razorpay checkout script");
     this.name = "RazorpayScriptLoadError";
   }
 }
 
-export const loadRazorpayScript = async (): Promise<void> => {
+const loadRazorpayScript = async (): Promise<void> => {
   if (typeof window === "undefined") {
     throw new RazorpayScriptLoadError();
   }

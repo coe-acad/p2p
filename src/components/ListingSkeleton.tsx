@@ -3,7 +3,7 @@
  * (white top space → green magnetic stripe → body with stats + time info)
  * so the grid doesn't reflow when listings load in.
  */
-export const ListingSkeleton = () => (
+const ListingSkeleton = () => (
   <div className="relative overflow-hidden flex w-full flex-col rounded-2xl border border-primary/12 bg-card shadow-[0_6px_18px_-12px_rgba(36,40,128,0.18)]">
     {/* Top white space */}
     <div className="h-4" />

@@ -36,9 +36,9 @@ pset() { $PB -c "Delete :$2" "$1" >/dev/null 2>&1 || true; $PB -c "Add :$2 $3 $4
 
 echo "==> Writing Info.plist entries"
 
-# The discom/device upload screens accept jpg+png, so iOS's WebView file picker
-# offers "Take Photo" and "Photo Library". Both abort the app without a usage
-# string. See LocationDiscomScreen.tsx:420, LocationDeviceScreen.tsx:382.
+# iOS's WebView file picker (VC upload: VCUploadModal, OnboardingVCPage) can
+# offer "Take Photo" and "Photo Library". Both abort the app without a usage
+# string, so keep these even though uploads are JSON-only today.
 pset "$PLIST" NSCameraUsageDescription string "Take a photo of your electricity bill or device nameplate to upload it."
 pset "$PLIST" NSPhotoLibraryUsageDescription string "Choose a photo of your electricity bill or device nameplate to upload it."
 

@@ -28,19 +28,6 @@ const homePathForIntent = (intent: "sell" | "buy" | undefined): string => {
   return "/intent";
 };
 
-export const ProtectedRoute = ({ children }: RouteProps) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
@@ -120,12 +107,3 @@ export const IntentAccessRoute = ({ children }: RouteProps) => {
   return <>{children}</>;
 };
 
-export const VerificationRoute = ({ children }: RouteProps) => {
-  const { isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  return <>{children}</>;
-};

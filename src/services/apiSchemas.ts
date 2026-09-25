@@ -6,7 +6,7 @@ export const TradeStatusSchema = z.object({
   state: z.string().nullable().optional(),
 });
 
-export const TradeHistoryItemSchema = z.object({
+const TradeHistoryItemSchema = z.object({
   type: z.enum(["trade", "catalog"]),
   transaction_id: z.string().optional(),
   catalog_id: z.string().optional(),
@@ -25,9 +25,6 @@ export const TradeHistoryItemSchema = z.object({
   created_at: z.string().optional(),
 });
 
-export const TradeHistoryEnvelopeSchema = z.object({
-  items: z.array(TradeHistoryItemSchema).optional().default([]),
-});
 
 export const EnsureUserResponseSchema = z
   .object({

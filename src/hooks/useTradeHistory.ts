@@ -22,7 +22,7 @@ export interface Trade {
   confirmedAt: Date;
 }
 
-export const tradeHistoryQueryKey = (
+const tradeHistoryQueryKey = (
   role: "buyer" | "seller",
   buyerPhone?: string,
 ) => ["tradeHistory", role, buyerPhone ?? null] as const;
