@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, toApiError, BAP_URL } from "@/services/apiClient";
 
 export interface EnergyListing {
   id: string;
@@ -77,7 +77,6 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
   const PAGE_SIZE = 10;
   const RAW_FETCH_LIMIT = 500;
   const discoverClientRef = useRef(createApiClient(BAP_URL));

@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "@/services/apiClient";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -45,9 +46,6 @@ interface DraftCatalog extends TomorrowCatalog {
   status: 'draft' | 'published';
 }
 
-const getBackendUrl = (): string => {
-  return import.meta.env.VITE_BACKEND_URL || "https://atria-bpp.atriauniversity.ai";
-};
 
 const formatDateDDMMYYYY = (istDate: Date): string => {
   const day = String(istDate.getUTCDate()).padStart(2, "0");
@@ -153,7 +151,6 @@ const TomorrowTradesPage = () => {
   const { user } = useAuth();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
   const { publishTrades } = usePublishedTrades();
-  const backendUrl = getBackendUrl();
 
   const isVCVerified = Boolean((userData as any)?.is_vc_verified);
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
@@ -273,7 +270,7 @@ const TomorrowTradesPage = () => {
 
         const headers = await getAuthHeaders();
         const encodedPhone = encodeURIComponent(userData.phone);
-        const apiUrl = `${backendUrl}/api/sellers/${encodedPhone}/tomorrow`;
+        const apiUrl = `${BACKEND_URL}/api/sellers/${encodedPhone}/tomorrow`;
 
         const response = await fetch(apiUrl, {
           method: "GET",
@@ -409,7 +406,7 @@ const TomorrowTradesPage = () => {
     setSubmitting(true);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${backendUrl}/api/create`, {
+      const response = await fetch(`${BACKEND_URL}/api/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify({ trades: catalog.trades }),
@@ -559,7 +556,7 @@ const TomorrowTradesPage = () => {
         startTime: istToUtc(trade.startTime),
         endTime: istToUtc(trade.endTime),
       }));
-      const response = await fetch(`${backendUrl}/api/create`, {
+      const response = await fetch(`${BACKEND_URL}/api/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify({ trades: tradesForBackend }),

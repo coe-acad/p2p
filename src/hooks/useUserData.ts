@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 
 const isIntentValue = (value: unknown): value is "sell" | "buy" =>
   value === "sell" || value === "buy";
@@ -180,11 +180,6 @@ const shouldHydrateFromRemote = (phone: string) => {
 // The endpoint returns the underlying users/{phone} doc verbatim — name,
 // intent, vc_data fields, etc. — or {} when no profile exists yet.
 const hydrateFromBackend = async (phone: string, uid: string | undefined) => {
-  const BACKEND_URL = resolveRequiredEnv(
-    import.meta.env.VITE_BACKEND_URL,
-    "http://localhost:3002",
-    "VITE_BACKEND_URL",
-  );
 
   let token: string | undefined;
   try {

@@ -6,7 +6,7 @@ import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
 import SamaiLogo from "@/components/SamaiLogo";
@@ -89,11 +89,6 @@ const OnboardingVCPage = () => {
       const token = await user?.getIdToken();
       if (!token) throw new Error("Unable to get authentication token");
 
-      const BACKEND_URL = resolveRequiredEnv(
-        import.meta.env.VITE_BACKEND_URL,
-        "http://localhost:3002",
-        "VITE_BACKEND_URL",
-      );
       const response = await fetch(`${BACKEND_URL}/api/vc/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

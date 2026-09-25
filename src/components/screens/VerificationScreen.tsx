@@ -9,13 +9,13 @@ import {
 } from "firebase/auth";
 import { Capacitor, PluginListenerHandle } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { auth } from "@/lib/firebase";
+import { auth, isPhoneVerificationDisabledForTesting } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
 interface VerificationScreenProps {
@@ -165,8 +165,6 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
         return;
       }
 
-      const isTestingMode = import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
-
       if (!recaptchaVerifierRef.current) {
         try {
           resetRecaptchaVerifier();
@@ -176,7 +174,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           await recaptchaVerifierRef.current.render();
         } catch (err: any) {
           logger.error("Recaptcha initialization failed", err);
-          if (!isTestingMode) {
+          if (!isPhoneVerificationDisabledForTesting) {
             setPhoneError("Verification initialization failed. Please try again.");
             throw err;
           }
@@ -239,11 +237,6 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
       }
 
       // Set the phone_number custom claim on Firebase so backend can authorize.
-      const BACKEND_URL = resolveRequiredEnv(
-        import.meta.env.VITE_BACKEND_URL,
-        "http://localhost:3002",
-        "VITE_BACKEND_URL",
-      );
       const token = await auth.currentUser?.getIdToken();
       if (token) {
         try {

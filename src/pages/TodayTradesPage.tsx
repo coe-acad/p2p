@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "@/services/apiClient";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle, ChevronDown, ShieldAlert, Timer, Zap } from "lucide-react";
@@ -95,8 +96,7 @@ const TodayTradesPage = () => {
       if (!userData?.phone_number) return;
       try {
         const headers = await getAuthHeaders();
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const response = await fetch(`${backendUrl}/api/trades`, { headers });
+        const response = await fetch(`${BACKEND_URL}/api/trades`, { headers });
         if (response.ok) {
           const data = await response.json();
           const today = new Date();

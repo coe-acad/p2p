@@ -1,4 +1,4 @@
-import { createApiClient, requestWithRetry, resolveRequiredEnv } from '@/services/apiClient';
+import { createApiClient, requestWithRetry, BAP_URL } from '@/services/apiClient';
 import { getAuthHeaders } from '@/services/authHeaders';
 
 const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -7,7 +7,6 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return v.toString(16);
 });
 
-const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, 'http://localhost:8001', 'VITE_BAP_URL');
 const bapClient = createApiClient(BAP_URL);
 
 export interface OrderDetails {
@@ -37,12 +36,6 @@ export interface InitResponse {
   order: any;
 }
 
-export interface ConfirmResponse {
-  transactionId: string;
-  order: any;
-  orderId: string;
-}
-
 export interface TradeStatusResponse {
   status: boolean;
   price: number | null;
@@ -55,30 +48,16 @@ export interface OrderStateResponse {
   order: any;
 }
 
-const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'svmc-p2p-bap.com';
-const DEFAULT_BAP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BAP_URI,
-  'https://stage-atria-bap.atriauniversity.ai/bap/receiver',
-  'VITE_ORDER_BAP_URI'
-);
-const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'svmc-p2p-bpp.com';
-const DEFAULT_BPP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BPP_URI,
-  'https://stage-atria-bpp.atriauniversity.ai',
-  'VITE_ORDER_BPP_URI'
-);
-
 const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) => ({
   version: '2.0.0',
   action: 'select',
   transaction_id: `txn-${generateUUID()}`,
   message_id: `msg-${generateUUID()}`,
   timestamp: new Date().toISOString(),
-  // Participant identifiers must match registered keys used by adapters for signing.
-  bap_id: DEFAULT_BAP_ID,
-  bap_uri: DEFAULT_BAP_URI,
-  bpp_id: orderDetails?.bpp_id || DEFAULT_BPP_ID,
-  bpp_uri: orderDetails?.bpp_uri || DEFAULT_BPP_URI,
+  // bap_id/bap_uri are stamped by the BAP from its own config (_normalize_payload).
+  // bpp_id/bpp_uri route the order to the seller's BPP, so they come from the offer.
+  bpp_id: orderDetails?.bpp_id,
+  bpp_uri: orderDetails?.bpp_uri,
   domain: 'beckn.one:deg:p2p-trading-interdiscom:2.0.0',
   ttl: 'PT30S',
 });
@@ -255,61 +234,6 @@ export const orderService = {
     }
   },
 
-  async confirm(
-    transactionId: string,
-    orderDetails: OrderDetails,
-    orderData: any
-  ): Promise<ConfirmResponse> {
-    console.log('[orderService.confirm] Starting confirm for transactionId:', transactionId);
-    const context = createContext(orderDetails);
-    (context as any).transaction_id = transactionId;
-    (context as any).action = 'confirm';
-
-    const payload = {
-      context: { ...context, action: 'confirm' },
-      message: {
-        order: orderData,
-      },
-    };
-
-    try {
-      const headers = await getAuthHeaders();
-      console.log('[orderService.confirm] Sending confirm payload');
-      const response = await requestWithRetry<any>(
-        bapClient,
-        {
-          url: '/confirm',
-          method: 'POST',
-          data: payload,
-          headers,
-        },
-        {
-          timeoutMs: 10000,
-          retries: 1,
-        }
-      );
-
-      console.log('[orderService.confirm] Success, orderId:', response.message?.order?.['beckn:id']);
-      return {
-        transactionId,
-        order: response.message?.order || {},
-        orderId: response.message?.order?.['beckn:id'] || 'unknown',
-      };
-    } catch (error) {
-      console.error('[orderService.confirm] Failed:', error);
-      throw error;
-    }
-  },
-
-  async getTradeStatus(transactionId: string): Promise<TradeStatusResponse> {
-    const state = await this.getOrderState(transactionId);
-    return {
-      status: state.order_state === 'CONFIRMED',
-      price: extractOrderAmount(state.order),
-      state: state.order_state,
-    };
-  },
-
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
     console.log('[orderService] getOrderState:', transactionId);
     try {
@@ -362,32 +286,6 @@ export const orderService = {
     }
 
     throw new Error('Initialization is still pending');
-  },
-
-  async waitForQuotation(
-    transactionId: string,
-    options?: { maxAttempts?: number; delayMs?: number }
-  ): Promise<OrderStateResponse> {
-    const maxAttempts = options?.maxAttempts ?? 20;
-    const delayMs = options?.delayMs ?? 1000;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      try {
-        const state = await this.getOrderState(transactionId);
-        if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
-          return state;
-        }
-      } catch (error) {
-        // Trade not created yet, retry
-        console.log(`[waitForQuotation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
-      }
-
-      if (attempt < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-    }
-
-    throw new Error('Quotation is still pending');
   },
 
   async waitForSelectedOrder(

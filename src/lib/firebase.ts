@@ -15,11 +15,12 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Allow disabling phone app verification for testing (e.g., local development)
-const isDisablePhoneAppVerificationForTesting =
-  import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
+// Firebase test phone numbers only. Dev builds only: a production build ignores
+// the flag, so a stray env var can never switch off phone verification.
+export const isPhoneVerificationDisabledForTesting =
+  import.meta.env.DEV && import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
 
-if (isDisablePhoneAppVerificationForTesting) {
+if (isPhoneVerificationDisabledForTesting) {
   auth.settings.appVerificationDisabledForTesting = true;
   console.log("🔓 Phone app verification DISABLED for testing");
 }

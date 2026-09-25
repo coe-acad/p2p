@@ -1,12 +1,6 @@
 import { z } from "zod";
 import { getAuthHeaders } from "@/services/authHeaders";
-import {
-  createApiClient,
-  requestWithRetry,
-  resolveRequiredEnv,
-  toApiError,
-  type RequestOptions,
-} from "@/services/apiClient";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions, BACKEND_URL, BAP_URL } from "@/services/apiClient";
 
 /**
  * Settlements & payout methods.
@@ -16,9 +10,7 @@ import {
  * anchor identity to the Firebase token and proxy over signed HTTP.
  */
 
-const BPP_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
-const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
-const bppClient = createApiClient(BPP_URL);
+const bppClient = createApiClient(BACKEND_URL);
 const bapClient = createApiClient(BAP_URL);
 
 // ---------------------------------------------------------------------------
@@ -159,7 +151,7 @@ export const getBuyerRefunds = async (options?: RequestOptions): Promise<Refund[
 // renders settlements identically.
 // ---------------------------------------------------------------------------
 
-export const paiseToRupees = (paise: number | null | undefined): number =>
+const paiseToRupees = (paise: number | null | undefined): number =>
   typeof paise === "number" ? paise / 100 : 0;
 
 export const formatRupees = (paise: number | null | undefined): string =>

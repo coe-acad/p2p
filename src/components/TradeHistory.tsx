@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTradeHistory, type Trade } from "@/hooks/useTradeHistory";
-import { QuoteOrderModal } from "@/components/QuoteOrderModal";
-import { orderService } from "@/services/orderService";
 import { formatRupees, getBuyerRefunds, type Refund } from "@/services/settlementService";
-import type { EnergyListing } from "@/hooks/useDiscoverListings";
 import { AlertCircle, Clock, ReceiptText, Undo2, Zap } from "lucide-react";
 
 interface TradeHistoryProps {
@@ -64,10 +61,6 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
   // filter selection on later refreshes.
   const [selectedStatus, setSelectedStatus] = useState<string | null>("CONFIRMED");
   const filterInitializedRef = useRef(false);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [quote, setQuote] = useState<any>(null);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
-  const [quoteStatus, setQuoteStatus] = useState<'idle' | 'selecting' | 'selected' | 'quoting' | 'quoted' | 'confirming' | 'confirmed'>('idle');
   // Refunds keyed by transaction — enrichment only. A lookup failure must
   // never break the history view, so errors are swallowed silently.
   const [refundsByTxn, setRefundsByTxn] = useState<Record<string, Refund>>({});
@@ -125,122 +118,6 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
       </div>
     );
   }
-
-  const tradeToListing = (trade: Trade | null): EnergyListing | null => {
-    if (!trade) return null;
-    return {
-      id: trade.transactionId,
-      catalog_id: trade.catalogId,
-      offer_id: trade.offerId,
-      bpp_id: trade.bppId,
-      bpp_uri: trade.bppUri,
-      seller_id: trade.sellerName,
-      seller_name: trade.sellerName,
-      offer_name: `${trade.quantity} kWh offer`,
-      quantity_available: trade.quantity,
-      quantity_unit: 'kWh',
-      price_per_unit: trade.pricePerUnit,
-      currency: 'INR',
-      total_price: trade.totalAmount,
-      source_type: 'SOLAR',
-      pricing_model: 'PER_KWH',
-      delivery_start: trade.deliveryStart || new Date().toISOString(),
-      delivery_end: trade.deliveryEnd || trade.deliveryStart || new Date().toISOString(),
-      validity_start: trade.deliveryStart || new Date().toISOString(),
-      validity_end: trade.deliveryEnd || trade.deliveryStart || new Date().toISOString(),
-      discovered_at: trade.confirmedAt.toISOString(),
-    };
-  };
-
-  const openPendingTrade = async (trade: Trade) => {
-    if (role !== "buyer" || trade.status !== "PENDING" || trade.type !== "trade") {
-      return;
-    }
-
-    setSelectedTrade(trade);
-    setQuoteError(null);
-    setQuote(null);
-    setQuoteStatus(trade.backendStatus === "INITIATED" ? "quoting" : "selected");
-
-    if (trade.backendStatus === "INITIATED") {
-      try {
-        const state = await orderService.getOrderState(trade.transactionId);
-        if (state.order_state === "INITIATED" && state.order) {
-          setQuote(state.order);
-          setQuoteStatus("quoted");
-          return;
-        }
-        setQuoteStatus("selected");
-      } catch (err) {
-        setQuoteError(err instanceof Error ? err.message : "Failed to load quotation");
-        setQuoteStatus("selected");
-      }
-    }
-  };
-
-  const handleGetQuote = async () => {
-    if (!selectedTrade) return;
-
-    setQuoteStatus("quoting");
-    setQuoteError(null);
-
-    try {
-      await orderService.init(selectedTrade.transactionId, {
-        offer_id: selectedTrade.offerId,
-        bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
-        bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
-        quantity: selectedTrade.quantity,
-        price_per_unit: selectedTrade.pricePerUnit,
-        seller_name: selectedTrade.sellerName,
-        delivery_start: selectedTrade.deliveryStart || new Date().toISOString(),
-        delivery_end: selectedTrade.deliveryEnd || selectedTrade.deliveryStart || new Date().toISOString(),
-      });
-      const state = await orderService.waitForQuotation(selectedTrade.transactionId);
-      setQuote(state.order);
-      setQuoteStatus("quoted");
-      await refresh();
-    } catch (err) {
-      setQuoteError(err instanceof Error ? err.message : "Failed to get quotation");
-      setQuoteStatus("selected");
-    }
-  };
-
-  const handleConfirm = async () => {
-    if (!selectedTrade || !quote) return;
-
-    setQuoteStatus("confirming");
-    setQuoteError(null);
-
-    try {
-      await orderService.confirm(
-        selectedTrade.transactionId,
-        {
-          offer_id: selectedTrade.offerId,
-          bpp_id: selectedTrade.bppId || 'svmc-p2p-bpp.com',
-          bpp_uri: selectedTrade.bppUri || 'https://stage-atria-bpp.atriauniversity.ai',
-          quantity: selectedTrade.quantity,
-          price_per_unit: selectedTrade.pricePerUnit,
-          seller_name: selectedTrade.sellerName,
-          delivery_start: selectedTrade.deliveryStart || new Date().toISOString(),
-          delivery_end: selectedTrade.deliveryEnd || selectedTrade.deliveryStart || new Date().toISOString(),
-        },
-        quote
-      );
-      await orderService.waitForConfirmation(selectedTrade.transactionId);
-      setQuoteStatus("confirmed");
-      await refresh();
-    } catch (err) {
-      setQuoteError(err instanceof Error ? err.message : "Failed to confirm order");
-      setQuoteStatus("quoted");
-    }
-  };
-
-  const closeQuoteModal = () => {
-    setSelectedTrade(null);
-    setQuote(null);
-    setQuoteError(null);
-    setQuoteStatus("idle");
-  };
 
   return (
     <div className="space-y-4">
@@ -362,16 +239,6 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
         </div>
       )}
 
-      <QuoteOrderModal
-        isOpen={role === "buyer" && Boolean(selectedTrade)}
-        listing={tradeToListing(selectedTrade)}
-        quote={quote}
-        error={quoteError}
-        status={quoteStatus}
-        onGetQuote={handleGetQuote}
-        onConfirm={handleConfirm}
-        onBack={closeQuoteModal}
-      />
     </div>
   );
 };

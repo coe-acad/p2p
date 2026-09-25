@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { saveUser } from "@/services/userService";
 import { auth } from "@/lib/firebase";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 
 const VerifyPage = () => {
   const navigate = useNavigate();
@@ -27,11 +27,6 @@ const VerifyPage = () => {
     // Drop any stale in-memory user data from a previous session.
     setUserData({});
 
-    const BACKEND_URL = resolveRequiredEnv(
-      import.meta.env.VITE_BACKEND_URL,
-      "http://localhost:3002",
-      "VITE_BACKEND_URL",
-    );
 
     let profile: Record<string, unknown> | null = null;
 

@@ -12,14 +12,9 @@
 // env: the key_id comes back from create-order, so a test↔live switch is one
 // env var on the server.
 
-import { createApiClient, requestWithRetry, resolveRequiredEnv } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, PAYMENT_URL } from "@/services/apiClient";
 import { getAuthHeaders } from "@/services/authHeaders";
 
-const PAYMENT_URL = resolveRequiredEnv(
-  import.meta.env.VITE_PAYMENT_URL,
-  "http://localhost:8003",
-  "VITE_PAYMENT_URL",
-);
 
 const paymentClient = createApiClient(PAYMENT_URL);
 

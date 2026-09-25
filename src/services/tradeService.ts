@@ -1,52 +1,9 @@
 import { getAuthHeaders } from "@/services/authHeaders";
-import { convertTradesToSchema } from "@/utils/tradeSchemaConverter";
-import type { PlannedTrade } from "@/hooks/usePublishedTrades";
-import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError, type RequestOptions } from "@/services/apiClient";
+import { createApiClient, requestWithRetry, toApiError, type RequestOptions, BACKEND_URL, BAP_URL } from "@/services/apiClient";
 import { TradeStatusSchema } from "@/services/apiSchemas";
 
-const BPP_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
-const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
-const bppClient = createApiClient(BPP_URL);
+const bppClient = createApiClient(BACKEND_URL);
 const bapClient = createApiClient(BAP_URL);
-
-// Submit planned trades to the backend for Beckn catalog publish
-export const submitTrades = async (trades: PlannedTrade[], options?: RequestOptions): Promise<void> => {
-  try {
-    console.log('[tradeService.submitTrades] Submitting', trades.length, 'trades');
-    const tradeSubmissions = convertTradesToSchema(trades);
-    const headers = await getAuthHeaders();
-    console.log('[tradeService.submitTrades] Converted trades, sending to /api/create');
-    await requestWithRetry(
-      bppClient,
-      { url: "/api/create", method: "POST", data: { trades: tradeSubmissions }, headers },
-      { ...options, retries: 1 }
-    );
-    console.log('[tradeService.submitTrades] Success');
-  } catch (error) {
-    console.error('[tradeService.submitTrades] Failed:', error);
-    throw toApiError(error, "Failed to submit trades");
-  }
-};
-
-// Poll trade confirmation status by transaction_id
-export const getTradeStatus = async (
-  transactionId: string,
-  options?: RequestOptions
-): Promise<{ status: boolean; price: number | null; state?: string | null }> => {
-  try {
-    console.log('[tradeService.getTradeStatus] Fetching status for transaction:', transactionId);
-    const data = await requestWithRetry<{ status: boolean; price: number | null; state?: string | null }>(
-      bppClient,
-      { url: "/api/trade-status", method: "GET", params: { transaction_id: transactionId } },
-      options
-    );
-    console.log('[tradeService.getTradeStatus] Success, state:', data.state);
-    return TradeStatusSchema.parse(data);
-  } catch (error) {
-    console.error('[tradeService.getTradeStatus] Failed:', error);
-    throw toApiError(error, "Failed to fetch trade status");
-  }
-};
 
 export interface TradeHistoryItem {
   type: "trade" | "catalog";

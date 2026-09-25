@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "@/services/apiClient";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -75,8 +76,7 @@ const HomePage = () => {
       if (!userData?.phone_number) return;
       try {
         const headers = await getAuthHeaders();
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const response = await fetch(`${backendUrl}/api/trades`, { headers });
+        const response = await fetch(`${BACKEND_URL}/api/trades`, { headers });
         if (response.ok) {
           const data = await response.json();
           // Extract published trades from response
