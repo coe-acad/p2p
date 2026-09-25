@@ -56,8 +56,8 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
   // Sellers need either onboardingComplete OR is_vc_verified to access seller
   // tooling — both are valid "done with onboarding" signals from Firestore.
   const isOnOnboardingFlow = location.pathname.startsWith("/onboarding");
-  const hasCompletedOnboarding = Boolean((userData as any).onboardingComplete);
-  const isVCVerified = Boolean((userData as any).is_vc_verified);
+  const hasCompletedOnboarding = Boolean(userData.onboardingComplete);
+  const isVCVerified = Boolean(userData.is_vc_verified);
 
   if (
     requiredIntent === "sell" &&

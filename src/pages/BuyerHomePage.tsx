@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -11,7 +10,7 @@ import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
-import { orderService } from "@/services/orderService";
+import { orderService, type BecknOrder } from "@/services/orderService";
 import { paymentIntentService } from "@/services/paymentIntentService";
 import { openRazorpayCheckout, RazorpayDismissed } from "@/lib/razorpay";
 import VCUploadModal from "@/components/modals/VCUploadModal";
@@ -74,12 +73,11 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
 };
 
 const BuyerHomePage = () => {
-  const navigate = useNavigate();
   const { userData, displayName } = useUserData();
   const { loading: vcLoading, refetch: refetchVCStatus } = useVCStatus();
   // Source of truth for the VC gate: userData.is_vc_verified. If true → user
   // can discover/buy. If anything else → red banner + block discover.
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const { listings, loading, error, currentPage, fetchListings, clearFilters, goToPage } = useDiscoverListings();
 
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
@@ -101,7 +99,7 @@ const BuyerHomePage = () => {
     | "confirmed"
   >("idle");
   const [currentTransactionId, setCurrentTransactionId] = useState<string>("");
-  const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+  const [currentOrderData, setCurrentOrderData] = useState<BecknOrder | null>(null);
   const [showVCUploadModal, setShowVCUploadModal] = useState(false);
 
   // Optimistic local filter: tracks offer_ids the user just bought so they
@@ -125,7 +123,7 @@ const BuyerHomePage = () => {
     // without having to hit the refresh button — matches what handleRefresh
     // does (POST /discover?force=true → then GET).
     if (isVCVerified) fetchListings(0, {}, { refreshFromNetwork: true });
-  }, [isVCVerified]);
+  }, [isVCVerified, fetchListings]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
   // catalog without manually pulling. Silent mode keeps the existing
@@ -145,7 +143,7 @@ const BuyerHomePage = () => {
       void fetchListings(0, {}, { silent: true });
     }, 30_000);
     return () => clearInterval(interval);
-  }, [isVCVerified, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
+  }, [isVCVerified, fetchListings, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -544,7 +542,6 @@ const BuyerHomePage = () => {
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
-          onGetQuote={handleInitOrder}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === "confirmed" ? handleCloseQuoteModal : handleBackToOfferModal}
         />

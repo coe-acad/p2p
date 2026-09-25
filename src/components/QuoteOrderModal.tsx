@@ -17,12 +17,13 @@ import {
   Zap,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import type { BecknOrder } from "@/services/orderService";
 import successCheckAnimation from "@/assets/lottie/success-check.json";
 
 interface QuoteOrderModalProps {
   isOpen: boolean;
   listing: EnergyListing | null;
-  quote: any;
+  quote: BecknOrder | null;
   error: string | null;
   status:
     | "idle"
@@ -34,13 +35,9 @@ interface QuoteOrderModalProps {
     | "verifying"
     | "finalising"
     | "confirmed";
-  onGetQuote: () => Promise<void>;
   onConfirm: () => Promise<void>;
   onBack: () => void;
 }
-
-const sellerInitial = (name?: string) =>
-  (name || "S").trim().split(/\s+/).map((s) => s[0]).join("").slice(0, 2).toUpperCase();
 
 const formatDeliveryWindow = (start?: string, end?: string): string => {
   if (!start && !end) return "Flexible";
@@ -60,7 +57,7 @@ const formatDeliveryWindow = (start?: string, end?: string): string => {
 };
 
 export const QuoteOrderModal = ({
-  isOpen, listing, quote, error, status, onGetQuote, onConfirm, onBack,
+  isOpen, listing, quote, error, status, onConfirm, onBack,
 }: QuoteOrderModalProps) => {
   // All hooks must run unconditionally — keep them above any early returns.
   const [confirmOpen, setConfirmOpen] = useState(false);

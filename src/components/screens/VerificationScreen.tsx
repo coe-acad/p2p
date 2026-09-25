@@ -172,7 +172,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           if (!container) throw new Error("reCAPTCHA container not found in DOM");
           recaptchaVerifierRef.current = new RecaptchaVerifier(auth, RECAPTCHA_CONTAINER_ID, { size: "invisible" });
           await recaptchaVerifierRef.current.render();
-        } catch (err: any) {
+        } catch (err) {
           logger.error("Recaptcha initialization failed", err);
           if (!isPhoneVerificationDisabledForTesting) {
             setPhoneError("Verification initialization failed. Please try again.");
@@ -193,7 +193,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
       logger.devLog("OTP sent");
       setStep("otp");
       setResendIn(RESEND_COOLDOWN_SECONDS);
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(getPhoneAuthErrorMessage(err));
       if (isNative) {

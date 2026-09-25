@@ -1,16 +1,11 @@
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import type { UserData } from "@/hooks/useUserData";
-import { createApiClient, requestWithRetry, toApiError, type RequestOptions, BACKEND_URL } from "@/services/apiClient";
-import { getAuthHeaders } from "@/services/authHeaders";
-import { EnsureUserResponseSchema } from "@/services/apiSchemas";
 
 const COLLECTION = "users";
-const backendClient = createApiClient(BACKEND_URL);
 
 // Save (merge) user data to Firestore, keyed by phone number
-export const saveUser = async (data: UserData): Promise<void> => {
+export const saveUser = async (data: Partial<UserData> & Pick<UserData, "phone">): Promise<void> => {
   if (!data.phone) return;
   const userRef = doc(db, COLLECTION, data.phone);
 
@@ -46,9 +41,3 @@ export const saveUser = async (data: UserData): Promise<void> => {
   );
 };
 
-export type EnsureUserPayload = {
-  name?: string;
-  meter_number?: string;
-  discom?: string;
-  consumerId?: string;
-};

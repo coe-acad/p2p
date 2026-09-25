@@ -10,7 +10,7 @@ import { BACKEND_URL } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
 import SamaiLogo from "@/components/SamaiLogo";
-import { unwrapCredential } from "@/utils/vcCredential";
+import { credentialFullName, unwrapCredential } from "@/utils/vcCredential";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 
@@ -26,14 +26,14 @@ const OnboardingVCPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const intent = (userData as any)?.intent;
+  const intent = userData?.intent;
   const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
   const credentialLabel = intent === "buy" ? "Consumption" : "Generation";
 
   // Backstop guard: if Firestore says this user is already VC-verified,
   // never show the upload screen — bounce home immediately. This catches
   // any path that reaches /onboarding/vc by mistake.
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   useEffect(() => {
     if (isVCVerified) {
       navigate(homeRoute, { replace: true });
@@ -71,7 +71,7 @@ const OnboardingVCPage = () => {
 
     try {
       const content = await uploadedFile.text();
-      let parsedData: any;
+      let parsedData: unknown;
       try {
         parsedData = JSON.parse(content);
       } catch {
@@ -114,7 +114,7 @@ const OnboardingVCPage = () => {
 
       const vcBucket: "consumption" | "generation" =
         result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
-      const userName: string | null = credential.credentialSubject?.fullName || null;
+      const userName = credentialFullName(credential);
 
       toast({
         title: "Credential uploaded",
@@ -127,12 +127,12 @@ const OnboardingVCPage = () => {
       setUserData({
         is_vc_verified: result.is_vc_verified ?? true,
         vc_data: {
-          ...((userData as any)?.vc_data || {}),
+          ...(userData?.vc_data || {}),
           [vcBucket]: result.fields || { fullName: userName || "" },
         },
         onboardingComplete: true,
         ...(userName ? { name: userName } : {}),
-      } as any);
+      });
 
       if (userData?.phone && intent) {
         await saveUser({
@@ -140,7 +140,7 @@ const OnboardingVCPage = () => {
           intent,
           onboardingComplete: true,
           ...(userName ? { name: userName } : {}),
-        } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
+        }).catch((err) => console.error("Failed to save onboarding completion:", err));
       }
 
       await queryClient.invalidateQueries({ queryKey: VC_STATUS_QUERY_KEY });
@@ -165,13 +165,13 @@ const OnboardingVCPage = () => {
   const handleSkip = async () => {
     localStorage.setItem(ONBOARDING_VC_KEY, "true");
     localStorage.setItem("samai_onboarding_complete", "true");
-    setUserData({ onboardingComplete: true } as any);
+    setUserData({ onboardingComplete: true });
     if (userData?.phone && intent) {
       await saveUser({
         phone: userData.phone,
         intent,
         onboardingComplete: true,
-      } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
+      }).catch((err) => console.error("Failed to save onboarding completion:", err));
     }
     navigate(homeRoute, { replace: true });
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { createApiClient, requestWithRetry, toApiError, BAP_URL } from "@/services/apiClient";
 
 export interface EnergyListing {
@@ -69,6 +69,9 @@ const sanitizeListings = (listings: EnergyListing[]): EnergyListing[] => {
   });
 };
 
+const PAGE_SIZE = 10;
+const RAW_FETCH_LIMIT = 500;
+
 export const useDiscoverListings = () => {
   const [listings, setListings] = useState<EnergyListing[]>([]);
   const [total, setTotal] = useState(0);
@@ -77,12 +80,11 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const PAGE_SIZE = 10;
-  const RAW_FETCH_LIMIT = 500;
   const discoverClientRef = useRef(createApiClient(BAP_URL));
   const activeRequestRef = useRef<AbortController | null>(null);
 
-  const fetchListings = async (
+  // Stable identity: reads only its arguments, refs and state setters.
+  const fetchListings = useCallback(async (
     pageNumber: number = 0,
     searchFilters: SearchFilters = {},
     opts: { silent?: boolean; refreshFromNetwork?: boolean } = {},
@@ -201,7 +203,7 @@ export const useDiscoverListings = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     return () => {

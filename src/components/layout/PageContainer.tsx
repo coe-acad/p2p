@@ -4,13 +4,11 @@ import { Container, Stack, ContainerProps } from "@mui/material";
 interface PageContainerProps extends Partial<ContainerProps> {
   children: ReactNode;
   gap?: number;
-  className?: string;
 }
 
 export const PageContainer = ({
   children,
   gap = 4,
-  className = "",
   maxWidth = "md",
   ...props
 }: PageContainerProps) => {

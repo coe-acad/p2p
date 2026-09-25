@@ -20,7 +20,7 @@ const IntentPage = () => {
         const savePromise = saveUser({
           phone: userData.phone,
           intent,
-        } as any);
+        });
 
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Save timeout")), 5000)
@@ -32,8 +32,8 @@ const IntentPage = () => {
       }
 
       // Navigate regardless of save success
-      const isVCVerified = Boolean((userData as any)?.is_vc_verified);
-      const hasCompletedOnboarding = Boolean((userData as any)?.onboardingComplete);
+      const isVCVerified = Boolean(userData?.is_vc_verified);
+      const hasCompletedOnboarding = Boolean(userData?.onboardingComplete);
       const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
 
       if (isVCVerified || hasCompletedOnboarding) {

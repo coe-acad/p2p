@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { useAuth } from "@/hooks/useAuth";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useToast } from "@/hooks/use-toast";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -47,25 +46,10 @@ interface DraftCatalog extends TomorrowCatalog {
 }
 
 
-const formatDateDDMMYYYY = (istDate: Date): string => {
-  const day = String(istDate.getUTCDate()).padStart(2, "0");
-  const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
-  const year = istDate.getUTCFullYear();
-  return `${day}/${month}/${year}`;
-};
-
 const convertTo12Hour = (hours24: number): { hour: number; period: string } => {
   const period = hours24 >= 12 ? "PM" : "AM";
   const hour = hours24 % 12 || 12;
   return { hour, period };
-};
-
-const convert12HourTo24Hour = (hour12: number, period: string): number => {
-  let hour24 = parseInt(String(hour12), 10);
-  if (isNaN(hour24) || hour24 < 1 || hour24 > 12) return -1;
-  if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
-  if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
-  return hour24;
 };
 
 // Display a number as-entered — no forced decimals, no rounding to whole.
@@ -78,81 +62,14 @@ const formatExact = (value: unknown): string => {
   return String(Number(n.toFixed(2)));
 };
 
-const convertUTC_to_IST_display = (utcTimestamp: string): string => {
-  try {
-    if (!utcTimestamp) return "";
-    const utcDate = new Date(utcTimestamp);
-    if (isNaN(utcDate.getTime())) return "";
-    const istDate = new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000);
-    const date = formatDateDDMMYYYY(istDate);
-    const hours24 = istDate.getUTCHours();
-    const { hour, period } = convertTo12Hour(hours24);
-    return `${date}, ${hour} ${period}`;
-  } catch {
-    return "";
-  }
-};
-
-const parseDateTimeInput = (input: string): { date: string; hours: string } | null => {
-  try {
-    const parts = input.split(",");
-    if (parts.length < 1) return null;
-    const dateStr = parts[0].trim();
-    const timeStr = parts.length > 1 ? parts[1].trim() : "";
-
-    const [day, month, year] = dateStr.split("/");
-    if (!day || !month || !year) return null;
-
-    let hours24 = 0;
-    if (timeStr) {
-      const ampmMatch = timeStr.match(/(\d{1,2})\s*(am|pm)?/i);
-      if (ampmMatch) {
-        const hour12 = parseInt(ampmMatch[1], 10);
-        const period = ampmMatch[2] ? ampmMatch[2].toUpperCase() : "AM";
-        hours24 = convert12HourTo24Hour(hour12, period);
-        if (hours24 === -1) return null;
-      }
-    }
-
-    return {
-      date: `${day}/${month}/${year}`,
-      hours: String(hours24).padStart(2, "0")
-    };
-  } catch {
-    return null;
-  }
-};
-
-const convertIST_to_UTC = (istDateTime: string): string => {
-  try {
-    if (!istDateTime) return "";
-    const parsed = parseDateTimeInput(istDateTime);
-    if (!parsed) return "";
-    const { date, hours } = parsed;
-    const [day, month, year] = date.split("/");
-    const dateStr = `${year}-${month}-${day}T${hours}:00:00Z`;
-    const istTime = new Date(dateStr);
-    if (isNaN(istTime.getTime())) return "";
-    const utcDate = new Date(istTime.getTime() - 5.5 * 60 * 60 * 1000);
-    const utcYear = utcDate.getUTCFullYear();
-    const utcMonth = String(utcDate.getUTCMonth() + 1).padStart(2, "0");
-    const utcDay = String(utcDate.getUTCDate()).padStart(2, "0");
-    const utcHours = String(utcDate.getUTCHours()).padStart(2, "0");
-    return `${utcYear}-${utcMonth}-${utcDay}T${utcHours}:00:00Z`;
-  } catch {
-    return "";
-  }
-};
-
 const TomorrowTradesPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userData, profileHydrated } = useUserData();
-  const { user } = useAuth();
   const { generation: hasGenerationVC, loading: vcLoading } = useVCStatus();
   const { publishTrades } = usePublishedTrades();
 
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const [catalog, setCatalog] = useState<TomorrowCatalog | null>(null);
   const [currentDraft, setCurrentDraft] = useState<DraftCatalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -306,7 +223,7 @@ const TomorrowTradesPage = () => {
   const formatDatetimeLocal = (datetimeLocal: string): string => {
     try {
       if (!datetimeLocal) return "Invalid time";
-      const [datePart, timePart] = datetimeLocal.split('T');
+      const [, timePart] = datetimeLocal.split('T');
       if (!timePart) return "Invalid time";
       const [hoursStr, minutesStr] = timePart.split(':');
       const hours24 = parseInt(hoursStr, 10);
@@ -921,7 +838,7 @@ const TomorrowTradesPage = () => {
                 </p>
                 <p className="mt-1 break-words text-muted-foreground">{error}</p>
                 <button
-                  onClick={() => navigate(!hasGenerationVC ? "/vc" : 0 as any)}
+                  onClick={() => (hasGenerationVC ? navigate(0) : navigate("/vc"))}
                   className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
                 >
                   {!hasGenerationVC ? "Go to verification" : "Refresh page"}

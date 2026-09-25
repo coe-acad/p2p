@@ -1,19 +1,18 @@
 import { EnergyListing } from "@/hooks/useDiscoverListings";
-import { Clock, Droplet, Hourglass, Layers, Leaf, Plug, Sun, Wind } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Clock, Hourglass, Layers } from "lucide-react";
 
 interface EnergyListingCardProps {
   listing: EnergyListing;
   onSelect?: (listing: EnergyListing) => void;
 }
 
-const sourceMeta = (source?: string): { icon: LucideIcon; label: string } => {
+const sourceLabelFor = (source?: string): string => {
   switch ((source || "").toLowerCase()) {
-    case "wind":    return { icon: Wind,    label: "Wind" };
-    case "hydro":   return { icon: Droplet, label: "Hydro" };
-    case "biomass": return { icon: Leaf,    label: "Biomass" };
-    case "grid":    return { icon: Plug,    label: "Grid" };
-    default:        return { icon: Sun,     label: source || "Solar" };
+    case "wind":    return "Wind";
+    case "hydro":   return "Hydro";
+    case "biomass": return "Biomass";
+    case "grid":    return "Grid";
+    default:        return source || "Solar";
   }
 };
 
@@ -64,7 +63,7 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
   const heroPrice = hasMultipleOffers
     ? (listing.min_price_per_unit ?? listing.price_per_unit)
     : listing.price_per_unit;
-  const { icon: Icon, label: sourceLabel } = sourceMeta(listing.source_type);
+  const sourceLabel = sourceLabelFor(listing.source_type);
   const validUntil = formatWhen(listing.validity_end);
 
   return (

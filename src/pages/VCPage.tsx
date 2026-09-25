@@ -59,10 +59,11 @@ const VCPage = () => {
   const [clearing, setClearing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const isVerified = Boolean((userData as any)?.is_vc_verified);
-  const isBuyer = (userData as any)?.intent === "buy";
-  const vcRoot = ((userData as any)?.vc_data || {}) as Record<string, any>;
-  const cred = (isBuyer ? vcRoot.consumption : vcRoot.generation) || {};
+  const isVerified = Boolean(userData?.is_vc_verified);
+  const isBuyer = userData?.intent === "buy";
+  // Backend stores the VC fields verbatim; key casing varies by issuer.
+  const vcRoot: Record<string, unknown> = userData?.vc_data ?? {};
+  const cred = ((isBuyer ? vcRoot.consumption : vcRoot.generation) ?? {}) as Record<string, unknown>;
 
   // Persona-by-color rule: buyer = green-dominant, seller = blue-dominant.
   // The subject card takes the persona color; the metadata card takes the secondary.
@@ -161,15 +162,15 @@ const VCPage = () => {
         is_vc_verified: false,
         vc_data: undefined,
         onboardingComplete: false,
-      } as any);
+      });
 
-      if ((userData as any)?.phone) {
+      if (userData?.phone) {
         await saveUser({
-          phone: (userData as any).phone,
+          phone: userData.phone,
           is_vc_verified: false,
           vc_data: null,
           onboardingComplete: false,
-        } as any).catch((err) => console.error("Failed to clear VC on server:", err));
+        }).catch((err) => console.error("Failed to clear VC on server:", err));
       }
 
       localStorage.removeItem("samai_onboarding_vc_done");

@@ -26,14 +26,47 @@ export interface OrderDetails {
   delivery_end: string;
 }
 
+type Amount = number | string;
+
+/** A line item of a Beckn order (JSON-LD). Only the fields the app reads are typed. */
+export interface BecknOrderItem {
+  'beckn:quantity'?: { unitQuantity?: Amount };
+  'beckn:acceptedOffer'?: {
+    'beckn:price'?: { 'schema:price'?: Amount; price?: Amount; value?: Amount };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** A Beckn order (JSON-LD). The BAP/BPP own the full shape; only the fields the app reads are typed. */
+export interface BecknOrder {
+  'beckn:id'?: string;
+  'beckn:state'?: string;
+  'beckn:orderItems'?: BecknOrderItem[];
+  'beckn:payment'?: { 'beckn:amount'?: { value?: Amount }; [key: string]: unknown };
+  'beckn:orderValue'?: { value?: Amount };
+  orderValue?: { total?: Amount };
+  [key: string]: unknown;
+}
+
+interface BecknResponse {
+  message?: { order?: BecknOrder };
+}
+
+interface OrderStateApiResponse extends BecknResponse {
+  order_state?: string | null;
+  context?: Record<string, unknown>;
+  order?: BecknOrder;
+}
+
 export interface SelectResponse {
   transactionId: string;
-  order: any;
+  order: BecknOrder;
 }
 
 export interface InitResponse {
   transactionId: string;
-  order: any;
+  order: BecknOrder;
 }
 
 export interface TradeStatusResponse {
@@ -44,8 +77,8 @@ export interface TradeStatusResponse {
 
 export interface OrderStateResponse {
   order_state: string | null;
-  context: any;
-  order: any;
+  context: Record<string, unknown>;
+  order: BecknOrder;
 }
 
 const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) => ({
@@ -62,27 +95,18 @@ const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) 
   ttl: 'PT30S',
 });
 
-const extractOrderAmount = (order: any): number | null => {
-  const paymentValue = order?.['beckn:payment']?.['beckn:amount']?.value;
-  if (typeof paymentValue === 'number') {
-    return paymentValue;
-  }
-  if (typeof paymentValue === 'string' && paymentValue.trim()) {
-    const parsed = Number(paymentValue);
+const toAmount = (value: Amount | undefined): number | null => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
     if (!Number.isNaN(parsed)) return parsed;
   }
-
-  const orderValue = order?.['beckn:orderValue']?.value ?? order?.orderValue?.total;
-  if (typeof orderValue === 'number') {
-    return orderValue;
-  }
-  if (typeof orderValue === 'string' && orderValue.trim()) {
-    const parsed = Number(orderValue);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-
   return null;
 };
+
+const extractOrderAmount = (order: BecknOrder): number | null =>
+  toAmount(order['beckn:payment']?.['beckn:amount']?.value) ??
+  toAmount(order['beckn:orderValue']?.value ?? order.orderValue?.total);
 
 const buildSelectOrderItem = (orderDetails: OrderDetails) => {
   const orderedItemId = orderDetails.offer_item_ids?.[0] || `item-${generateUUID()}`;
@@ -130,7 +154,7 @@ export const orderService = {
     console.log('[orderService.select] Starting select for offer:', orderDetails.offer_id);
     const context = createContext(orderDetails);
 
-    const payload: any = {
+    const payload = {
       context: { ...context, action: 'select' },
       message: {
         order: {
@@ -143,8 +167,8 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
-      console.log('[orderService.select] Sending payload, transactionId:', (context as any).transaction_id);
-      const response = await requestWithRetry<any>(
+      console.log('[orderService.select] Sending payload, transactionId:', context.transaction_id);
+      const response = await requestWithRetry<BecknResponse>(
         bapClient,
         {
           url: '/select',
@@ -160,7 +184,7 @@ export const orderService = {
 
       console.log('[orderService.select] Success, response:', response);
       return {
-        transactionId: (context as any).transaction_id,
+        transactionId: context.transaction_id,
         order: response.message?.order || {},
       };
     } catch (error) {
@@ -172,14 +196,12 @@ export const orderService = {
   async init(
     transactionId: string,
     orderDetails: OrderDetails,
-    orderData?: any
+    orderData?: BecknOrder | null
   ): Promise<InitResponse> {
     console.log('[orderService.init] Starting init for transactionId:', transactionId);
-    const context = createContext(orderDetails);
-    (context as any).transaction_id = transactionId;
-    (context as any).action = 'init';
+    const context = { ...createContext(orderDetails), transaction_id: transactionId };
 
-    const baseOrder = orderData && typeof orderData === 'object'
+    const baseOrder: Record<string, unknown> = orderData && typeof orderData === 'object'
       ? structuredClone(orderData)
       : buildSelectedOrderFallback(orderDetails);
 
@@ -209,7 +231,7 @@ export const orderService = {
     try {
       const headers = await getAuthHeaders();
       console.log('[orderService.init] Sending init payload');
-      const response = await requestWithRetry<any>(
+      const response = await requestWithRetry<BecknResponse>(
         bapClient,
         {
           url: '/init',
@@ -238,7 +260,7 @@ export const orderService = {
     console.log('[orderService] getOrderState:', transactionId);
     try {
       const headers = await getAuthHeaders();
-      const response = await requestWithRetry<any>(
+      const response = await requestWithRetry<OrderStateApiResponse>(
         bapClient,
         {
           url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,

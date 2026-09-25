@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useTradeHistory, type Trade } from "@/hooks/useTradeHistory";
+import { useTradeHistory } from "@/hooks/useTradeHistory";
 import { formatRupees, getBuyerRefunds, type Refund } from "@/services/settlementService";
-import { AlertCircle, Clock, ReceiptText, Undo2, Zap } from "lucide-react";
+import { AlertCircle, Clock, ReceiptText, Undo2 } from "lucide-react";
 
 interface TradeHistoryProps {
   role: "buyer" | "seller";
@@ -53,7 +53,7 @@ const TradeSkeleton = ({ role = "buyer" }: { role?: "buyer" | "seller" }) => (
 );
 
 export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
-  const { trades, loading, error, refresh } = useTradeHistory(role, buyerPhone);
+  const { trades, loading, error } = useTradeHistory(role, buyerPhone);
   // Default to CONFIRMED so the page opens with completed purchases (what
   // users most often come here for). If the first load returns no confirmed
   // trades, fall back to "show all" so a user with only pending orders isn't

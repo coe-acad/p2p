@@ -15,7 +15,7 @@ const SamaiHeaderBrand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData } = useUserData();
-  const isBuyer = (userData as any)?.intent === "buy";
+  const isBuyer = userData?.intent === "buy";
   const homeRoute = isBuyer ? "/buyer-home" : "/home";
   const isOnHome = location.pathname === homeRoute;
 

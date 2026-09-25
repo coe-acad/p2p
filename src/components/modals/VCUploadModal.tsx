@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { unwrapCredential } from "@/utils/vcCredential";
+import { credentialFullName, unwrapCredential } from "@/utils/vcCredential";
 
 interface VCUploadModalProps {
   isOpen: boolean;
@@ -33,7 +33,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   const { userData, setUserData } = useUserData();
   const queryClient = useQueryClient();
 
-  const intent = (userData as any)?.intent;
+  const intent = userData?.intent;
   const credentialLabel = intent === "buy" ? "Consumption" : "Generation";
 
   const acceptFile = (file: File | undefined) => {
@@ -66,7 +66,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
 
     try {
       const content = await uploadedFile.text();
-      let parsedData: any;
+      let parsedData: unknown;
       try {
         parsedData = JSON.parse(content);
       } catch {
@@ -108,7 +108,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
 
       const vcBucket: "consumption" | "generation" =
         result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
-      const userName: string | null = credential.credentialSubject?.fullName || null;
+      const userName = credentialFullName(credential);
 
       toast({
         title: "Credential uploaded",
@@ -122,14 +122,14 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
           [vcBucket]: result.fields || { fullName: userName || "" },
         },
         ...(userName ? { name: userName } : {}),
-      } as any);
+      });
 
       if (userData?.phone && intent && userName) {
         await saveUser({
           phone: userData.phone,
           intent,
           name: userName,
-        } as any).catch((err) => console.error("Failed to save credential name:", err));
+        }).catch((err) => console.error("Failed to save credential name:", err));
       }
 
       setUploadedFile(null);

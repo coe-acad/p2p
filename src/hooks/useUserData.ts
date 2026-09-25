@@ -21,7 +21,7 @@ export interface UserData {
   vc_data?: {
     consumption?: { fullName?: string };
     generation?: { fullName?: string };
-  };
+  } | null;
   // Demo mode: returning user with 30 days of trading history
   isReturningUser?: boolean;
   // User role: seller or buyer

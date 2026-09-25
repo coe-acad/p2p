@@ -26,7 +26,7 @@ const BuyerOrderHistoryPage = () => {
             </div>
           </div>
 
-          <TradeHistory role="buyer" buyerPhone={(userData as any)?.phone} />
+          <TradeHistory role="buyer" buyerPhone={userData?.phone} />
         </PageContainer>
       </div>
     </MainAppShell>

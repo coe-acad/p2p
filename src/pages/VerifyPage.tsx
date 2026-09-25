@@ -1,6 +1,6 @@
 import VerificationScreen from "@/components/screens/VerificationScreen";
 import { useNavigate } from "react-router-dom";
-import { useUserData } from "@/hooks/useUserData";
+import { useUserData, type UserData } from "@/hooks/useUserData";
 import { saveUser } from "@/services/userService";
 import { auth } from "@/lib/firebase";
 import { BACKEND_URL } from "@/services/apiClient";
@@ -28,7 +28,7 @@ const VerifyPage = () => {
     setUserData({});
 
 
-    let profile: Record<string, unknown> | null = null;
+    let profile: Partial<UserData> | null = null;
 
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -45,20 +45,18 @@ const VerifyPage = () => {
       // Treat as new user on failure — safer than blocking on a flaky backend.
     }
 
-    const intent = profile?.intent === "buy" || profile?.intent === "sell"
-      ? (profile.intent as "buy" | "sell")
-      : undefined;
+    const intent = profile?.intent === "buy" || profile?.intent === "sell" ? profile.intent : undefined;
 
     if (intent && profile) {
       // Returning user — seed userData with everything the backend returned so
       // the home page paints with name/VC details on first render, and so
       // useUserData's hydrateFromBackend doesn't kick off a duplicate fetch.
       setUserData({
-        ...(profile as any),
+        ...profile,
         phone: phoneWithCountry,
         intent,
         onboardingComplete: true,
-      } as any);
+      });
 
       // Legacy onboarding flags so older route guards keep working.
       localStorage.setItem("samai_onboarding_complete", "true");
@@ -74,7 +72,7 @@ const VerifyPage = () => {
     setUserData({
       phone: phoneWithCountry,
       onboardingComplete: false,
-    } as any);
+    });
 
     // Wipe any stale local flags so guards don't think this user is mid-flow.
     [
@@ -90,7 +88,7 @@ const VerifyPage = () => {
       "samai_onboarding_vc_done",
     ].forEach((k) => localStorage.removeItem(k));
 
-    await saveUser({ phone: phoneWithCountry } as any).catch((err) =>
+    await saveUser({ phone: phoneWithCountry }).catch((err) =>
       console.error("Failed to save user phone to Firestore:", err),
     );
 

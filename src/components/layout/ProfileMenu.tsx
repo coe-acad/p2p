@@ -89,18 +89,17 @@ export const ProfileMenu = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { userData, displayName } = useUserData();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const isDark = resolvedTheme === "dark";
-  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
-  const isBuyer = (userData as any)?.intent === "buy";
-  const phone = (userData as any)?.phone as string | undefined;
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isBuyer = userData?.intent === "buy";
+  const phone = userData?.phone as string | undefined;
+  const isVCVerified = Boolean(userData?.is_vc_verified);
 
-  const initials = initialsFrom(displayName || (userData as any)?.name, phone);
+  const initials = initialsFrom(displayName || userData?.name, phone);
 
   // Persona-by-color: buyer = green identity, seller = blue identity.
   // Full strings spelled out so Tailwind's JIT picks them up.
@@ -191,7 +190,7 @@ export const ProfileMenu = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {displayName || (userData as any)?.name || "Welcome"}
+                  {displayName || userData?.name || "Welcome"}
                 </p>
                 {isVCVerified && (
                   <BadgeCheck className={`h-3.5 w-3.5 shrink-0 ${tone.verifyBadge}`} strokeWidth={2} />
