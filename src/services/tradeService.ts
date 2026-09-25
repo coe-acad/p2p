@@ -1,6 +1,5 @@
 import { getAuthHeaders } from "@/services/authHeaders";
 import { createApiClient, requestWithRetry, toApiError, type RequestOptions, BACKEND_URL, BAP_URL } from "@/services/apiClient";
-import { TradeStatusSchema } from "@/services/apiSchemas";
 
 const bppClient = createApiClient(BACKEND_URL);
 const bapClient = createApiClient(BAP_URL);
@@ -24,24 +23,27 @@ export interface TradeHistoryItem {
   created_at?: string;
 }
 
-const normalizeTradeHistoryItem = (item: any): TradeHistoryItem => ({
-  type: item?.type === "catalog" ? "catalog" : "trade",
-  transaction_id: typeof item?.transaction_id === "string" ? item.transaction_id : undefined,
-  catalog_id: typeof item?.catalog_id === "string" ? item.catalog_id : undefined,
-  offer_ids: Array.isArray(item?.offer_ids) ? item.offer_ids.filter((value: unknown) => typeof value === "string") : undefined,
-  status: typeof item?.status === "string" ? item.status : "UNKNOWN",
-  seller_name: typeof item?.seller_name === "string" ? item.seller_name : undefined,
-  buyer_phone: typeof item?.buyer_phone === "string" ? item.buyer_phone : undefined,
-  bpp_id: typeof item?.bpp_id === "string" ? item.bpp_id : undefined,
-  bpp_uri: typeof item?.bpp_uri === "string" ? item.bpp_uri : undefined,
-  quantity: typeof item?.quantity === "number" ? item.quantity : undefined,
-  price_per_unit: typeof item?.price_per_unit === "number" ? item.price_per_unit : undefined,
-  total_amount: typeof item?.total_amount === "number" ? item.total_amount : undefined,
-  delivery_start: typeof item?.delivery_start === "string" ? item.delivery_start : undefined,
-  delivery_end: typeof item?.delivery_end === "string" ? item.delivery_end : undefined,
-  updated_at: typeof item?.updated_at === "string" ? item.updated_at : undefined,
-  created_at: typeof item?.created_at === "string" ? item.created_at : undefined,
-});
+const normalizeTradeHistoryItem = (raw: unknown): TradeHistoryItem => {
+  const item = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    type: item.type === "catalog" ? "catalog" : "trade",
+    transaction_id: typeof item.transaction_id === "string" ? item.transaction_id : undefined,
+    catalog_id: typeof item.catalog_id === "string" ? item.catalog_id : undefined,
+    offer_ids: Array.isArray(item.offer_ids) ? item.offer_ids.filter((value): value is string => typeof value === "string") : undefined,
+    status: typeof item.status === "string" ? item.status : "UNKNOWN",
+    seller_name: typeof item.seller_name === "string" ? item.seller_name : undefined,
+    buyer_phone: typeof item.buyer_phone === "string" ? item.buyer_phone : undefined,
+    bpp_id: typeof item.bpp_id === "string" ? item.bpp_id : undefined,
+    bpp_uri: typeof item.bpp_uri === "string" ? item.bpp_uri : undefined,
+    quantity: typeof item.quantity === "number" ? item.quantity : undefined,
+    price_per_unit: typeof item.price_per_unit === "number" ? item.price_per_unit : undefined,
+    total_amount: typeof item.total_amount === "number" ? item.total_amount : undefined,
+    delivery_start: typeof item.delivery_start === "string" ? item.delivery_start : undefined,
+    delivery_end: typeof item.delivery_end === "string" ? item.delivery_end : undefined,
+    updated_at: typeof item.updated_at === "string" ? item.updated_at : undefined,
+    created_at: typeof item.created_at === "string" ? item.created_at : undefined,
+  };
+};
 
 export const getTradeHistory = async (
   role: "buyer" | "seller" = "seller",

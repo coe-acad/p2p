@@ -1,4 +1,3 @@
-import { BACKEND_URL } from "@/services/apiClient";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle, ChevronDown, ShieldAlert, Timer, Zap } from "lucide-react";
@@ -7,7 +6,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import { useUserData } from "@/hooks/useUserData";
-import { getAuthHeaders } from "@/services/authHeaders";
+import { getTradeHistory } from "@/services/tradeService";
 
 const formatDateLabel = () =>
   new Date().toLocaleDateString("en-IN", {
@@ -71,7 +70,6 @@ interface TodayTrade {
   kWh: number;
   rate: number;
   earnings: number;
-  buyer?: string;
   status: "confirmed" | "pending";
 }
 
@@ -84,7 +82,7 @@ const TodayTradesPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedHours, setExpandedHours] = useState<Set<string>>(new Set());
 
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const hasAnything = confirmedTrades.length > 0 || pendingTrades.length > 0;
 
   const confirmedUnits = confirmedTrades.reduce((sum, t) => sum + t.kWh, 0);
@@ -95,49 +93,44 @@ const TodayTradesPage = () => {
     const fetchTodayTrades = async () => {
       if (!userData?.phone_number) return;
       try {
-        const headers = await getAuthHeaders();
-        const response = await fetch(`${BACKEND_URL}/api/trades`, { headers });
-        if (response.ok) {
-          const data = await response.json();
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
+        const items = await getTradeHistory("seller");
 
-          // Filter trades for today
-          const todayTrades = (data.items || []).filter((item: any) => {
-            const deliveryEnd = new Date(item.delivery_end);
-            return deliveryEnd >= today && deliveryEnd < tomorrow;
-          });
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
-          // Separate confirmed and pending
-          const confirmed = todayTrades
-            .filter((item: any) => item.status === "CONFIRMED" || item.status === "COMPLETED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-              earnings: parseFloat(item.total_amount || 0),
-              buyer: item.buyer_name,
-              status: "confirmed" as const,
-            }));
+        // Filter trades for today
+        const todayTrades = items.filter((item) => {
+          const deliveryEnd = new Date(item.delivery_end);
+          return deliveryEnd >= today && deliveryEnd < tomorrow;
+        });
 
-          const pending = todayTrades
-            .filter((item: any) => item.status === "PUBLISHED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-              earnings: parseFloat(item.total_amount || 0),
-              buyer: item.buyer_name,
-              status: "pending" as const,
-            }));
+        // Separate confirmed and pending
+        const confirmed = todayTrades
+          .filter((item) => item.status === "CONFIRMED" || item.status === "COMPLETED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+            earnings: item.total_amount ?? 0,
+            status: "confirmed" as const,
+          }));
 
-          setConfirmedTrades(confirmed);
-          setPendingTrades(pending);
-        }
+        const pending = todayTrades
+          .filter((item) => item.status === "PUBLISHED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+            earnings: item.total_amount ?? 0,
+            status: "pending" as const,
+          }));
+
+        setConfirmedTrades(confirmed);
+        setPendingTrades(pending);
       } catch (err) {
         console.error("Failed to fetch today's trades:", err);
       } finally {
@@ -239,12 +232,6 @@ const TodayTradesPage = () => {
               <div className="space-y-2">
                 {groupTradesByHour(confirmedTrades).map((bucket) => {
                   const isExpanded = expandedHours.has(`confirmed-${bucket.hour}`);
-                  const tradesByAlias = bucket.trades.reduce((acc, trade) => {
-                    const alias = trade.id.substring(0, 20) + "...";
-                    if (!acc[alias]) acc[alias] = [];
-                    acc[alias].push(trade);
-                    return acc;
-                  }, {} as Record<string, TodayTrade[]>);
 
                   return (
                     <div
@@ -304,11 +291,6 @@ const TodayTradesPage = () => {
                                   <p className="text-sm font-medium text-foreground nums">
                                     {trade.kWh.toFixed(2)} kWh · ₹{trade.rate.toFixed(2)}/kWh
                                   </p>
-                                  {trade.buyer && (
-                                    <p className="text-xs font-medium text-accent mt-1">
-                                      👤 Buyer: {trade.buyer}
-                                    </p>
-                                  )}
                                 </div>
                                 <p className="shrink-0 text-sm font-semibold text-accent nums">
                                   ₹{trade.earnings.toLocaleString("en-IN")}
@@ -337,12 +319,6 @@ const TodayTradesPage = () => {
               <div className="space-y-2">
                 {groupTradesByHour(pendingTrades).map((bucket) => {
                   const isExpanded = expandedHours.has(bucket.hour);
-                  const tradesByAlias = bucket.trades.reduce((acc, trade) => {
-                    const alias = trade.id.substring(0, 20) + "...";
-                    if (!acc[alias]) acc[alias] = [];
-                    acc[alias].push(trade);
-                    return acc;
-                  }, {} as Record<string, TodayTrade[]>);
 
                   return (
                     <div

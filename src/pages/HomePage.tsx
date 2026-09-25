@@ -1,9 +1,7 @@
-import { BACKEND_URL } from "@/services/apiClient";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
-  CheckCircle,
   RefreshCw,
   ShieldAlert,
   Sun,
@@ -14,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { getAuthHeaders } from "@/services/authHeaders";
+import { getTradeHistory } from "@/services/tradeService";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
@@ -43,9 +41,8 @@ const HomePage = () => {
   const [earningsView, setEarningsView] = useState<"published" | "completed">("published");
 
   const justPublished = location.state?.justPublished ?? false;
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const hasPublished = tradesData.plannedTrades.length > 0;
-  const confirmedCount = tradesData.confirmedTrades.length;
 
   // Calculate metrics based on view
   const publishedAvgRate = plannedUnits > 0 ? plannedEarnings / plannedUnits : 0;
@@ -75,23 +72,17 @@ const HomePage = () => {
     const fetchPublishedTrades = async () => {
       if (!userData?.phone_number) return;
       try {
-        const headers = await getAuthHeaders();
-        const response = await fetch(`${BACKEND_URL}/api/trades`, { headers });
-        if (response.ok) {
-          const data = await response.json();
-          // Extract published trades from response
-          const trades = data.items
-            ?.filter((item: any) => item.status === "PUBLISHED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-            })) || [];
+        const trades = (await getTradeHistory("seller"))
+          .filter((item) => item.status === "PUBLISHED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+          }));
 
-          if (trades.length > 0) {
-            publishTrades(trades);
-          }
+        if (trades.length > 0) {
+          publishTrades(trades);
         }
       } catch (err) {
         console.error("Failed to fetch published trades:", err);
