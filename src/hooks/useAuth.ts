@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { recordLogin } from "@/services/loginHistoryService";
+import { clearSavedRestorePath } from "@/hooks/useLastPathRestore";
 
 interface AuthState {
   user: User | null;
@@ -107,6 +108,7 @@ export const useAuth = (): AuthState => {
       localStorage.removeItem("samai_onboarding_location_done");
       localStorage.removeItem("samai_onboarding_devices_done");
       localStorage.removeItem("samai_onboarding_talk_done");
+      clearSavedRestorePath();
     } catch (error) {
       console.error("Logout failed:", error);
       throw error;
