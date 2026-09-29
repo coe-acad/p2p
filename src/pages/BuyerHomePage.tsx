@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { useDiscoverListings, EnergyListing } from "@/hooks/useDiscoverListings";
 import { EnergyListingCard } from "@/components/EnergyListingCard";
@@ -12,10 +11,12 @@ import { Pagination } from "@/components/Pagination";
 import { ConfirmOrderModal } from "@/components/ConfirmOrderModal";
 import { SelectedOrderModal } from "@/components/SelectedOrderModal";
 import { QuoteOrderModal } from "@/components/QuoteOrderModal";
-import { orderService } from "@/services/orderService";
+import { orderService, type BecknOrder } from "@/services/orderService";
+import { paymentIntentService } from "@/services/paymentIntentService";
+import { openRazorpayCheckout, RazorpayDismissed } from "@/lib/razorpay";
 import VCUploadModal from "@/components/modals/VCUploadModal";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw, ShieldAlert, Zap } from "lucide-react";
+import { ZapOff, RefreshCw, ShieldAlert, Zap } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
 
@@ -73,12 +74,11 @@ const groupListingsByCatalog = (listings: EnergyListing[]): EnergyListing[] => {
 };
 
 const BuyerHomePage = () => {
-  const navigate = useNavigate();
   const { userData, displayName } = useUserData();
   const { loading: vcLoading, refetch: refetchVCStatus } = useVCStatus();
   // Source of truth for the VC gate: userData.is_vc_verified. If true → user
   // can discover/buy. If anything else → red banner + block discover.
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const { listings, loading, error, currentPage, fetchListings, clearFilters, goToPage } = useDiscoverListings();
 
   const [selectedListing, setSelectedListing] = useState<EnergyListing | null>(null);
@@ -89,10 +89,18 @@ const BuyerHomePage = () => {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<
-    "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed"
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed"
   >("idle");
   const [currentTransactionId, setCurrentTransactionId] = useState<string>("");
-  const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+  const [currentOrderData, setCurrentOrderData] = useState<BecknOrder | null>(null);
   const [showVCUploadModal, setShowVCUploadModal] = useState(false);
 
   // Optimistic local filter: tracks offer_ids the user just bought so they
@@ -112,8 +120,11 @@ const BuyerHomePage = () => {
   useEffect(() => {
     // Only fetch listings if the user is VC-verified. Otherwise discover is
     // blocked and we shouldn't be making the request at all.
-    if (isVCVerified) fetchListings();
-  }, [isVCVerified]);
+    // Force a network refresh on landing so buyers see the freshest catalog
+    // without having to hit the refresh button — matches what handleRefresh
+    // does (POST /discover?force=true → then GET).
+    if (isVCVerified) fetchListings(0, {}, { refreshFromNetwork: true });
+  }, [isVCVerified, fetchListings]);
 
   // Auto-refresh listings every 30 seconds so the buyer always sees a fresh
   // catalog without manually pulling. Silent mode keeps the existing
@@ -133,7 +144,7 @@ const BuyerHomePage = () => {
       void fetchListings(0, {}, { silent: true });
     }, 30_000);
     return () => clearInterval(interval);
-  }, [isVCVerified, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
+  }, [isVCVerified, fetchListings, showOfferModal, showSelectedModal, showQuoteModal, showVCUploadModal, orderStatus]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -238,35 +249,73 @@ const BuyerHomePage = () => {
 
   const handleConfirmOrder = async () => {
     if (!selectedOffer || !currentTransactionId) return;
-    setOrderStatus("confirming");
     setOrderError(null);
 
+    // Buyer-driven confirm now goes through atria-payments. The BAP /confirm
+    // route is gated on the payment_intent record, so calling it directly
+    // (the old path) would 402. The flow:
+    //   paying   → create Razorpay order + open checkout
+    //   verifying → server-side signature check + flips PENDING→PAID
+    //   finalising → poll until atria-payments confirms BAP forwarded /confirm
+    //   confirmed → on_confirm has landed on BAP
     try {
-      await orderService.confirm(
+      setOrderStatus("paying");
+      const paymentOrder = await paymentIntentService.createPaymentOrder(
         currentTransactionId,
-        {
-          offer_id: selectedOffer.offer_id,
-          seller_id: selectedOffer.seller_id,
-          bpp_id: selectedOffer.bpp_id,
-          bpp_uri: selectedOffer.bpp_uri,
-          offer_item_ids: selectedOffer.offer_item_ids,
-          offer_provider: selectedOffer.offer_provider,
-          offer_descriptor: selectedOffer.offer_descriptor,
-          offer_price: selectedOffer.offer_price,
-          offer_attributes: selectedOffer.offer_attributes,
-          quantity: selectedOffer.quantity_available,
-          price_per_unit: selectedOffer.price_per_unit,
-          seller_name: selectedOffer.seller_name,
-          delivery_start: selectedOffer.delivery_start,
-          delivery_end: selectedOffer.delivery_end,
-        },
-        currentOrderData,
       );
 
+      // Close the Radix Dialog (QuoteOrderModal + its child ConfirmDialog)
+      // BEFORE opening Razorpay. Radix's focus-trap puts aria-hidden +
+      // pointer-events:none on siblings, which freezes the Razorpay iframe
+      // (it renders on document.body and Radix treats it as a sibling to
+      // hide). Reopen on dismiss/error so the buyer lands back on the quote.
+      setShowQuoteModal(false);
+
+      let razorpayResponse;
+      try {
+        razorpayResponse = await openRazorpayCheckout({
+          keyId: paymentOrder.key_id,
+          orderId: paymentOrder.order_id,
+          amount: paymentOrder.amount,
+          currency: paymentOrder.currency,
+          description: `Energy purchase from ${selectedOffer.seller_name ?? "seller"}`,
+          prefill: {
+            name: userData?.name || undefined,
+            contact: userData?.phone_number || userData?.phone || undefined,
+            email: userData?.email || undefined,
+          },
+        });
+      } catch (modalError) {
+        // Dismiss is a buyer choice, not an error. The PENDING payment record
+        // stays on the server so a re-click reuses it instead of charging
+        // them again.
+        if (modalError instanceof RazorpayDismissed) {
+          setShowQuoteModal(true);
+          setOrderStatus("quoted");
+          return;
+        }
+        setShowQuoteModal(true);
+        throw modalError;
+      }
+
+      // Razorpay succeeded — bring back the quote modal so the buyer sees the
+      // "Verifying payment" / "Finalising order" copy while the BAP confirm
+      // flow finishes.
+      setShowQuoteModal(true);
+      setOrderStatus("verifying");
+      const verifyResult = await paymentIntentService.verifyPayment(razorpayResponse);
+
+      if (!verifyResult.bap_confirmed) {
+        setOrderStatus("finalising");
+        await paymentIntentService.waitForBapConfirmation(currentTransactionId);
+      }
+
+      // Defense in depth: payments service says BAP confirm-paid was forwarded,
+      // but we still wait for on_confirm to land on BAP before declaring victory.
+      // This is what guarantees the seller's offer is locked.
       await orderService.waitForConfirmation(currentTransactionId);
+
       setOrderStatus("confirmed");
-      // Hide the bought offer locally before the refetch — guarantees it
-      // disappears even if the BPP catalog hasn't synced yet.
       if (selectedOffer?.offer_id) {
         setPurchasedOfferIds((prev) => {
           const next = new Set(prev);
@@ -284,6 +333,8 @@ const BuyerHomePage = () => {
       }, 2000);
     } catch (e) {
       setOrderError(e instanceof Error ? e.message : "Failed to confirm order");
+      // Land back on the quote screen so the buyer can retry — the PENDING
+      // payment record on the server keeps the same Razorpay order alive.
       setOrderStatus("quoted");
     }
   };
@@ -342,8 +393,16 @@ const BuyerHomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
-        <PageContainer gap={5}>
+      {/* Fixed container sits under the sticky header. The header is h-14 with
+          paddingTop: env(safe-area-inset-top) — that env value is the Android
+          status bar height (or the iOS notch), so top-14 alone leaves the top
+          of our content behind the status bar. Match the header's total height
+          so the greeting + refresh button sit fully below it. */}
+      <div
+        className="circuit-bg fixed inset-x-0 bottom-0 flex flex-col overflow-hidden bg-background"
+        style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}
+      >
+        <div className="mx-auto flex w-full max-w-[900px] flex-1 min-h-0 flex-col gap-5 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           {/* Greeting — profile now lives in the shell's top header. Only the
               refresh action stays on the page since it's contextual to listings. */}
           <div className="flex items-center justify-between fade-in opacity-0">
@@ -359,7 +418,7 @@ const BuyerHomePage = () => {
                          hover:border-accent/50 hover:bg-accent/10
                          disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? <EnergyLoader label="Refreshing" /> : <RefreshCw className="h-4 w-4" />}
             </button>
           </div>
 
@@ -399,7 +458,7 @@ const BuyerHomePage = () => {
               {error && (
                 <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                    <AlertTriangle className="h-4 w-4" />
+                    <ZapOff className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">Couldn't load listings</p>
@@ -414,12 +473,12 @@ const BuyerHomePage = () => {
               {loading && !showListings && <ListingSkeletonList count={4} />}
 
               {showListings && (
-                <div className="-mt-3 space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                <div className="-mt-3 flex min-h-0 flex-1 flex-col gap-2">
+                  <p className="shrink-0 text-xs text-muted-foreground">
                     <span className="nums font-semibold text-primary">{groupedListings.length}</span>{" "}
                     listing{groupedListings.length === 1 ? "" : "s"} available
                   </p>
-                  <div className="grid gap-4 max-h-[calc(100dvh-15rem)] overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
+                  <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 pb-2 [scrollbar-width:thin]">
                     {paginatedGroupedListings.map((listing, idx) => (
                       <div
                         key={listing.id}
@@ -432,7 +491,9 @@ const BuyerHomePage = () => {
                   </div>
 
                   {totalPages > 1 && (
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} isLoading={loading} />
+                    <div className="shrink-0">
+                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} isLoading={loading} />
+                    </div>
                   )}
                 </div>
               )}
@@ -456,7 +517,7 @@ const BuyerHomePage = () => {
               )}
             </>
           )}
-        </PageContainer>
+        </div>
 
         {/* Buy-flow modals — untouched (separate roadmap task) */}
         <ConfirmOrderModal
@@ -482,7 +543,6 @@ const BuyerHomePage = () => {
           quote={currentOrderData}
           error={orderError}
           status={orderStatus}
-          onGetQuote={handleInitOrder}
           onConfirm={handleConfirmOrder}
           onBack={orderStatus === "confirmed" ? handleCloseQuoteModal : handleBackToOfferModal}
         />

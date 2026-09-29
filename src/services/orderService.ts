@@ -1,4 +1,4 @@
-import { createApiClient, requestWithRetry, resolveRequiredEnv } from '@/services/apiClient';
+import { createApiClient, requestWithRetry, BAP_URL } from '@/services/apiClient';
 import { getAuthHeaders } from '@/services/authHeaders';
 
 const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -7,7 +7,6 @@ const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return v.toString(16);
 });
 
-const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, 'http://localhost:8001', 'VITE_BAP_URL');
 const bapClient = createApiClient(BAP_URL);
 
 export interface OrderDetails {
@@ -27,20 +26,47 @@ export interface OrderDetails {
   delivery_end: string;
 }
 
+type Amount = number | string;
+
+/** A line item of a Beckn order (JSON-LD). Only the fields the app reads are typed. */
+export interface BecknOrderItem {
+  'beckn:quantity'?: { unitQuantity?: Amount };
+  'beckn:acceptedOffer'?: {
+    'beckn:price'?: { 'schema:price'?: Amount; price?: Amount; value?: Amount };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** A Beckn order (JSON-LD). The BAP/BPP own the full shape; only the fields the app reads are typed. */
+export interface BecknOrder {
+  'beckn:id'?: string;
+  'beckn:state'?: string;
+  'beckn:orderItems'?: BecknOrderItem[];
+  'beckn:payment'?: { 'beckn:amount'?: { value?: Amount }; [key: string]: unknown };
+  'beckn:orderValue'?: { value?: Amount };
+  orderValue?: { total?: Amount };
+  [key: string]: unknown;
+}
+
+interface BecknResponse {
+  message?: { order?: BecknOrder };
+}
+
+interface OrderStateApiResponse extends BecknResponse {
+  order_state?: string | null;
+  context?: Record<string, unknown>;
+  order?: BecknOrder;
+}
+
 export interface SelectResponse {
   transactionId: string;
-  order: any;
+  order: BecknOrder;
 }
 
 export interface InitResponse {
   transactionId: string;
-  order: any;
-}
-
-export interface ConfirmResponse {
-  transactionId: string;
-  order: any;
-  orderId: string;
+  order: BecknOrder;
 }
 
 export interface TradeStatusResponse {
@@ -51,22 +77,9 @@ export interface TradeStatusResponse {
 
 export interface OrderStateResponse {
   order_state: string | null;
-  context: any;
-  order: any;
+  context: Record<string, unknown>;
+  order: BecknOrder;
 }
-
-const DEFAULT_BAP_ID = import.meta.env.VITE_ORDER_BAP_ID || 'atria-p2p-trading-bap.com';
-const DEFAULT_BAP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BAP_URI,
-  'https://stage-atria-bap.atriauniversity.ai/bap/receiver',
-  'VITE_ORDER_BAP_URI'
-);
-const DEFAULT_BPP_ID = import.meta.env.VITE_ORDER_BPP_ID || 'atria-p2p-trading-bpp';
-const DEFAULT_BPP_URI = resolveRequiredEnv(
-  import.meta.env.VITE_ORDER_BPP_URI,
-  'https://stage-atria-bpp.atriauniversity.ai',
-  'VITE_ORDER_BPP_URI'
-);
 
 const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) => ({
   version: '2.0.0',
@@ -74,36 +87,26 @@ const createContext = (orderDetails?: Pick<OrderDetails, 'bpp_id' | 'bpp_uri'>) 
   transaction_id: `txn-${generateUUID()}`,
   message_id: `msg-${generateUUID()}`,
   timestamp: new Date().toISOString(),
-  // Participant identifiers must match registered keys used by adapters for signing.
-  bap_id: DEFAULT_BAP_ID,
-  bap_uri: DEFAULT_BAP_URI,
-  bpp_id: orderDetails?.bpp_id || DEFAULT_BPP_ID,
-  bpp_uri: orderDetails?.bpp_uri || DEFAULT_BPP_URI,
+  // bap_id/bap_uri are stamped by the BAP from its own config (_normalize_payload).
+  // bpp_id/bpp_uri route the order to the seller's BPP, so they come from the offer.
+  bpp_id: orderDetails?.bpp_id,
+  bpp_uri: orderDetails?.bpp_uri,
   domain: 'beckn.one:deg:p2p-trading-interdiscom:2.0.0',
   ttl: 'PT30S',
 });
 
-const extractOrderAmount = (order: any): number | null => {
-  const paymentValue = order?.['beckn:payment']?.['beckn:amount']?.value;
-  if (typeof paymentValue === 'number') {
-    return paymentValue;
-  }
-  if (typeof paymentValue === 'string' && paymentValue.trim()) {
-    const parsed = Number(paymentValue);
+const toAmount = (value: Amount | undefined): number | null => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
     if (!Number.isNaN(parsed)) return parsed;
   }
-
-  const orderValue = order?.['beckn:orderValue']?.value ?? order?.orderValue?.total;
-  if (typeof orderValue === 'number') {
-    return orderValue;
-  }
-  if (typeof orderValue === 'string' && orderValue.trim()) {
-    const parsed = Number(orderValue);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-
   return null;
 };
+
+const extractOrderAmount = (order: BecknOrder): number | null =>
+  toAmount(order['beckn:payment']?.['beckn:amount']?.value) ??
+  toAmount(order['beckn:orderValue']?.value ?? order.orderValue?.total);
 
 const buildSelectOrderItem = (orderDetails: OrderDetails) => {
   const orderedItemId = orderDetails.offer_item_ids?.[0] || `item-${generateUUID()}`;
@@ -151,7 +154,7 @@ export const orderService = {
     console.log('[orderService.select] Starting select for offer:', orderDetails.offer_id);
     const context = createContext(orderDetails);
 
-    const payload: any = {
+    const payload = {
       context: { ...context, action: 'select' },
       message: {
         order: {
@@ -164,8 +167,8 @@ export const orderService = {
 
     try {
       const headers = await getAuthHeaders();
-      console.log('[orderService.select] Sending payload, transactionId:', (context as any).transaction_id);
-      const response = await requestWithRetry<any>(
+      console.log('[orderService.select] Sending payload, transactionId:', context.transaction_id);
+      const response = await requestWithRetry<BecknResponse>(
         bapClient,
         {
           url: '/select',
@@ -181,7 +184,7 @@ export const orderService = {
 
       console.log('[orderService.select] Success, response:', response);
       return {
-        transactionId: (context as any).transaction_id,
+        transactionId: context.transaction_id,
         order: response.message?.order || {},
       };
     } catch (error) {
@@ -193,14 +196,12 @@ export const orderService = {
   async init(
     transactionId: string,
     orderDetails: OrderDetails,
-    orderData?: any
+    orderData?: BecknOrder | null
   ): Promise<InitResponse> {
     console.log('[orderService.init] Starting init for transactionId:', transactionId);
-    const context = createContext(orderDetails);
-    (context as any).transaction_id = transactionId;
-    (context as any).action = 'init';
+    const context = { ...createContext(orderDetails), transaction_id: transactionId };
 
-    const baseOrder = orderData && typeof orderData === 'object'
+    const baseOrder: Record<string, unknown> = orderData && typeof orderData === 'object'
       ? structuredClone(orderData)
       : buildSelectedOrderFallback(orderDetails);
 
@@ -230,7 +231,7 @@ export const orderService = {
     try {
       const headers = await getAuthHeaders();
       console.log('[orderService.init] Sending init payload');
-      const response = await requestWithRetry<any>(
+      const response = await requestWithRetry<BecknResponse>(
         bapClient,
         {
           url: '/init',
@@ -255,66 +256,11 @@ export const orderService = {
     }
   },
 
-  async confirm(
-    transactionId: string,
-    orderDetails: OrderDetails,
-    orderData: any
-  ): Promise<ConfirmResponse> {
-    console.log('[orderService.confirm] Starting confirm for transactionId:', transactionId);
-    const context = createContext(orderDetails);
-    (context as any).transaction_id = transactionId;
-    (context as any).action = 'confirm';
-
-    const payload = {
-      context: { ...context, action: 'confirm' },
-      message: {
-        order: orderData,
-      },
-    };
-
-    try {
-      const headers = await getAuthHeaders();
-      console.log('[orderService.confirm] Sending confirm payload');
-      const response = await requestWithRetry<any>(
-        bapClient,
-        {
-          url: '/confirm',
-          method: 'POST',
-          data: payload,
-          headers,
-        },
-        {
-          timeoutMs: 10000,
-          retries: 1,
-        }
-      );
-
-      console.log('[orderService.confirm] Success, orderId:', response.message?.order?.['beckn:id']);
-      return {
-        transactionId,
-        order: response.message?.order || {},
-        orderId: response.message?.order?.['beckn:id'] || 'unknown',
-      };
-    } catch (error) {
-      console.error('[orderService.confirm] Failed:', error);
-      throw error;
-    }
-  },
-
-  async getTradeStatus(transactionId: string): Promise<TradeStatusResponse> {
-    const state = await this.getOrderState(transactionId);
-    return {
-      status: state.order_state === 'CONFIRMED',
-      price: extractOrderAmount(state.order),
-      state: state.order_state,
-    };
-  },
-
   async getOrderState(transactionId: string): Promise<OrderStateResponse> {
     console.log('[orderService] getOrderState:', transactionId);
     try {
       const headers = await getAuthHeaders();
-      const response = await requestWithRetry<any>(
+      const response = await requestWithRetry<OrderStateApiResponse>(
         bapClient,
         {
           url: `/api/order-state?transaction_id=${encodeURIComponent(transactionId)}`,
@@ -362,32 +308,6 @@ export const orderService = {
     }
 
     throw new Error('Initialization is still pending');
-  },
-
-  async waitForQuotation(
-    transactionId: string,
-    options?: { maxAttempts?: number; delayMs?: number }
-  ): Promise<OrderStateResponse> {
-    const maxAttempts = options?.maxAttempts ?? 20;
-    const delayMs = options?.delayMs ?? 1000;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      try {
-        const state = await this.getOrderState(transactionId);
-        if ((state.order_state === 'INITIATED' || state.order_state === 'CONFIRMED') && state.order) {
-          return state;
-        }
-      } catch (error) {
-        // Trade not created yet, retry
-        console.log(`[waitForQuotation] Attempt ${attempt + 1}/${maxAttempts}: Trade not ready yet, retrying...`);
-      }
-
-      if (attempt < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-    }
-
-    throw new Error('Quotation is still pending');
   },
 
   async waitForSelectedOrder(

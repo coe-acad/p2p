@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, Upload, X } from "lucide-react";
+import { FileText, Upload, X, Zap } from "lucide-react";
+import { useTheme } from "next-themes";
+import { BorderBeam } from "border-beam";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import BrandMark from "@/components/BrandMark";
-import { unwrapCredential } from "@/utils/vcCredential";
+import SamaiLogo from "@/components/SamaiLogo";
+import { credentialFullName, unwrapCredential } from "@/utils/vcCredential";
 
 const ONBOARDING_VC_KEY = "samai_onboarding_vc_done";
 
@@ -25,15 +28,17 @@ const OnboardingVCPage = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
-  const intent = (userData as any)?.intent;
+  const intent = userData?.intent;
   const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
   const credentialLabel = intent === "buy" ? "Consumption" : "Generation";
 
   // Backstop guard: if Firestore says this user is already VC-verified,
   // never show the upload screen — bounce home immediately. This catches
   // any path that reaches /onboarding/vc by mistake.
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   useEffect(() => {
     if (isVCVerified) {
       navigate(homeRoute, { replace: true });
@@ -71,7 +76,7 @@ const OnboardingVCPage = () => {
 
     try {
       const content = await uploadedFile.text();
-      let parsedData: any;
+      let parsedData: unknown;
       try {
         parsedData = JSON.parse(content);
       } catch {
@@ -89,11 +94,6 @@ const OnboardingVCPage = () => {
       const token = await user?.getIdToken();
       if (!token) throw new Error("Unable to get authentication token");
 
-      const BACKEND_URL = resolveRequiredEnv(
-        import.meta.env.VITE_BACKEND_URL,
-        "http://localhost:3002",
-        "VITE_BACKEND_URL",
-      );
       const response = await fetch(`${BACKEND_URL}/api/vc/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -105,7 +105,21 @@ const OnboardingVCPage = () => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
-      const userName: string | null = credential.credentialSubject?.fullName || null;
+      // Backend response tells us which VC bucket was written and what
+      // fields it extracted. Mirror it into userData so the "Verification
+      // required" banner clears immediately after re-upload without
+      // needing a logout/login round-trip (was writing `isVCVerified` —
+      // wrong field name and wrong value — leaving the banner stuck).
+      const result: {
+        vc_type?: string;
+        stored_under?: string;
+        fields?: Record<string, unknown>;
+        is_vc_verified?: boolean;
+      } = await response.json().catch(() => ({}));
+
+      const vcBucket: "consumption" | "generation" =
+        result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
+      const userName = credentialFullName(credential);
 
       toast({
         title: "Credential uploaded",
@@ -116,10 +130,14 @@ const OnboardingVCPage = () => {
       localStorage.setItem("samai_onboarding_complete", "true");
 
       setUserData({
-        isVCVerified: false,
+        is_vc_verified: result.is_vc_verified ?? true,
+        vc_data: {
+          ...(userData?.vc_data || {}),
+          [vcBucket]: result.fields || { fullName: userName || "" },
+        },
         onboardingComplete: true,
         ...(userName ? { name: userName } : {}),
-      } as any);
+      });
 
       if (userData?.phone && intent) {
         await saveUser({
@@ -127,7 +145,7 @@ const OnboardingVCPage = () => {
           intent,
           onboardingComplete: true,
           ...(userName ? { name: userName } : {}),
-        } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
+        }).catch((err) => console.error("Failed to save onboarding completion:", err));
       }
 
       await queryClient.invalidateQueries({ queryKey: VC_STATUS_QUERY_KEY });
@@ -152,27 +170,27 @@ const OnboardingVCPage = () => {
   const handleSkip = async () => {
     localStorage.setItem(ONBOARDING_VC_KEY, "true");
     localStorage.setItem("samai_onboarding_complete", "true");
-    setUserData({ onboardingComplete: true } as any);
+    setUserData({ onboardingComplete: true });
     if (userData?.phone && intent) {
       await saveUser({
         phone: userData.phone,
         intent,
         onboardingComplete: true,
-      } as any).catch((err) => console.error("Failed to save onboarding completion:", err));
+      }).catch((err) => console.error("Failed to save onboarding completion:", err));
     }
     navigate(homeRoute, { replace: true });
   };
 
   return (
-    <div className="min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
+    <div className="circuit-bg min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
-            <BrandMark size="lg" />
+            <SamaiLogo size="lg" showText={true} />
           </div>
 
           <div className="text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
+            <p className="kicker-zap text-sm font-medium uppercase tracking-[0.18em] text-accent">
               Step 3 of 3
             </p>
             <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
@@ -184,6 +202,8 @@ const OnboardingVCPage = () => {
           </div>
 
           {!uploadedFile ? (
+            // Soft breathing border (border-beam) invites the upload.
+            <BorderBeam size="pulse-inner" colorVariant="ocean" theme={isDark ? "dark" : "light"} strength={0.6} borderRadius={12}>
             <div
               role="button"
               tabIndex={0}
@@ -201,10 +221,10 @@ const OnboardingVCPage = () => {
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors cursor-pointer ${
-                dragOver ? "border-primary bg-primary/[0.04]" : "border-border bg-card hover:border-foreground/30"
+                dragOver ? "border-primary bg-primary/[0.08]" : "border-border bg-primary/[0.04] hover:border-primary/40"
               }`}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-card text-primary shadow-sm">
                 <Upload className="h-5 w-5" />
               </span>
               <div>
@@ -221,10 +241,11 @@ const OnboardingVCPage = () => {
                 disabled={isLoading}
               />
             </div>
+            </BorderBeam>
           ) : (
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <FileText className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -246,15 +267,22 @@ const OnboardingVCPage = () => {
 
           <div className="flex flex-col gap-3">
             <Button onClick={handleUpload} disabled={!uploadedFile || isLoading} size="lg" className="w-full">
-              {isLoading ? <Loader2 className="animate-spin" /> : "Verify and continue"}
+              {isLoading ? (
+                <EnergyLoader label="Verifying" />
+              ) : (
+                <>
+                  Verify and continue
+                  <Zap className="btn-zap fill-current" strokeWidth={0} />
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"
               onClick={handleSkip}
               disabled={isLoading}
-              className="w-full text-muted-foreground transition-colors duration-200
-                         hover:bg-accent/8 hover:text-foreground
-                         focus-visible:bg-accent/10"
+              className="w-full bg-accent/10 font-semibold text-accent transition-colors duration-200
+                         hover:bg-accent/15 hover:text-accent
+                         focus-visible:bg-accent/15"
             >
               Skip for now
             </Button>

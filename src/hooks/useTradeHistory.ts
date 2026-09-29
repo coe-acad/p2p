@@ -18,11 +18,11 @@ export interface Trade {
   deliveryStart?: string;
   deliveryEnd?: string;
   backendStatus: string;
-  status: "CONFIRMED" | "COMPLETED" | "PENDING" | "CANCELLED";
+  status: "CONFIRMED" | "PENDING" | "CANCELLED";
   confirmedAt: Date;
 }
 
-export const tradeHistoryQueryKey = (
+const tradeHistoryQueryKey = (
   role: "buyer" | "seller",
   buyerPhone?: string,
 ) => ["tradeHistory", role, buyerPhone ?? null] as const;
@@ -34,15 +34,17 @@ const mapTrades = (
 ): Trade[] => {
   return items
     .map((item) => {
-      const rawStatus = item.status || "UNKNOWN";
+      const backendRaw = item.status || "UNKNOWN";
+      // Production doesn't distinguish COMPLETED from CONFIRMED — the backend
+      // may flip CONFIRMED→COMPLETED after delivery time, but we surface it
+      // as CONFIRMED so the purchase-history UI stays on a single terminal state.
+      const rawStatus = backendRaw === "COMPLETED" ? "CONFIRMED" : backendRaw;
       const normalizedStatus =
-        rawStatus === "COMPLETED"
-          ? "COMPLETED"
-          : rawStatus === "CONFIRMED"
-            ? "CONFIRMED"
-            : rawStatus === "CANCELLED"
-              ? "CANCELLED"
-              : "PENDING";
+        rawStatus === "CONFIRMED"
+          ? "CONFIRMED"
+          : rawStatus === "CANCELLED"
+            ? "CANCELLED"
+            : "PENDING";
 
       const title =
         role === "seller"
@@ -50,9 +52,7 @@ const mapTrades = (
             ? "Published Energy Catalog"
             : rawStatus === "CONFIRMED"
               ? "Accepted Energy Offer"
-              : rawStatus === "COMPLETED"
-                ? "Completed Energy Trade"
-                : "Trade Request"
+              : "Trade Request"
           : item.seller_name || "Unknown Seller";
 
       const subtitle =

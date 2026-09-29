@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { FileText, Loader2, Upload, X } from "lucide-react";
+import { EnergyLoader } from "@/components/EnergyLoader";
+import { FileText, Upload, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
 import { VC_STATUS_QUERY_KEY } from "@/hooks/useVCStatus";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 import { saveUser } from "@/services/userService";
 import {
   Dialog,
@@ -15,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { unwrapCredential } from "@/utils/vcCredential";
+import { credentialFullName, unwrapCredential } from "@/utils/vcCredential";
 
 interface VCUploadModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
   const { userData, setUserData } = useUserData();
   const queryClient = useQueryClient();
 
-  const intent = (userData as any)?.intent;
+  const intent = userData?.intent;
   const credentialLabel = intent === "buy" ? "Consumption" : "Generation";
 
   const acceptFile = (file: File | undefined) => {
@@ -66,7 +67,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
 
     try {
       const content = await uploadedFile.text();
-      let parsedData: any;
+      let parsedData: unknown;
       try {
         parsedData = JSON.parse(content);
       } catch {
@@ -84,11 +85,6 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
       const token = await user?.getIdToken();
       if (!token) throw new Error("Unable to get authentication token");
 
-      const BACKEND_URL = resolveRequiredEnv(
-        import.meta.env.VITE_BACKEND_URL,
-        "http://localhost:3002",
-        "VITE_BACKEND_URL",
-      );
       const response = await fetch(`${BACKEND_URL}/api/vc/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -100,7 +96,20 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
         throw new Error(error.detail || "Failed to upload credential.");
       }
 
-      const userName: string | null = credential.credentialSubject?.fullName || null;
+      // Backend response tells us which VC bucket got updated and the
+      // extracted fields — use it as the source of truth for the in-memory
+      // state so the "Verification required" banner clears without needing
+      // a logout/login round-trip.
+      const result: {
+        vc_type?: string;
+        stored_under?: string;
+        fields?: Record<string, unknown>;
+        is_vc_verified?: boolean;
+      } = await response.json().catch(() => ({}));
+
+      const vcBucket: "consumption" | "generation" =
+        result.vc_type === "ConsumptionProfileCredential" ? "consumption" : "generation";
+      const userName = credentialFullName(credential);
 
       toast({
         title: "Credential uploaded",
@@ -108,16 +117,20 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
       });
 
       setUserData({
-        isVCVerified: false,
+        is_vc_verified: result.is_vc_verified ?? true,
+        vc_data: {
+          ...(userData?.vc_data || {}),
+          [vcBucket]: result.fields || { fullName: userName || "" },
+        },
         ...(userName ? { name: userName } : {}),
-      } as any);
+      });
 
       if (userData?.phone && intent && userName) {
         await saveUser({
           phone: userData.phone,
           intent,
           name: userName,
-        } as any).catch((err) => console.error("Failed to save credential name:", err));
+        }).catch((err) => console.error("Failed to save credential name:", err));
       }
 
       setUploadedFile(null);
@@ -215,7 +228,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
           )}
 
           <Button onClick={handleUpload} disabled={!uploadedFile || isLoading} size="lg" className="w-full">
-            {isLoading ? <Loader2 className="animate-spin" /> : "Verify and continue"}
+            {isLoading ? <EnergyLoader label="Verifying" /> : "Verify and continue"}
           </Button>
         </div>
       </DialogContent>

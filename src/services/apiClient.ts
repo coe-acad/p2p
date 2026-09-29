@@ -21,7 +21,7 @@ const DEFAULT_RETRY_DELAY_MS = 300;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const resolveRequiredEnv = (
+const resolveRequiredEnv = (
   envValue: string | undefined,
   fallback: string,
   envName: string
@@ -36,6 +36,12 @@ export const resolveRequiredEnv = (
 
   return fallback;
 };
+
+// Single source for every backend base URL. Production builds without these
+// fail at startup instead of silently calling localhost or another deployment.
+export const BACKEND_URL = resolveRequiredEnv(import.meta.env.VITE_BACKEND_URL, "http://localhost:3002", "VITE_BACKEND_URL");
+export const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
+export const PAYMENT_URL = resolveRequiredEnv(import.meta.env.VITE_PAYMENT_URL, "http://localhost:8003", "VITE_PAYMENT_URL");
 
 export const createApiClient = (baseURL: string): AxiosInstance => {
   return axios.create({

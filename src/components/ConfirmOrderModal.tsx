@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { EnergyListing } from "@/hooks/useDiscoverListings";
-import { AlertCircle, Clock, Loader2, MapPin, Zap } from "lucide-react";
+import { ZapOff, Clock, Sun, Zap } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface ConfirmOrderModalProps {
@@ -16,7 +17,16 @@ interface ConfirmOrderModalProps {
   listing: EnergyListing | null;
   offers: EnergyListing[];
   error: string | null;
-  status: "idle" | "selecting" | "selected" | "quoting" | "quoted" | "confirming" | "confirmed";
+  status:
+    | "idle"
+    | "selecting"
+    | "selected"
+    | "quoting"
+    | "quoted"
+    | "paying"
+    | "verifying"
+    | "finalising"
+    | "confirmed";
   onSelectOffer: (offer: EnergyListing) => Promise<void>;
   onCancel: () => void;
 }
@@ -68,7 +78,7 @@ export const ConfirmOrderModal = ({
     <Dialog open={isOpen} onOpenChange={onCancel}>
       <DialogContent className="block w-[calc(100vw-2rem)] max-w-[520px] overflow-hidden p-0 sm:w-full">
         {/* Light green header strip — same magnetic-stripe motif as listing cards */}
-        <div className="w-full bg-accent/15 px-5 py-4">
+        <div className="circuit-bg w-full bg-accent/10 px-5 py-4">
           <DialogHeader className="space-y-1.5 text-left">
             <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
               Choose an offer
@@ -83,7 +93,9 @@ export const ConfirmOrderModal = ({
         <div className="w-full space-y-4 px-5 pb-5 pt-4">
           {/* Seller summary row */}
           <div className="flex min-w-0 items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 shrink-0 text-accent" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-primary/10 text-primary">
+              <Sun className="spin-sun h-4 w-4" />
+            </span>
             <span className="min-w-0 truncate font-medium text-foreground">{listing.seller_name || "Unknown seller"}</span>
             <span className="shrink-0 text-muted-foreground/40">·</span>
             <span className="shrink-0 text-muted-foreground nums">
@@ -105,14 +117,14 @@ export const ConfirmOrderModal = ({
               return (
                 <div
                   key={offer.id}
-                  className="group w-full min-w-0 rounded-xl border border-primary/12 bg-card p-4 transition-all duration-200 ease-out
+                  className="group w-full min-w-0 rounded-2xl border border-border bg-card p-4 shadow-[0_6px_18px_-12px_rgba(20,24,100,0.25)] transition-all duration-200 ease-out
                              hover:-translate-y-0.5 hover:border-primary/40
                              hover:shadow-[0_8px_22px_-14px_rgba(36,40,128,0.28)]"
                 >
                   {/* Top row — price hero + qty */}
                   <div className="flex min-w-0 items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-2xl font-semibold tracking-tight text-primary nums">
+                      <p className="truncate text-2xl font-normal tracking-tight text-primary nums">
                         ₹{offer.price_per_unit.toFixed(2)}
                         <span className="ml-1 text-xs font-normal text-muted-foreground">
                           /{offer.quantity_unit}
@@ -124,7 +136,7 @@ export const ConfirmOrderModal = ({
                       <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         Available
                       </p>
-                      <p className="mt-0.5 text-lg font-semibold text-foreground nums">
+                      <p className="mt-0.5 text-xl font-light tracking-tight text-foreground nums">
                         {offer.quantity_available.toFixed(2)}{" "}
                         <span className="inline-flex items-center gap-0.5 text-sm font-medium text-muted-foreground">
                           <Zap className="h-3 w-3 fill-accent text-accent" strokeWidth={0} />
@@ -154,11 +166,14 @@ export const ConfirmOrderModal = ({
                     >
                       {isThisLoading ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <EnergyLoader label="Selecting" />
                           Selecting
                         </>
                       ) : (
-                        "Select"
+                        <>
+                          Select
+                          <Zap className="btn-zap fill-current" strokeWidth={0} />
+                        </>
                       )}
                     </Button>
                   </div>
@@ -176,7 +191,7 @@ export const ConfirmOrderModal = ({
           {/* Error banner */}
           {error && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-3 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
               <span className="text-foreground break-words">{error}</span>
             </div>
           )}

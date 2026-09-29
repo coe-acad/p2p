@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
+import { BrandOrb } from "@/components/EnergyLoader";
 
 /**
  * Compact brand mark for the app shell header.
@@ -15,7 +16,7 @@ const SamaiHeaderBrand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData } = useUserData();
-  const isBuyer = (userData as any)?.intent === "buy";
+  const isBuyer = userData?.intent === "buy";
   const homeRoute = isBuyer ? "/buyer-home" : "/home";
   const isOnHome = location.pathname === homeRoute;
 
@@ -37,9 +38,9 @@ const SamaiHeaderBrand = () => {
                  transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-100
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      {/* Zap with a soft electric aura that pulses on a 2.2s loop. */}
+      {/* Zap circled by the same breathing orb as the login screen. */}
       <span className="relative inline-flex h-5 w-5 items-center justify-center">
-        <span aria-hidden className="electric-pulse absolute inset-0" />
+        <BrandOrb size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-accent" />
         <Zap
           aria-hidden
           strokeWidth={0}

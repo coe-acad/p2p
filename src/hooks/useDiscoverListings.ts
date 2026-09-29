@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { createApiClient, requestWithRetry, resolveRequiredEnv, toApiError } from "@/services/apiClient";
+import { useCallback, useState, useEffect, useRef } from "react";
+import { createApiClient, requestWithRetry, toApiError, BAP_URL } from "@/services/apiClient";
 
 export interface EnergyListing {
   id: string;
@@ -69,6 +69,9 @@ const sanitizeListings = (listings: EnergyListing[]): EnergyListing[] => {
   });
 };
 
+const PAGE_SIZE = 10;
+const RAW_FETCH_LIMIT = 500;
+
 export const useDiscoverListings = () => {
   const [listings, setListings] = useState<EnergyListing[]>([]);
   const [total, setTotal] = useState(0);
@@ -77,15 +80,11 @@ export const useDiscoverListings = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({});
 
-  const BAP_URL = resolveRequiredEnv(import.meta.env.VITE_BAP_URL, "http://localhost:8001", "VITE_BAP_URL");
-  const NETWORK_ID =
-    import.meta.env.VITE_NETWORK_ID || "indiaenergystack.in/test-ies-p2p-trading-network";
-  const PAGE_SIZE = 10;
-  const RAW_FETCH_LIMIT = 500;
   const discoverClientRef = useRef(createApiClient(BAP_URL));
   const activeRequestRef = useRef<AbortController | null>(null);
 
-  const fetchListings = async (
+  // Stable identity: reads only its arguments, refs and state setters.
+  const fetchListings = useCallback(async (
     pageNumber: number = 0,
     searchFilters: SearchFilters = {},
     opts: { silent?: boolean; refreshFromNetwork?: boolean } = {},
@@ -204,7 +203,7 @@ export const useDiscoverListings = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     return () => {

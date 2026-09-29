@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { Loader2 } from "lucide-react";
+import { EnergyLoader } from "@/components/EnergyLoader";
+import { Link } from "react-router-dom";
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  PhoneAuthProvider,
+  signInWithCredential,
+} from "firebase/auth";
+import { Capacitor, PluginListenerHandle } from "@capacitor/core";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { auth, isPhoneVerificationDisabledForTesting } from "@/lib/firebase";
+import { Zap } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import BrandMark from "@/components/BrandMark";
-import { resolveRequiredEnv } from "@/services/apiClient";
+import { BACKEND_URL } from "@/services/apiClient";
 import { logger } from "@/lib/logger";
 
 interface VerificationScreenProps {
@@ -32,6 +42,20 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
+  // Native phone-auth state. On Android the Capacitor Firebase plugin uses
+  // PhoneAuthProvider directly — no reCAPTCHA — so we skip the web verifier
+  // setup entirely and track the verificationId returned by phoneCodeSent.
+  const isNative = Capacitor.isNativePlatform();
+  const verificationIdRef = useRef<string | null>(null);
+  const nativeListenersRef = useRef<PluginListenerHandle[]>([]);
+
+  const removeNativeListeners = async () => {
+    for (const h of nativeListenersRef.current) {
+      try { await h.remove(); } catch { /* listener may already be torn down */ }
+    }
+    nativeListenersRef.current = [];
+  };
+
   const resetRecaptchaVerifier = () => {
     try {
       recaptchaVerifierRef.current?.clear();
@@ -53,7 +77,10 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     }
   };
 
-  useEffect(() => () => resetRecaptchaVerifier(), []);
+  useEffect(() => () => {
+    resetRecaptchaVerifier();
+    void removeNativeListeners();
+  }, []);
 
   // Resend countdown — ticks once per second while > 0.
   useEffect(() => {
@@ -78,7 +105,51 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     if (phoneError) setPhoneError("");
   };
 
-  const sendOtp = async () => {
+  const sendOtpNative = async (resend: boolean) => {
+    // Replace any prior listeners — leftovers from a previous send would fire
+    // for stale verification IDs and clobber the current attempt.
+    await removeNativeListeners();
+
+    let resolveCodeSent: (verificationId: string) => void;
+    let rejectCodeSent: (err: Error) => void;
+    const codeSentPromise = new Promise<string>((res, rej) => {
+      resolveCodeSent = res;
+      rejectCodeSent = rej;
+    });
+
+    const sentHandle = await FirebaseAuthentication.addListener("phoneCodeSent", (event) => {
+      verificationIdRef.current = event.verificationId;
+      resolveCodeSent(event.verificationId);
+    });
+    const failHandle = await FirebaseAuthentication.addListener("phoneVerificationFailed", (event) => {
+      rejectCodeSent(new Error(event.message || "Verification failed"));
+    });
+    // Android can auto-retrieve the SMS code. When that fires we surface the
+    // code in the UI and feed it through the normal verifyOtp path so the
+    // signInWithCredential step still runs and auth.currentUser ends up set.
+    const completedHandle = await FirebaseAuthentication.addListener("phoneVerificationCompleted", (event) => {
+      const code = (event as { verificationCode?: string }).verificationCode;
+      if (code && verificationIdRef.current) {
+        setOtp(code);
+        void verifyOtp(code);
+      }
+    });
+    nativeListenersRef.current = [sentHandle, failHandle, completedHandle];
+
+    // Kick the native flow off. signInWithPhoneNumber returns void; the
+    // verificationId arrives via the phoneCodeSent listener.
+    await FirebaseAuthentication.signInWithPhoneNumber({
+      phoneNumber: `+91${phoneNumber}`,
+      resendCode: resend,
+    });
+
+    const timeout = new Promise<string>((_, rej) =>
+      setTimeout(() => rej(new Error("Request timed out. Please try again.")), 30000),
+    );
+    await Promise.race([codeSentPromise, timeout]);
+  };
+
+  const sendOtp = async (resend = false) => {
     if (!isValidIndianMobile(phoneNumber)) {
       setPhoneError("Indian mobile numbers start with 6, 7, 8, or 9.");
       return;
@@ -87,7 +158,13 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     setPhoneError("");
 
     try {
-      const isTestingMode = import.meta.env.VITE_DISABLE_PHONE_APP_VERIFICATION_FOR_TESTING === "true";
+      if (isNative) {
+        await sendOtpNative(resend);
+        logger.devLog("OTP sent (native)");
+        setStep("otp");
+        setResendIn(RESEND_COOLDOWN_SECONDS);
+        return;
+      }
 
       if (!recaptchaVerifierRef.current) {
         try {
@@ -96,9 +173,9 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           if (!container) throw new Error("reCAPTCHA container not found in DOM");
           recaptchaVerifierRef.current = new RecaptchaVerifier(auth, RECAPTCHA_CONTAINER_ID, { size: "invisible" });
           await recaptchaVerifierRef.current.render();
-        } catch (err: any) {
+        } catch (err) {
           logger.error("Recaptcha initialization failed", err);
-          if (!isTestingMode) {
+          if (!isPhoneVerificationDisabledForTesting) {
             setPhoneError("Verification initialization failed. Please try again.");
             throw err;
           }
@@ -117,29 +194,50 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
       logger.devLog("OTP sent");
       setStep("otp");
       setResendIn(RESEND_COOLDOWN_SECONDS);
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Phone OTP send failed", err);
       setPhoneError(getPhoneAuthErrorMessage(err));
-      resetRecaptchaVerifier();
+      if (isNative) {
+        await removeNativeListeners();
+      } else {
+        resetRecaptchaVerifier();
+      }
     } finally {
       setIsSendingOtp(false);
     }
   };
 
   const verifyOtp = async (enteredOtp: string) => {
-    if (!confirmationResultRef.current || isVerifying) return;
+    if (isVerifying) return;
+    if (isNative) {
+      if (!verificationIdRef.current) return;
+    } else {
+      if (!confirmationResultRef.current) return;
+    }
     setIsVerifying(true);
     setOtpError("");
 
     try {
-      await confirmationResultRef.current.confirm(enteredOtp);
+      if (isNative) {
+        // With skipNativeAuth: true the plugin's confirmVerificationCode just
+        // validates inputs without signing in. The actual sign-in (which is
+        // what populates auth.currentUser and lets the rest of the app issue
+        // authed backend calls) is done by signInWithCredential on the JS SDK.
+        // The SMS code is consumed exactly once — here, by signInWithCredential.
+        await FirebaseAuthentication.confirmVerificationCode({
+          verificationId: verificationIdRef.current!,
+          verificationCode: enteredOtp,
+        });
+        const credential = PhoneAuthProvider.credential(
+          verificationIdRef.current!,
+          enteredOtp,
+        );
+        await signInWithCredential(auth, credential);
+      } else {
+        await confirmationResultRef.current!.confirm(enteredOtp);
+      }
 
       // Set the phone_number custom claim on Firebase so backend can authorize.
-      const BACKEND_URL = resolveRequiredEnv(
-        import.meta.env.VITE_BACKEND_URL,
-        "http://localhost:3002",
-        "VITE_BACKEND_URL",
-      );
       const token = await auth.currentUser?.getIdToken();
       if (token) {
         try {
@@ -172,8 +270,14 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     if (resendIn > 0) return;
     setOtp("");
     setOtpError("");
-    resetRecaptchaVerifier();
-    await sendOtp();
+    // Do NOT reset the verifier on web. Firebase's invisible reCAPTCHA is
+    // designed to be reused across sends — signInWithPhoneNumber pulls a
+    // fresh token from the existing widget. Tearing it down and re-rendering
+    // burns a token Firebase hasn't seen yet; after 2–3 such resends Firebase
+    // escalates to a visible challenge and eventually flags the device.
+    // On native, the plugin needs resendCode=true to use the prior session
+    // instead of starting a fresh PhoneAuthProvider attempt.
+    await sendOtp(true);
   };
 
   const handlePhoneFormSubmit = (e: React.FormEvent) => {
@@ -186,25 +290,27 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
     setOtp("");
     setOtpError("");
     confirmationResultRef.current = null;
-    resetRecaptchaVerifier();
+    verificationIdRef.current = null;
+    if (isNative) {
+      void removeNativeListeners();
+    } else {
+      resetRecaptchaVerifier();
+    }
   };
 
   return (
-    <div className="min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
+    <div className="circuit-bg min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-sm">
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <BrandMark size="lg" orb />
               </div>
 
               <div className="text-center">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
+                <h1 className="kicker-zap text-sm font-medium uppercase tracking-[0.18em] text-accent">
                   Peer-to-peer solar trading
-                </p>
-                <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
-                  Start trading energy in a flow designed for mobile.
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Your solar. Your choice.
@@ -248,18 +354,25 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                 className="w-full"
                 size="lg"
               >
-                {isSendingOtp ? <Loader2 className="animate-spin" /> : "Continue"}
+                {isSendingOtp ? (
+                  <EnergyLoader label="Sending code" />
+                ) : (
+                  <>
+                    Continue
+                    <Zap className="btn-zap fill-current" strokeWidth={0} />
+                  </>
+                )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
                 By continuing you agree to Samai's{" "}
-                <a href="#" className="text-foreground underline-offset-4 hover:underline">
+                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Terms
-                </a>{" "}
+                </Link>{" "}
                 and{" "}
-                <a href="#" className="text-foreground underline-offset-4 hover:underline">
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-foreground underline-offset-4 hover:underline">
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
             </form>
@@ -268,7 +381,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <BrandMark size="lg" orb />
               </div>
 
               <div className="text-center">
@@ -294,16 +407,19 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                   autoFocus
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  containerClassName="gap-1.5 sm:gap-2"
+                  containerClassName="gap-0"
                 >
-                  <InputOTPGroup className="gap-1.5 sm:gap-2">
+                  {/* Connected boxes in one card; the active box gets the brand ring. */}
+                  <InputOTPGroup
+                    className={`gap-0 overflow-hidden rounded-xl border bg-card shadow-[0_6px_18px_-12px_rgba(20,24,100,0.25)] ${
+                      otpError ? "border-destructive" : "border-input"
+                    }`}
+                  >
                     {[0, 1, 2, 3, 4, 5].map((i) => (
                       <InputOTPSlot
                         key={i}
                         index={i}
-                        className={`h-12 w-10 rounded-md border bg-card text-base font-medium first:rounded-md last:rounded-md sm:w-11 ${
-                          otpError ? "border-destructive" : ""
-                        }`}
+                        className="h-14 w-11 rounded-none border-0 border-l border-border bg-transparent text-xl font-medium first:rounded-none first:border-l-0 last:rounded-none sm:w-12"
                       />
                     ))}
                   </InputOTPGroup>
@@ -311,7 +427,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
 
                 {isVerifying && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <EnergyLoader size={20} className="text-primary" label="Verifying" />
                     Verifying
                   </div>
                 )}
@@ -321,7 +437,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
               <div className="text-center text-sm text-muted-foreground">
                 {resendIn > 0 ? (
                   <>
-                    Didn't get it? Resend in <span className="nums text-foreground">0:{String(resendIn).padStart(2, "0")}</span>
+                    Didn't get it? <span className="font-semibold text-primary">Resend in <span className="nums">0:{String(resendIn).padStart(2, "0")}</span></span>
                   </>
                 ) : (
                   <>
@@ -329,7 +445,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                     <button
                       type="button"
                       onClick={handleResend}
-                      className="text-foreground font-medium underline-offset-4 hover:underline"
+                      className="font-semibold text-primary underline-offset-4 hover:underline"
                     >
                       Resend code
                     </button>

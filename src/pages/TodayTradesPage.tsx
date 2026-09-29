@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle, ChevronDown, ShieldAlert, Timer, Zap } from "lucide-react";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -6,7 +7,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import { useUserData } from "@/hooks/useUserData";
-import { getAuthHeaders } from "@/services/authHeaders";
+import { getTradeHistory } from "@/services/tradeService";
 
 const formatDateLabel = () =>
   new Date().toLocaleDateString("en-IN", {
@@ -70,7 +71,6 @@ interface TodayTrade {
   kWh: number;
   rate: number;
   earnings: number;
-  buyer?: string;
   status: "confirmed" | "pending";
 }
 
@@ -83,7 +83,7 @@ const TodayTradesPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedHours, setExpandedHours] = useState<Set<string>>(new Set());
 
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const hasAnything = confirmedTrades.length > 0 || pendingTrades.length > 0;
 
   const confirmedUnits = confirmedTrades.reduce((sum, t) => sum + t.kWh, 0);
@@ -94,50 +94,44 @@ const TodayTradesPage = () => {
     const fetchTodayTrades = async () => {
       if (!userData?.phone_number) return;
       try {
-        const headers = await getAuthHeaders();
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const response = await fetch(`${backendUrl}/api/trades`, { headers });
-        if (response.ok) {
-          const data = await response.json();
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
+        const items = await getTradeHistory("seller");
 
-          // Filter trades for today
-          const todayTrades = (data.items || []).filter((item: any) => {
-            const deliveryEnd = new Date(item.delivery_end);
-            return deliveryEnd >= today && deliveryEnd < tomorrow;
-          });
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
-          // Separate confirmed and pending
-          const confirmed = todayTrades
-            .filter((item: any) => item.status === "CONFIRMED" || item.status === "COMPLETED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-              earnings: parseFloat(item.total_amount || 0),
-              buyer: item.buyer_name,
-              status: "confirmed" as const,
-            }));
+        // Filter trades for today
+        const todayTrades = items.filter((item) => {
+          const deliveryEnd = new Date(item.delivery_end);
+          return deliveryEnd >= today && deliveryEnd < tomorrow;
+        });
 
-          const pending = todayTrades
-            .filter((item: any) => item.status === "PUBLISHED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-              earnings: parseFloat(item.total_amount || 0),
-              buyer: item.buyer_name,
-              status: "pending" as const,
-            }));
+        // Separate confirmed and pending
+        const confirmed = todayTrades
+          .filter((item) => item.status === "CONFIRMED" || item.status === "COMPLETED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+            earnings: item.total_amount ?? 0,
+            status: "confirmed" as const,
+          }));
 
-          setConfirmedTrades(confirmed);
-          setPendingTrades(pending);
-        }
+        const pending = todayTrades
+          .filter((item) => item.status === "PUBLISHED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+            earnings: item.total_amount ?? 0,
+            status: "pending" as const,
+          }));
+
+        setConfirmedTrades(confirmed);
+        setPendingTrades(pending);
       } catch (err) {
         console.error("Failed to fetch today's trades:", err);
       } finally {
@@ -152,7 +146,7 @@ const TodayTradesPage = () => {
   if (!vcLoading && !hasGenerationVC && !isVCVerified) {
     return (
       <MainAppShell>
-        <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
           <PageContainer gap={4}>
             <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
@@ -176,7 +170,7 @@ const TodayTradesPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Heading row */}
           <div className="flex items-center gap-2 fade-in opacity-0">
@@ -198,7 +192,7 @@ const TodayTradesPage = () => {
           {/* Summary — blue hero amount, green confirmed chip */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Earned so far
               </p>
               {confirmedTrades.length > 0 && (
@@ -209,8 +203,14 @@ const TodayTradesPage = () => {
               )}
             </div>
 
-            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
-              <p className="text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              {/* Large faint bolt watermark (energy theme) */}
+              <Zap
+                aria-hidden
+                strokeWidth={0}
+                className="pointer-events-none absolute -right-4 top-2 h-28 w-28 fill-primary/[0.07] text-transparent"
+              />
+              <p className="relative text-4xl font-light tracking-tight text-accent nums sm:text-5xl">
                 ₹{confirmedEarnings.toLocaleString("en-IN")}
               </p>
               <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
@@ -223,9 +223,7 @@ const TodayTradesPage = () => {
           {/* Loading state */}
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Timer className="h-5 w-5 animate-spin" />
-              </span>
+              <EnergyLoader size={64} className="text-primary" label="Loading today's trades" />
               <p className="text-sm text-muted-foreground">Loading today's trades…</p>
             </div>
           )}
@@ -233,18 +231,12 @@ const TodayTradesPage = () => {
           {/* Confirmed section — hourly summary with expansion */}
           {!loading && confirmedTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Confirmed by time
               </p>
               <div className="space-y-2">
                 {groupTradesByHour(confirmedTrades).map((bucket) => {
                   const isExpanded = expandedHours.has(`confirmed-${bucket.hour}`);
-                  const tradesByAlias = bucket.trades.reduce((acc, trade) => {
-                    const alias = trade.id.substring(0, 20) + "...";
-                    if (!acc[alias]) acc[alias] = [];
-                    acc[alias].push(trade);
-                    return acc;
-                  }, {} as Record<string, TodayTrade[]>);
 
                   return (
                     <div
@@ -304,11 +296,6 @@ const TodayTradesPage = () => {
                                   <p className="text-sm font-medium text-foreground nums">
                                     {trade.kWh.toFixed(2)} kWh · ₹{trade.rate.toFixed(2)}/kWh
                                   </p>
-                                  {trade.buyer && (
-                                    <p className="text-xs font-medium text-accent mt-1">
-                                      👤 Buyer: {trade.buyer}
-                                    </p>
-                                  )}
                                 </div>
                                 <p className="shrink-0 text-sm font-semibold text-accent nums">
                                   ₹{trade.earnings.toLocaleString("en-IN")}
@@ -331,18 +318,12 @@ const TodayTradesPage = () => {
           {/* Awaiting buyers section — hourly summary with expansion */}
           {!loading && pendingTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Available slots by time
               </p>
               <div className="space-y-2">
                 {groupTradesByHour(pendingTrades).map((bucket) => {
                   const isExpanded = expandedHours.has(bucket.hour);
-                  const tradesByAlias = bucket.trades.reduce((acc, trade) => {
-                    const alias = trade.id.substring(0, 20) + "...";
-                    if (!acc[alias]) acc[alias] = [];
-                    acc[alias].push(trade);
-                    return acc;
-                  }, {} as Record<string, TodayTrade[]>);
 
                   return (
                     <div

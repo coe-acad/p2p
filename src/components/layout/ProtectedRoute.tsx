@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
+import { getSavedRestorePath } from "@/hooks/useLastPathRestore";
 
 interface RouteProps {
   children: ReactNode;
@@ -14,7 +16,7 @@ interface RoleProtectedRouteProps extends RouteProps {
 const LoadingSpinner = () => (
   <div className="app-viewport-min flex items-center justify-center bg-background">
     <div className="flex flex-col items-center gap-4">
-      <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <EnergyLoader size={64} className="text-primary" />
       <p className="text-sm text-muted-foreground">Loading...</p>
     </div>
   </div>
@@ -27,19 +29,6 @@ const homePathForIntent = (intent: "sell" | "buy" | undefined): string => {
   return "/intent";
 };
 
-export const ProtectedRoute = ({ children }: RouteProps) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
@@ -68,8 +57,8 @@ export const RoleProtectedRoute = ({ children, requiredIntent }: RoleProtectedRo
   // Sellers need either onboardingComplete OR is_vc_verified to access seller
   // tooling — both are valid "done with onboarding" signals from Firestore.
   const isOnOnboardingFlow = location.pathname.startsWith("/onboarding");
-  const hasCompletedOnboarding = Boolean((userData as any).onboardingComplete);
-  const isVCVerified = Boolean((userData as any).is_vc_verified);
+  const hasCompletedOnboarding = Boolean(userData.onboardingComplete);
+  const isVCVerified = Boolean(userData.is_vc_verified);
 
   if (
     requiredIntent === "sell" &&
@@ -92,7 +81,12 @@ export const PublicOnlyRoute = ({ children }: RouteProps) => {
   }
 
   if (user) {
-    return <Navigate to={homePathForIntent(userData.intent)} replace />;
+    // If the user is coming back from a cold start (Android killed the
+    // process while backgrounded, or the tab reloaded), restore them to the
+    // last screen they were on instead of dumping them at home. The stored
+    // path is cleared on logout so a different user's session starts fresh.
+    const savedPath = getSavedRestorePath();
+    return <Navigate to={savedPath || homePathForIntent(userData.intent)} replace />;
   }
 
   return <>{children}</>;
@@ -114,12 +108,3 @@ export const IntentAccessRoute = ({ children }: RouteProps) => {
   return <>{children}</>;
 };
 
-export const VerificationRoute = ({ children }: RouteProps) => {
-  const { isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  return <>{children}</>;
-};

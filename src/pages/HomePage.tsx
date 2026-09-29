@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
-  CheckCircle,
   RefreshCw,
   ShieldAlert,
   Sun,
@@ -13,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from "@/hooks/useUserData";
 import { usePublishedTrades } from "@/hooks/usePublishedTrades";
 import { useVCStatus } from "@/hooks/useVCStatus";
-import { getAuthHeaders } from "@/services/authHeaders";
+import { getTradeHistory } from "@/services/tradeService";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
@@ -42,9 +41,8 @@ const HomePage = () => {
   const [earningsView, setEarningsView] = useState<"published" | "completed">("published");
 
   const justPublished = location.state?.justPublished ?? false;
-  const isVCVerified = Boolean((userData as any)?.is_vc_verified);
+  const isVCVerified = Boolean(userData?.is_vc_verified);
   const hasPublished = tradesData.plannedTrades.length > 0;
-  const confirmedCount = tradesData.confirmedTrades.length;
 
   // Calculate metrics based on view
   const publishedAvgRate = plannedUnits > 0 ? plannedEarnings / plannedUnits : 0;
@@ -56,14 +54,14 @@ const HomePage = () => {
       units: plannedUnits,
       avgRate: publishedAvgRate,
       confirmed: confirmedUnits,
-      description: "Total earnings from your published catalog.",
+      description: "Total value of your published catalog.",
     },
     completed: {
       earnings: confirmedEarnings,
       units: confirmedUnits,
       avgRate: completedAvgRate,
       confirmed: confirmedUnits,
-      description: "Total earnings from confirmed trades.",
+      description: "Value of confirmed trades. Actual payouts appear in Earnings.",
     },
   };
 
@@ -74,24 +72,17 @@ const HomePage = () => {
     const fetchPublishedTrades = async () => {
       if (!userData?.phone_number) return;
       try {
-        const headers = await getAuthHeaders();
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
-        const response = await fetch(`${backendUrl}/api/trades`, { headers });
-        if (response.ok) {
-          const data = await response.json();
-          // Extract published trades from response
-          const trades = data.items
-            ?.filter((item: any) => item.status === "PUBLISHED")
-            .map((item: any) => ({
-              id: item.catalog_id,
-              time: `${item.delivery_start} – ${item.delivery_end}`,
-              kWh: parseFloat(item.quantity || 0),
-              rate: parseFloat(item.price_per_unit || 0),
-            })) || [];
+        const trades = (await getTradeHistory("seller"))
+          .filter((item) => item.status === "PUBLISHED")
+          .map((item) => ({
+            id: item.catalog_id,
+            time: `${item.delivery_start} – ${item.delivery_end}`,
+            kWh: item.quantity ?? 0,
+            rate: item.price_per_unit ?? 0,
+          }));
 
-          if (trades.length > 0) {
-            publishTrades(trades);
-          }
+        if (trades.length > 0) {
+          publishTrades(trades);
         }
       } catch (err) {
         console.error("Failed to fetch published trades:", err);
@@ -115,7 +106,7 @@ const HomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Greeting row */}
           <div className="flex items-center justify-between gap-3 fade-in opacity-0">
@@ -174,8 +165,8 @@ const HomePage = () => {
               Hairline divider separates the hero amount from the stats. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Earnings overview
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Trade value
               </p>
               <div className="flex items-center gap-1 rounded-full bg-muted p-0.5">
                 <button
@@ -201,8 +192,14 @@ const HomePage = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
-              <p className="flex items-baseline gap-1 text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              {/* Large faint bolt watermark (energy theme) */}
+              <Zap
+                aria-hidden
+                strokeWidth={0}
+                className="pointer-events-none absolute -right-4 top-2 h-28 w-28 fill-primary/[0.07] text-transparent"
+              />
+              <p className="relative flex items-baseline gap-1 text-4xl font-light tracking-tight text-accent nums sm:text-5xl">
                 ₹{currentData.earnings.toLocaleString("en-IN")}
               </p>
               <span aria-hidden className="mt-1 block h-[2px] w-8 rounded-full bg-primary" />
@@ -249,7 +246,7 @@ const HomePage = () => {
               No stripe. A solid blue left-edge accent bar carries the persona
               identity instead. */}
           <div className="space-y-2">
-            <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Next action
             </p>
             <button
@@ -274,7 +271,7 @@ const HomePage = () => {
                                shadow-[0_6px_14px_-6px_rgba(36,40,128,0.45)]
                                transition-transform duration-300 ease-out
                                group-hover:scale-105">
-                <Sun className="h-5 w-5" />
+                <Sun className="spin-sun h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold text-foreground sm:text-lg">
@@ -318,7 +315,7 @@ const HomePage = () => {
           {/* Recently confirmed feed — only if any */}
           {tradesData.confirmedTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Recently confirmed
               </p>
               <div className="space-y-2">
