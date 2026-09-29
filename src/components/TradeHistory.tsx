@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTradeHistory } from "@/hooks/useTradeHistory";
 import { formatRupees, getBuyerRefunds, type Refund } from "@/services/settlementService";
-import { AlertCircle, Clock, ReceiptText, Undo2 } from "lucide-react";
+import { ZapOff, Clock, ReceiptText, Sun, Undo2, Zap } from "lucide-react";
 
 interface TradeHistoryProps {
   role: "buyer" | "seller";
@@ -18,7 +18,7 @@ interface TradeHistoryProps {
 const statusTone = (status: string): string => {
   switch (status) {
     case "CONFIRMED":
-      return "bg-accent/12 text-accent";
+      return "bg-accent/10 text-accent";
     case "PUBLISHED":
     case "INITIATED":
     case "SELECTED":
@@ -31,23 +31,19 @@ const statusTone = (status: string): string => {
   }
 };
 
-/** Stripe colour per persona — buyer = green, seller = blue. */
-const stripeBgFor = (role: "buyer" | "seller") =>
-  role === "seller" ? "bg-primary/12" : "bg-accent/15";
+/** Statuses where energy is still moving — shown with a blinking charge bolt. */
+const IN_PROGRESS = new Set(["INITIATED", "SELECTED", "CONFIRMING"]);
 
-const TradeSkeleton = ({ role = "buyer" }: { role?: "buyer" | "seller" }) => (
-  <div className="overflow-hidden rounded-xl border border-primary/12 bg-card shadow-[0_6px_18px_-12px_rgba(36,40,128,0.18)]">
-    <div className={`${stripeBgFor(role)} px-4 py-3`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
-        <div className="h-5 w-20 rounded-full bg-foreground/10 animate-pulse" />
-      </div>
-      <div className="mt-2 h-2.5 w-24 rounded bg-foreground/10 animate-pulse" />
+const TradeSkeleton = () => (
+  <div className="flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3.5">
+    <div className="h-9 w-9 shrink-0 rounded-[11px] bg-foreground/10 animate-pulse" />
+    <div className="min-w-0 flex-1 space-y-2">
+      <div className="h-3.5 w-32 rounded bg-foreground/10 animate-pulse" />
+      <div className="h-2.5 w-44 rounded bg-foreground/10 animate-pulse" />
     </div>
-    <div className="space-y-3 px-4 py-4">
-      <div className="h-7 w-28 rounded bg-foreground/10 animate-pulse" />
-      <div className="h-3 w-44 rounded bg-foreground/10 animate-pulse" />
-      <div className="h-3 w-36 rounded bg-foreground/10 animate-pulse" />
+    <div className="space-y-2">
+      <div className="h-3.5 w-16 rounded bg-foreground/10 animate-pulse" />
+      <div className="h-4 w-20 rounded-full bg-foreground/10 animate-pulse" />
     </div>
   </div>
 );
@@ -101,7 +97,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
     return (
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
-          <TradeSkeleton key={i} role={role} />
+          <TradeSkeleton key={i} />
         ))}
       </div>
     );
@@ -110,7 +106,7 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
   if (error) {
     return (
       <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
-        <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground">Couldn't load purchase history</p>
           <p className="mt-1 break-words text-muted-foreground">{error}</p>
@@ -119,9 +115,58 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
     );
   }
 
+  // Group the visible trades by delivery day ("Today", "Yesterday", "24 Sep").
+  const groups: Array<{ day: string; items: typeof filteredTrades }> = [];
+  for (const trade of filteredTrades) {
+    const day = dayLabel(trade.deliveryStart || trade.deliveryEnd);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) last.items.push(trade);
+    else groups.push({ day, items: [trade] });
+  }
+
+  // Month summary over the trades already loaded (no extra requests).
+  const now = new Date();
+  const monthTrades = trades.filter((t) => {
+    const iso = t.deliveryStart || t.deliveryEnd;
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthKwh = monthTrades.reduce((sum, t) => sum + (t.quantity || 0), 0);
+  const monthAmount = monthTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+
   return (
     <div className="space-y-4">
-      {/* Status filter — pill row, persona green for active */}
+      {monthTrades.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-[0_6px_18px_-12px_rgba(20,24,100,0.25)]">
+          <div className="flex items-center justify-between">
+            <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              {now.toLocaleDateString("en-IN", { month: "long" })}
+            </p>
+            <span className="text-xs text-muted-foreground nums">
+              {monthTrades.length} {monthTrades.length === 1 ? "order" : "orders"}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 border-t border-border pt-3">
+            <div>
+              <p className="text-lg font-medium tracking-tight text-foreground nums">{monthKwh.toFixed(2)}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                kWh {role === "buyer" ? "bought" : "sold"}
+              </p>
+            </div>
+            <div className="border-l border-border pl-3">
+              <p className="text-lg font-medium tracking-tight text-foreground nums">
+                ₹{monthAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              </p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                {role === "buyer" ? "Spent" : "Trade value"}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Status filter chips */}
       {statuses.length > 0 && (
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-x-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <FilterPill
@@ -129,7 +174,6 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
             isActive={selectedStatus === null}
             count={trades.length}
             onClick={() => setSelectedStatus(null)}
-            role={role}
           />
           {statuses.map((status) => (
             <FilterPill
@@ -138,7 +182,6 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
               isActive={selectedStatus === status}
               count={trades.filter((t) => t.backendStatus === status).length}
               onClick={() => setSelectedStatus(status)}
-              role={role}
             />
           ))}
         </div>
@@ -158,89 +201,95 @@ export const TradeHistory = ({ role, buyerPhone }: TradeHistoryProps) => {
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredTrades.map((trade) => {
-            const tradeId = trade.transactionId || trade.catalogId;
-            const refund =
-              role === "buyer" && trade.transactionId
-                ? refundsByTxn[trade.transactionId]
-                : undefined;
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <div key={group.day}>
+              <p className="px-1 pb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                {group.day}
+              </p>
+              <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                {group.items.map((trade) => {
+                  const tradeId = trade.transactionId || trade.catalogId;
+                  const refund =
+                    role === "buyer" && trade.transactionId
+                      ? refundsByTxn[trade.transactionId]
+                      : undefined;
+                  const deliveryWindow = formatDeliveryWindow(trade.deliveryStart, trade.deliveryEnd);
 
-            return (
-              <div
-                key={tradeId}
-                className="block w-full overflow-hidden rounded-xl border border-primary/12 bg-card text-left
-                           shadow-[0_6px_18px_-12px_rgba(36,40,128,0.18)]"
-              >
-                {/* Persona-coloured stripe — green for buyer, blue for seller */}
-                <div className={`${stripeBgFor(role)} px-4 py-3`}>
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {trade.title || "Trade"}
-                      </p>
-                      {trade.subtitle && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {trade.subtitle}
+                  return (
+                    <div key={tradeId} className="flex items-start gap-3 px-4 py-3.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-primary/10 text-primary">
+                        <Sun className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">{trade.title || "Trade"}</p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground nums">
+                          {trade.quantity ? `${trade.quantity.toFixed(2)} kWh` : trade.subtitle}
+                          {deliveryWindow && (
+                            <>
+                              {" · "}
+                              <Clock className="inline h-3 w-3 align-[-2px]" /> {deliveryWindow}
+                            </>
+                          )}
                         </p>
-                      )}
+
+                        {/* Refund chip — real money state from the payments system */}
+                        {refund && (
+                          <span
+                            className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider nums ${
+                              refund.status === "PROCESSED"
+                                ? "bg-accent/10 text-accent"
+                                : refund.status === "FAILED"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-primary/10 text-primary"
+                            }`}
+                          >
+                            <Undo2 className="h-2.5 w-2.5" />
+                            {refund.status === "PROCESSED"
+                              ? `Refunded ${formatRupees(refund.amount_paise)}`
+                              : refund.status === "FAILED"
+                                ? "Refund failed — contact support"
+                                : `Refund of ${formatRupees(refund.amount_paise)} processing`}
+                          </span>
+                        )}
+
+                        {tradeId && (
+                          <p className="mt-1 break-all text-[10px] text-muted-foreground/80 nums">ID {tradeId}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <p className="text-sm font-semibold text-foreground nums">₹{trade.totalAmount.toFixed(2)}</p>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider nums ${statusTone(trade.backendStatus)}`}
+                        >
+                          {IN_PROGRESS.has(trade.backendStatus) && (
+                            <Zap aria-hidden strokeWidth={0} className="charge-blink h-2.5 w-2.5 fill-current" />
+                          )}
+                          {trade.backendStatus || "PENDING"}
+                        </span>
+                      </div>
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider nums ${statusTone(trade.backendStatus)}`}
-                    >
-                      {trade.backendStatus || "PENDING"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Body — amount hero + meta */}
-                <div className="space-y-2 px-4 py-3">
-                  <p className="text-2xl font-semibold tracking-tight text-foreground nums">
-                    ₹{trade.totalAmount.toFixed(2)}
-                  </p>
-
-                  {/* Refund chip — real money state from the payments system */}
-                  {refund && (
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider nums ${
-                        refund.status === "PROCESSED"
-                          ? "bg-accent/12 text-accent"
-                          : refund.status === "FAILED"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      <Undo2 className="h-2.5 w-2.5" />
-                      {refund.status === "PROCESSED"
-                        ? `Refunded ${formatRupees(refund.amount_paise)}`
-                        : refund.status === "FAILED"
-                          ? "Refund failed — contact support"
-                          : `Refund of ${formatRupees(refund.amount_paise)} processing`}
-                    </span>
-                  )}
-
-                  {(trade.deliveryStart || trade.deliveryEnd) && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5 shrink-0 text-accent" />
-                      <span className="nums">{formatDeliveryWindow(trade.deliveryStart, trade.deliveryEnd)}</span>
-                    </div>
-                  )}
-
-                  {tradeId && (
-                    <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
-                      <span className="shrink-0 font-medium uppercase tracking-wider">ID</span>
-                      <span className="min-w-0 flex-1 break-all nums">{tradeId}</span>
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
-
     </div>
   );
+};
+
+/** "Today" / "Yesterday" / "24 Sep" for grouping; "Undated" when missing. */
+const dayLabel = (iso?: string): string => {
+  if (!iso) return "Undated";
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 };
 
 /**
@@ -257,51 +306,37 @@ const formatDeliveryWindow = (start?: string, end?: string): string => {
   return "";
 };
 
-/**
- * Filter chip — buyer = green active, seller = blue active.
- */
+/** Filter chip — primary when active (matches the marketplace chips). */
 const FilterPill = ({
   label,
   isActive,
   count,
   onClick,
-  role,
 }: {
   label: string;
   isActive: boolean;
   count: number;
   onClick: () => void;
-  role: "buyer" | "seller";
-}) => {
-  const activeTone =
-    role === "seller"
-      ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_12px_-6px_rgba(36,40,128,0.45)]"
-      : "border-accent bg-accent text-accent-foreground shadow-[0_4px_12px_-6px_rgba(31,138,82,0.45)]";
-  const restHover =
-    role === "seller"
-      ? "hover:border-primary/40 hover:text-foreground"
-      : "hover:border-accent/40 hover:text-foreground";
-  return (
+}) => (
   <button
     type="button"
     onClick={onClick}
     aria-pressed={isActive}
-    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-wider
+    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold
                 transition-all duration-200 ease-out
                 ${
                   isActive
-                    ? activeTone
-                    : `border-border bg-card text-muted-foreground ${restHover} hover:-translate-y-0.5`
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 }`}
   >
     {label}
     <span
       className={`nums rounded-full px-1.5 py-0.5 text-[10px] ${
-        isActive ? "bg-accent-foreground/15 text-accent-foreground" : "bg-secondary text-muted-foreground"
+        isActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-secondary text-muted-foreground"
       }`}
     >
       {count}
     </span>
   </button>
-  );
-};
+);

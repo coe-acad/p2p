@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { Link } from "react-router-dom";
 import {
   RecaptchaVerifier,
@@ -10,7 +11,7 @@ import {
 import { Capacitor, PluginListenerHandle } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth, isPhoneVerificationDisabledForTesting } from "@/lib/firebase";
-import { Loader2 } from "lucide-react";
+import { Zap } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -298,21 +299,18 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
   };
 
   return (
-    <div className="min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
+    <div className="circuit-bg min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-sm">
           {step === "phone" && (
             <form onSubmit={handlePhoneFormSubmit} className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <BrandMark size="lg" orb />
               </div>
 
               <div className="text-center">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
+                <h1 className="kicker-zap text-sm font-medium uppercase tracking-[0.18em] text-accent">
                   Peer-to-peer solar trading
-                </p>
-                <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
-                  Start trading energy in a flow designed for mobile.
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Your solar. Your choice.
@@ -356,7 +354,14 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                 className="w-full"
                 size="lg"
               >
-                {isSendingOtp ? <Loader2 className="animate-spin" /> : "Continue"}
+                {isSendingOtp ? (
+                  <EnergyLoader label="Sending code" />
+                ) : (
+                  <>
+                    Continue
+                    <Zap className="btn-zap fill-current" strokeWidth={0} />
+                  </>
+                )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
@@ -376,7 +381,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
           {step === "otp" && (
             <div className="flex flex-col gap-6 slide-up">
               <div className="flex justify-center">
-                <BrandMark size="lg" />
+                <BrandMark size="lg" orb />
               </div>
 
               <div className="text-center">
@@ -402,16 +407,19 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                   autoFocus
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  containerClassName="gap-1.5 sm:gap-2"
+                  containerClassName="gap-0"
                 >
-                  <InputOTPGroup className="gap-1.5 sm:gap-2">
+                  {/* Connected boxes in one card; the active box gets the brand ring. */}
+                  <InputOTPGroup
+                    className={`gap-0 overflow-hidden rounded-xl border bg-card shadow-[0_6px_18px_-12px_rgba(20,24,100,0.25)] ${
+                      otpError ? "border-destructive" : "border-input"
+                    }`}
+                  >
                     {[0, 1, 2, 3, 4, 5].map((i) => (
                       <InputOTPSlot
                         key={i}
                         index={i}
-                        className={`h-12 w-10 rounded-md border bg-card text-base font-medium first:rounded-md last:rounded-md sm:w-11 ${
-                          otpError ? "border-destructive" : ""
-                        }`}
+                        className="h-14 w-11 rounded-none border-0 border-l border-border bg-transparent text-xl font-medium first:rounded-none first:border-l-0 last:rounded-none sm:w-12"
                       />
                     ))}
                   </InputOTPGroup>
@@ -419,7 +427,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
 
                 {isVerifying && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <EnergyLoader size={20} className="text-primary" label="Verifying" />
                     Verifying
                   </div>
                 )}
@@ -429,7 +437,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
               <div className="text-center text-sm text-muted-foreground">
                 {resendIn > 0 ? (
                   <>
-                    Didn't get it? Resend in <span className="nums text-foreground">0:{String(resendIn).padStart(2, "0")}</span>
+                    Didn't get it? <span className="font-semibold text-primary">Resend in <span className="nums">0:{String(resendIn).padStart(2, "0")}</span></span>
                   </>
                 ) : (
                   <>
@@ -437,7 +445,7 @@ const VerificationScreen = ({ onVerified }: VerificationScreenProps) => {
                     <button
                       type="button"
                       onClick={handleResend}
-                      className="text-foreground font-medium underline-offset-4 hover:underline"
+                      className="font-semibold text-primary underline-offset-4 hover:underline"
                     >
                       Resend code
                     </button>

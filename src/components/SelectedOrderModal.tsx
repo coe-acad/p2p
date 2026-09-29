@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -6,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EnergyListing } from "@/hooks/useDiscoverListings";
-import { AlertCircle, ArrowRight, Clock, Loader2, Zap } from "lucide-react";
+import { ZapOff, ArrowRight, Clock, Zap } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface SelectedOrderModalProps {
@@ -72,11 +73,11 @@ export const SelectedOrderModal = ({
 
         {/* GPay-style: recipient pill at top */}
         <div className="flex flex-col items-center gap-3 px-6 pt-7">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-base font-semibold text-accent">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-base font-semibold text-accent ring-8 ring-accent/[0.06]">
             {sellerInitial(listing.seller_name)}
           </span>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Paying</p>
+            <p className="kicker-zap text-xs uppercase tracking-[0.16em] text-accent">Paying</p>
             <p className="mt-0.5 truncate text-base font-semibold text-foreground">
               {listing.seller_name || "Unknown seller"}
             </p>
@@ -85,7 +86,7 @@ export const SelectedOrderModal = ({
 
         {/* Big amount — the hero */}
         <div className="mt-4 flex flex-col items-center px-6">
-          <p className="text-5xl font-semibold tracking-tight text-foreground nums sm:text-6xl">
+          <p className="text-5xl font-light tracking-tight text-foreground nums sm:text-6xl">
             ₹{totalAmount.toFixed(2)}
           </p>
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground nums">
@@ -113,7 +114,7 @@ export const SelectedOrderModal = ({
         {/* Error inline */}
         {error && (
           <div className="mx-6 mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
             <span className="text-foreground break-words">{error}</span>
           </div>
         )}
@@ -136,7 +137,7 @@ export const SelectedOrderModal = ({
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <EnergyLoader label="Getting quote" />
                 Getting quote
               </>
             ) : (

@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
+import { useTheme } from "next-themes";
+import { BorderBeam } from "border-beam";
 import { SearchFilters } from "@/hooks/useDiscoverListings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +19,7 @@ interface SearchListingsProps {
  */
 export const SearchListings = ({ onSearch, onClearFilters, isLoading = false }: SearchListingsProps) => {
   const [showFilters, setShowFilters] = useState(false);
+  const { resolvedTheme } = useTheme();
   const [sellerName, setSellerName] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -53,8 +57,24 @@ export const SearchListings = ({ onSearch, onClearFilters, isLoading = false }: 
     <div className="w-full space-y-3">
       {/* Main search bar — submit-on-Enter, no separate button */}
       <div className="flex gap-2">
+        {/* While results load, a beam runs along the bar and a scanning orb replaces the icon. */}
+        <BorderBeam
+          size="line"
+          colorVariant="ocean"
+          theme={resolvedTheme === "dark" ? "dark" : "light"}
+          active={isLoading}
+          className="flex-1"
+        >
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {isLoading ? (
+            <EnergyLoader
+              size={20}
+              label="Searching listings"
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-primary"
+            />
+          ) : (
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             placeholder="Search by seller name"
             value={sellerName}
@@ -70,6 +90,7 @@ export const SearchListings = ({ onSearch, onClearFilters, isLoading = false }: 
             enterKeyHint="search"
           />
         </div>
+        </BorderBeam>
         <Button
           variant="outline"
           size="default"

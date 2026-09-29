@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle, ChevronDown, ShieldAlert, Timer, Zap } from "lucide-react";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -145,7 +146,7 @@ const TodayTradesPage = () => {
   if (!vcLoading && !hasGenerationVC && !isVCVerified) {
     return (
       <MainAppShell>
-        <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
           <PageContainer gap={4}>
             <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
@@ -169,7 +170,7 @@ const TodayTradesPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Heading row */}
           <div className="flex items-center gap-2 fade-in opacity-0">
@@ -191,7 +192,7 @@ const TodayTradesPage = () => {
           {/* Summary — blue hero amount, green confirmed chip */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Earned so far
               </p>
               {confirmedTrades.length > 0 && (
@@ -202,8 +203,14 @@ const TodayTradesPage = () => {
               )}
             </div>
 
-            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
-              <p className="text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              {/* Large faint bolt watermark (energy theme) */}
+              <Zap
+                aria-hidden
+                strokeWidth={0}
+                className="pointer-events-none absolute -right-4 top-2 h-28 w-28 fill-primary/[0.07] text-transparent"
+              />
+              <p className="relative text-4xl font-light tracking-tight text-accent nums sm:text-5xl">
                 ₹{confirmedEarnings.toLocaleString("en-IN")}
               </p>
               <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
@@ -216,9 +223,7 @@ const TodayTradesPage = () => {
           {/* Loading state */}
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Timer className="h-5 w-5 animate-spin" />
-              </span>
+              <EnergyLoader size={64} className="text-primary" label="Loading today's trades" />
               <p className="text-sm text-muted-foreground">Loading today's trades…</p>
             </div>
           )}
@@ -226,7 +231,7 @@ const TodayTradesPage = () => {
           {/* Confirmed section — hourly summary with expansion */}
           {!loading && confirmedTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Confirmed by time
               </p>
               <div className="space-y-2">
@@ -313,7 +318,7 @@ const TodayTradesPage = () => {
           {/* Awaiting buyers section — hourly summary with expansion */}
           {!loading && pendingTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Available slots by time
               </p>
               <div className="space-y-2">

@@ -1,13 +1,13 @@
 import { BACKEND_URL } from "@/services/apiClient";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertCircle,
+  ZapOff,
   ArrowLeft,
   Check,
   CheckCircle,
   Pencil,
-  RefreshCw,
   ShieldAlert,
   Sun,
   Trash2,
@@ -527,7 +527,7 @@ const TomorrowTradesPage = () => {
   if (!vcLoading && !hasGenerationVC && !isVCVerified) {
     return (
       <MainAppShell>
-        <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+        <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
           <PageContainer gap={4}>
             <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/[0.06] p-4 slide-up">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
@@ -551,7 +551,7 @@ const TomorrowTradesPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Heading row with toggle */}
           <div className="flex items-center gap-2 fade-in opacity-0">
@@ -599,7 +599,7 @@ const TomorrowTradesPage = () => {
 
           {/* Add Offer Form */}
           <div className="space-y-2">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Add offer to catalog
             </p>
             <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -657,7 +657,7 @@ const TomorrowTradesPage = () => {
           {/* Current Draft */}
           {currentDraft && currentDraft.trades.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Current draft
               </p>
               <div className="rounded-2xl border border-primary/20 bg-card p-4">
@@ -821,9 +821,7 @@ const TomorrowTradesPage = () => {
           {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <RefreshCw className="h-5 w-5 animate-spin" />
-              </span>
+              <EnergyLoader size={64} className="text-primary" label="Loading tomorrow's offers" />
               <p className="text-sm text-muted-foreground">Loading tomorrow's offers…</p>
             </div>
           )}
@@ -831,7 +829,7 @@ const TomorrowTradesPage = () => {
           {/* Error */}
           {error && !loading && (
             <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-foreground">
                   {!hasGenerationVC ? "Credentials required" : "Couldn't load offers"}
@@ -853,7 +851,7 @@ const TomorrowTradesPage = () => {
               {/* Expected Earnings — blue identity frame, green hero amount */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                     Excess energy (auto-generated)
                   </p>
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary nums">
@@ -876,7 +874,7 @@ const TomorrowTradesPage = () => {
               {/* Planned Trades */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                     Planned trades
                   </p>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground nums">

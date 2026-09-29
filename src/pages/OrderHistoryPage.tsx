@@ -6,7 +6,7 @@ import { ReceiptText } from "lucide-react";
 const OrderHistoryPage = () => {
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={4}>
           <div className="flex items-center gap-3 fade-in opacity-0">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">

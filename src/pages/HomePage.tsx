@@ -106,7 +106,7 @@ const HomePage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Greeting row */}
           <div className="flex items-center justify-between gap-3 fade-in opacity-0">
@@ -165,7 +165,7 @@ const HomePage = () => {
               Hairline divider separates the hero amount from the stats. */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Trade value
               </p>
               <div className="flex items-center gap-1 rounded-full bg-muted p-0.5">
@@ -192,8 +192,14 @@ const HomePage = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
-              <p className="flex items-baseline gap-1 text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              {/* Large faint bolt watermark (energy theme) */}
+              <Zap
+                aria-hidden
+                strokeWidth={0}
+                className="pointer-events-none absolute -right-4 top-2 h-28 w-28 fill-primary/[0.07] text-transparent"
+              />
+              <p className="relative flex items-baseline gap-1 text-4xl font-light tracking-tight text-accent nums sm:text-5xl">
                 ₹{currentData.earnings.toLocaleString("en-IN")}
               </p>
               <span aria-hidden className="mt-1 block h-[2px] w-8 rounded-full bg-primary" />
@@ -240,7 +246,7 @@ const HomePage = () => {
               No stripe. A solid blue left-edge accent bar carries the persona
               identity instead. */}
           <div className="space-y-2">
-            <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Next action
             </p>
             <button
@@ -265,7 +271,7 @@ const HomePage = () => {
                                shadow-[0_6px_14px_-6px_rgba(36,40,128,0.45)]
                                transition-transform duration-300 ease-out
                                group-hover:scale-105">
-                <Sun className="h-5 w-5" />
+                <Sun className="spin-sun h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold text-foreground sm:text-lg">
@@ -309,7 +315,7 @@ const HomePage = () => {
           {/* Recently confirmed feed — only if any */}
           {tradesData.confirmedTrades.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Recently confirmed
               </p>
               <div className="space-y-2">

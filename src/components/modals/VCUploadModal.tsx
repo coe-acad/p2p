@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { FileText, Loader2, Upload, X } from "lucide-react";
+import { EnergyLoader } from "@/components/EnergyLoader";
+import { FileText, Upload, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -227,7 +228,7 @@ const VCUploadModal = ({ isOpen, onClose, onSuccess }: VCUploadModalProps) => {
           )}
 
           <Button onClick={handleUpload} disabled={!uploadedFile || isLoading} size="lg" className="w-full">
-            {isLoading ? <Loader2 className="animate-spin" /> : "Verify and continue"}
+            {isLoading ? <EnergyLoader label="Verifying" /> : "Verify and continue"}
           </Button>
         </div>
       </DialogContent>
