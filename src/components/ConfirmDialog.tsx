@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2 } from "lucide-react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -75,7 +75,7 @@ export const ConfirmDialog = ({
                 : "flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
             }
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : proceedLabel}
+            {loading ? <EnergyLoader /> : proceedLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

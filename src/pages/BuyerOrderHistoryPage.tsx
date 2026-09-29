@@ -9,7 +9,7 @@ const BuyerOrderHistoryPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={4}>
           {/* Page heading */}
           <div className="flex items-center gap-3 fade-in opacity-0">

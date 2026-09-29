@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useNavigate } from "react-router-dom";
 import MainAppShell from "@/components/layout/MainAppShell";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -13,7 +14,6 @@ import {
   Copy,
   FileText,
   Fingerprint,
-  Loader2,
   RotateCw,
 } from "lucide-react";
 
@@ -70,7 +70,7 @@ const VCPage = () => {
   // Strings are written out in full so Tailwind's JIT scanner picks them up.
   const tone = isBuyer
     ? {
-        heroBg: "bg-accent",
+        heroBg: "bg-accent text-accent-foreground ring-8 ring-accent/10",
         heroShadow: "shadow-[0_10px_24px_-10px_rgba(31,138,82,0.55)]",
         kicker: "text-accent",
         subjectBorder: "border-accent/25",
@@ -87,7 +87,7 @@ const VCPage = () => {
         metaIconText: "text-primary",
       }
     : {
-        heroBg: "bg-primary",
+        heroBg: "bg-primary text-primary-foreground ring-8 ring-primary/10",
         heroShadow: "shadow-[0_10px_24px_-10px_rgba(36,40,128,0.55)]",
         kicker: "text-primary",
         subjectBorder: "border-primary/25",
@@ -197,11 +197,11 @@ const VCPage = () => {
       <PageContainer gap={4}>
         {/* Hero — verified identity badge */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className={`relative flex h-16 w-16 items-center justify-center rounded-full ${tone.heroBg} text-white ${tone.heroShadow}`}>
+          <span className={`relative flex h-16 w-16 items-center justify-center rounded-full ${tone.heroBg} ${tone.heroShadow}`}>
             <BadgeCheck className="h-8 w-8" strokeWidth={2.5} />
           </span>
           <div>
-            <p className={`text-xs font-medium uppercase tracking-[0.18em] ${tone.kicker}`}>
+            <p className={`kicker-zap text-xs font-medium uppercase tracking-[0.18em] ${tone.kicker}`}>
               Verified · VC Documents
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
@@ -313,7 +313,7 @@ const VCPage = () => {
                 disabled={clearing}
                 className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Clear & continue"}
+                {clearing ? <EnergyLoader /> : "Clear & continue"}
               </Button>
             </div>
           </div>

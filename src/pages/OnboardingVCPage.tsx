@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, Upload, X } from "lucide-react";
+import { FileText, Upload, X, Zap } from "lucide-react";
+import { useTheme } from "next-themes";
+import { BorderBeam } from "border-beam";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +28,8 @@ const OnboardingVCPage = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const intent = userData?.intent;
   const homeRoute = intent === "buy" ? "/buyer-home" : "/home";
@@ -177,7 +182,7 @@ const OnboardingVCPage = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
+    <div className="circuit-bg min-h-screen min-h-svh min-h-dvh flex flex-col bg-background">
       <main className="flex-1 flex items-center justify-center px-6 py-12 sm:px-8">
         <div className="w-full max-w-md flex flex-col gap-8 slide-up">
           <div className="flex justify-center">
@@ -185,7 +190,7 @@ const OnboardingVCPage = () => {
           </div>
 
           <div className="text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">
+            <p className="kicker-zap text-sm font-medium uppercase tracking-[0.18em] text-accent">
               Step 3 of 3
             </p>
             <h1 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
@@ -197,6 +202,8 @@ const OnboardingVCPage = () => {
           </div>
 
           {!uploadedFile ? (
+            // Soft breathing border (border-beam) invites the upload.
+            <BorderBeam size="pulse-inner" colorVariant="ocean" theme={isDark ? "dark" : "light"} strength={0.6} borderRadius={12}>
             <div
               role="button"
               tabIndex={0}
@@ -214,10 +221,10 @@ const OnboardingVCPage = () => {
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors cursor-pointer ${
-                dragOver ? "border-primary bg-primary/[0.04]" : "border-border bg-card hover:border-foreground/30"
+                dragOver ? "border-primary bg-primary/[0.08]" : "border-border bg-primary/[0.04] hover:border-primary/40"
               }`}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-card text-primary shadow-sm">
                 <Upload className="h-5 w-5" />
               </span>
               <div>
@@ -234,10 +241,11 @@ const OnboardingVCPage = () => {
                 disabled={isLoading}
               />
             </div>
+            </BorderBeam>
           ) : (
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <FileText className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -259,15 +267,22 @@ const OnboardingVCPage = () => {
 
           <div className="flex flex-col gap-3">
             <Button onClick={handleUpload} disabled={!uploadedFile || isLoading} size="lg" className="w-full">
-              {isLoading ? <Loader2 className="animate-spin" /> : "Verify and continue"}
+              {isLoading ? (
+                <EnergyLoader label="Verifying" />
+              ) : (
+                <>
+                  Verify and continue
+                  <Zap className="btn-zap fill-current" strokeWidth={0} />
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"
               onClick={handleSkip}
               disabled={isLoading}
-              className="w-full text-muted-foreground transition-colors duration-200
-                         hover:bg-accent/8 hover:text-foreground
-                         focus-visible:bg-accent/10"
+              className="w-full bg-accent/10 font-semibold text-accent transition-colors duration-200
+                         hover:bg-accent/15 hover:text-accent
+                         focus-visible:bg-accent/15"
             >
               Skip for now
             </Button>

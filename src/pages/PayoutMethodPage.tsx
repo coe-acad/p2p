@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  AlertCircle,
+  ZapOff,
   ArrowRight,
   CheckCircle,
   Landmark,
-  Loader2,
   Lock,
   Smartphone,
   Wallet,
@@ -91,7 +91,7 @@ const CurrentMethodCard = ({ account, justSaved }: CurrentMethodCardProps) => {
 
   return (
     <div className="space-y-2">
-      <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Current method
       </p>
       <div className="rounded-xl border border-border bg-card p-4">
@@ -285,7 +285,7 @@ const PayoutMethodPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Heading — blue icon tile for seller persona */}
           <div className="flex items-center gap-3 fade-in opacity-0">
@@ -305,7 +305,7 @@ const PayoutMethodPage = () => {
           {/* Error banner */}
           {error && (
             <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-foreground">Something went wrong</p>
                 <p className="mt-1 break-words text-muted-foreground">{error}</p>
@@ -337,7 +337,7 @@ const PayoutMethodPage = () => {
 
               {formVisible && (
                 <div className="space-y-2">
-                  <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <p className="kicker-zap px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                     Add payout method
                   </p>
                   <div className="rounded-xl border border-border bg-card p-4">
@@ -507,7 +507,7 @@ const PayoutMethodPage = () => {
                       <Button type="submit" className="w-full" disabled={!formValid || submitting}>
                         {submitting ? (
                           <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <EnergyLoader />
                             Saving…
                           </>
                         ) : (

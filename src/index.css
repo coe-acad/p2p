@@ -9,17 +9,17 @@
 @layer base {
   :root {
     /* Core — soft tinted yellow surface (Atria warmth), white cards on top for contrast */
-    --background: 48 38% 97%;
-    --foreground: 222 16% 12%;
+    --background: 46 40% 97%;
+    --foreground: 224 20% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 16% 12%;
+    --card-foreground: 224 20% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 16% 12%;
+    --popover-foreground: 224 20% 11%;
 
     /* Brand — Atria University deep blue */
-    --primary: 240 60% 42%;
+    --primary: 238 62% 40%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary — cool neutral fills */
@@ -27,26 +27,26 @@
     --secondary-foreground: 222 16% 22%;
 
     --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 222 9% 45%;
 
     /* Accent — Atria University green (used sparingly, mostly for the brand mark
        and positive signals like "available", "verified"). */
-    --accent: 144 65% 38%;
+    --accent: 145 64% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 240 60% 42%;
+    --border: 222 14% 90%;
+    --input: 222 14% 88%;
+    --ring: 238 62% 40%;
 
     --radius: 0.5rem;
 
     /* Brand tokens kept for back-compat with un-reskinned pages;
        neutralised to flat Atria fills so nothing looks neon. */
-    --solar-gradient: hsl(240 60% 42%);
-    --green-gradient: hsl(144 65% 38%);
+    --solar-gradient: hsl(238 62% 40%);
+    --green-gradient: hsl(145 64% 35%);
     --warm-gradient: hsl(220 14% 96%);
     --glow-primary: none;
     --glow-accent: none;
@@ -54,34 +54,36 @@
     /* Sidebar */
   }
 
+  /* Dark = "Midnight": deep ink surfaces, lifted Atria blue and green. */
   .dark {
-    --background: 222 18% 8%;
-    --foreground: 220 14% 96%;
+    --background: 232 41% 7%;
+    --foreground: 227 36% 95%;
 
-    --card: 222 18% 10%;
-    --card-foreground: 220 14% 96%;
+    --card: 232 40% 12%;
+    --card-foreground: 227 36% 95%;
 
-    --popover: 222 18% 10%;
-    --popover-foreground: 220 14% 96%;
+    --popover: 232 40% 12%;
+    --popover-foreground: 227 36% 95%;
 
-    --primary: 240 70% 65%;
-    --primary-foreground: 222 18% 8%;
+    --primary: 238 87% 72%;
+    --primary-foreground: 232 41% 7%;
 
-    --secondary: 222 14% 16%;
-    --secondary-foreground: 220 14% 90%;
+    --secondary: 232 37% 15%;
+    --secondary-foreground: 227 36% 90%;
 
-    --muted: 222 14% 16%;
-    --muted-foreground: 220 9% 60%;
+    --muted: 232 37% 15%;
+    --muted-foreground: 228 16% 61%;
 
-    --accent: 144 60% 48%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 151 61% 53%;
+    --accent-foreground: 232 41% 7%;
 
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 80% 69%;
+    --destructive-foreground: 232 41% 7%;
 
-    --border: 222 14% 18%;
-    --input: 222 14% 18%;
-    --ring: 240 70% 65%;
+    --border: 231 28% 19%;
+    --input: 231 28% 22%;
+    --ring: 238 87% 72%;
+
 
   }
 }
@@ -141,11 +143,11 @@
   }
 
   .btn-solar:hover {
-    background: hsl(240 60% 36%);
+    background: hsl(var(--primary) / 0.9);
   }
 
   .btn-solar:active {
-    background: hsl(240 60% 32%);
+    background: hsl(var(--primary) / 0.8);
   }
 
   .btn-solar:disabled {
@@ -222,3 +224,71 @@
   }
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Energy theme — circuit backdrop, bolt marks, charged buttons, sun.  */
+/* ------------------------------------------------------------------ */
+
+/* Faint circuit-board grid behind hero/app screens. Only sets
+   background-image, so it layers on top of bg-background's color. */
+.circuit-bg {
+  background-image:
+    radial-gradient(circle at 1px 1px, hsl(var(--border)) 1.2px, transparent 1.6px),
+    linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px);
+  background-size: 28px 28px, 84px 84px, 84px 84px;
+  background-attachment: fixed;
+}
+
+/* Small lightning bolt before kicker lines (uppercase green eyebrows). */
+.kicker-zap::before {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.45em;
+  vertical-align: -0.02em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Charged primary button: a light sheen sweeps across on hover. */
+.btn-charge {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 10px 22px -14px hsl(var(--primary));
+}
+.btn-charge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+.btn-charge:hover::after { transform: translateX(120%); }
+.btn-charge .btn-zap { transition: transform 0.2s ease; }
+.btn-charge:hover .btn-zap { transform: scale(1.2) rotate(-8deg); }
+
+/* Slowly turning sun with a soft brand-blue glow. */
+@keyframes sun-spin { to { transform: rotate(360deg); } }
+.spin-sun {
+  animation: sun-spin 9s linear infinite;
+  filter: drop-shadow(0 0 3px hsl(var(--primary) / 0.45));
+}
+
+/* EnergyLoader: the solid bolt is revealed bottom-to-top, like a battery charging. */
+@keyframes charge-fill { 0% { clip-path: inset(100% 0 0 0); } 70%, 100% { clip-path: inset(0 0 0 0); } }
+.charge-fill { animation: charge-fill 1.6s ease-in-out infinite; }
+
+/* Blinking charge bolt on "in delivery" statuses. */
+@keyframes charge-blink { 50% { opacity: 0.35; } }
+.charge-blink { animation: charge-blink 1.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-sun, .charge-blink { animation: none; }
+  .charge-fill { animation: none; clip-path: inset(40% 0 0 0); }
+  .btn-charge::after { display: none; }
+}

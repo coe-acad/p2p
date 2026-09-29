@@ -16,6 +16,7 @@ import { useLastPathRestore } from "@/hooks/useLastPathRestore";
 import IntentPage from "./pages/IntentPage";
 import VerifyPage from "./pages/VerifyPage";
 import VCPage from "./pages/VCPage";
+import ProfilePage from "./pages/ProfilePage";
 import OnboardingVCPage from "./pages/OnboardingVCPage";
 import HomePage from "./pages/HomePage";
 import BuyerHomePage from "./pages/BuyerHomePage";
@@ -63,6 +64,9 @@ const AppRoutes = () => {
 
       {/* VC details (post-upload management) - both intents */}
       <Route path="/vc" element={<VCPage />} />
+
+      {/* Profile - both intents */}
+      <Route path="/profile" element={<ProfilePage />} />
 
       {/* Seller Main App */}
       <Route path="/home" element={<RoleProtectedRoute requiredIntent="sell"><HomePage /></RoleProtectedRoute>} />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useUserData } from "@/hooks/useUserData";
 import { useVCStatus } from "@/hooks/useVCStatus";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -15,7 +16,7 @@ import { paymentIntentService } from "@/services/paymentIntentService";
 import { openRazorpayCheckout, RazorpayDismissed } from "@/lib/razorpay";
 import VCUploadModal from "@/components/modals/VCUploadModal";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw, ShieldAlert, Zap } from "lucide-react";
+import { ZapOff, RefreshCw, ShieldAlert, Zap } from "lucide-react";
 
 const CATALOGS_PER_PAGE = 10;
 
@@ -398,7 +399,7 @@ const BuyerHomePage = () => {
           of our content behind the status bar. Match the header's total height
           so the greeting + refresh button sit fully below it. */}
       <div
-        className="fixed inset-x-0 bottom-0 flex flex-col overflow-hidden bg-background"
+        className="circuit-bg fixed inset-x-0 bottom-0 flex flex-col overflow-hidden bg-background"
         style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}
       >
         <div className="mx-auto flex w-full max-w-[900px] flex-1 min-h-0 flex-col gap-5 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
@@ -417,7 +418,7 @@ const BuyerHomePage = () => {
                          hover:border-accent/50 hover:bg-accent/10
                          disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? <EnergyLoader label="Refreshing" /> : <RefreshCw className="h-4 w-4" />}
             </button>
           </div>
 
@@ -457,7 +458,7 @@ const BuyerHomePage = () => {
               {error && (
                 <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                    <AlertTriangle className="h-4 w-4" />
+                    <ZapOff className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">Couldn't load listings</p>

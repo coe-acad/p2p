@@ -11,19 +11,17 @@ import { useUserData } from "@/hooks/useUserData";
 import {
   BadgeCheck,
   ChevronRight,
-  Landmark,
   LogOut,
   Moon,
   Phone,
-  ReceiptText,
   Sun,
-  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-const initialsFrom = (name?: string, phone?: string) => {
+// eslint-disable-next-line react-refresh/only-export-components -- tiny shared helper
+export const initialsFrom = (name?: string, phone?: string) => {
   const n = (name || "").trim();
   if (n) {
     return n
@@ -64,7 +62,7 @@ const MenuItem = ({
     onClick={onClick}
     className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150
                 ${destructive
-                  ? "text-destructive hover:bg-destructive/[0.06]"
+                  ? "bg-destructive/[0.06] text-destructive hover:bg-destructive/[0.1]"
                   : `text-foreground ${hoverBgClass}`}`}
   >
     <span
@@ -112,10 +110,10 @@ export const ProfileMenu = () => {
         triggerHoverBg: "hover:bg-accent/[0.12]",
         bandBg: "bg-accent/12",
         bandHoverBg: "hover:bg-accent/[0.18]",
-        avatarBg: "bg-accent",
+        avatarBg: "bg-accent text-accent-foreground",
         avatarShadow: "shadow-[0_8px_18px_-8px_rgba(31,138,82,0.50)]",
         chevHover: "group-hover:text-accent",
-        verifyBadge: "fill-accent text-accent-foreground",
+        rolePill: "bg-accent/10 text-accent",
         iconTile: "bg-accent/10 text-accent",
         rowHover: "hover:bg-accent/[0.08]",
       }
@@ -127,20 +125,16 @@ export const ProfileMenu = () => {
         triggerHoverBg: "hover:bg-primary/[0.12]",
         bandBg: "bg-primary/12",
         bandHoverBg: "hover:bg-primary/[0.18]",
-        avatarBg: "bg-primary",
+        avatarBg: "bg-primary text-primary-foreground",
         avatarShadow: "shadow-[0_8px_18px_-8px_rgba(36,40,128,0.50)]",
         chevHover: "group-hover:text-primary",
-        // Verified badge stays green even on seller — "verified" reads as success,
-        // and green is the universal success/confirmed color in this app.
-        verifyBadge: "fill-accent text-accent-foreground",
+        rolePill: "bg-primary/10 text-primary",
         iconTile: "bg-primary/10 text-primary",
         rowHover: "hover:bg-primary/[0.08]",
       };
 
-  // Profile band routes to /vc. VCPage checks is_vc_verified and either
-  // shows the credential details OR redirects to /onboarding/vc to upload.
-  const vcRoute = "/vc";
-  const ordersRoute = isBuyer ? "/buyer-order-history" : "/order-history";
+  // Profile band opens the full Profile page (identity, account links, log out).
+  const profileRoute = "/profile";
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -180,21 +174,18 @@ export const ProfileMenu = () => {
             The verified status pill on the right doubles as a VC-status signal. */}
         <button
           type="button"
-          onClick={() => navigate(vcRoute)}
+          onClick={() => navigate(profileRoute)}
           className={`group block w-full ${tone.bandBg} px-4 py-4 text-left transition-colors duration-200 ${tone.bandHoverBg}`}
         >
           <div className="flex items-center gap-3">
-            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${tone.avatarBg} text-base font-semibold text-white ${tone.avatarShadow} transition-transform duration-200 group-hover:scale-[1.03]`}>
+            <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${tone.avatarBg} text-lg font-semibold ${tone.avatarShadow} ring-4 ring-card/70 transition-transform duration-200 group-hover:scale-[1.03]`}>
               <span className="nums">{initials}</span>
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-base font-semibold tracking-tight text-foreground">
                   {displayName || userData?.name || "Welcome"}
                 </p>
-                {isVCVerified && (
-                  <BadgeCheck className={`h-3.5 w-3.5 shrink-0 ${tone.verifyBadge}`} strokeWidth={2} />
-                )}
               </div>
               {phone && (
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground nums">
@@ -202,10 +193,15 @@ export const ProfileMenu = () => {
                   {phone}
                 </p>
               )}
-              <p className="mt-1 flex items-center gap-1.5">
-                <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="mt-1.5 flex items-center gap-1.5">
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${tone.rolePill}`}>
                   {isBuyer ? "Buyer" : "Seller"}
                 </span>
+                {isVCVerified && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                    <BadgeCheck className="h-3 w-3" /> Meter verified
+                  </span>
+                )}
                 {!isVCVerified && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-destructive">
                     Verify
@@ -219,40 +215,6 @@ export const ProfileMenu = () => {
 
         {/* Items */}
         <div className="p-1.5">
-          <MenuItem
-            icon={ReceiptText}
-            label={isBuyer ? "Purchase history" : "Trade history"}
-            hint={isBuyer ? "Past purchases and orders" : "Past trades and orders"}
-            onClick={() => navigate(ordersRoute)}
-            iconTileClass={tone.iconTile}
-            hoverBgClass={tone.rowHover}
-          />
-
-          {/* Seller money surfaces — settlements are seller-only; buyers see
-              refunds inline on their purchase history instead. */}
-          {!isBuyer && (
-            <>
-              <MenuItem
-                icon={Wallet}
-                label="Earnings"
-                hint="Settlement payouts for completed trades"
-                onClick={() => navigate("/earnings")}
-                iconTileClass={tone.iconTile}
-                hoverBgClass={tone.rowHover}
-              />
-              <MenuItem
-                icon={Landmark}
-                label="Payout method"
-                hint="Where we send your money"
-                onClick={() => navigate("/payout-method")}
-                iconTileClass={tone.iconTile}
-                hoverBgClass={tone.rowHover}
-              />
-            </>
-          )}
-
-          <Divider />
-
           {/* Theme toggle — futuristic pill switch, no full-row click target so
               the toggle owns the interaction. */}
           <div className="flex items-center gap-3 px-3 py-2.5">

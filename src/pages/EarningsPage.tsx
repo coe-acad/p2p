@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertCircle,
+  AlertCircle, ZapOff,
   ArrowRight,
   CheckCircle,
   Clock,
@@ -9,6 +9,7 @@ import {
   Landmark,
   MinusCircle,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import MainAppShell from "@/components/layout/MainAppShell";
@@ -112,7 +113,7 @@ const EarningsPage = () => {
 
   return (
     <MainAppShell>
-      <div className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
+      <div className="circuit-bg min-h-[calc(100vh-3.5rem)] overflow-x-hidden bg-background">
         <PageContainer gap={5}>
           {/* Heading — blue icon tile for seller persona */}
           <div className="flex items-center gap-3 fade-in opacity-0">
@@ -152,7 +153,7 @@ const EarningsPage = () => {
           {/* Summary — real money received, not projections */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Total paid out
               </p>
               {paidOut.length > 0 && (
@@ -163,8 +164,14 @@ const EarningsPage = () => {
               )}
             </div>
 
-            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
-              <p className="text-4xl font-semibold tracking-tight text-accent nums sm:text-5xl">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]">
+              {/* Large faint bolt watermark (energy theme) */}
+              <Zap
+                aria-hidden
+                strokeWidth={0}
+                className="pointer-events-none absolute -right-4 top-2 h-28 w-28 fill-primary/[0.07] text-transparent"
+              />
+              <p className="relative text-4xl font-light tracking-tight text-accent nums sm:text-5xl">
                 {formatRupees(totalPaidPaise)}
               </p>
               <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-primary" />
@@ -177,7 +184,7 @@ const EarningsPage = () => {
           {/* Error banner */}
           {error && !loading && (
             <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-foreground">Couldn't load earnings</p>
                 <p className="mt-1 break-words text-muted-foreground">{error}</p>
@@ -188,7 +195,7 @@ const EarningsPage = () => {
           {/* Settlements */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="kicker-zap text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Settlements
               </p>
               {!loading && settlements.length > 0 && (
@@ -215,7 +222,7 @@ const EarningsPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
                 {settlements.map((s) => {
                   const { kind, label } = chipFor(s);
                   const { Icon, tileBg, tileText } = chipVisual(kind);
@@ -230,10 +237,7 @@ const EarningsPage = () => {
                   return (
                     <div
                       key={s.txn_id ?? `${s.created_at}-${s.payout_amount_paise}`}
-                      className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3
-                                 transition-all duration-200 ease-out
-                                 hover:-translate-y-0.5 hover:border-primary/30
-                                 hover:shadow-[0_6px_18px_-12px_rgba(36,40,128,0.20)]"
+                      className="group flex items-center gap-3 px-4 py-3.5 transition-colors duration-200 hover:bg-muted/50"
                     >
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tileBg} ${tileText}`}>
                         <Icon className="h-5 w-5" />
@@ -253,7 +257,7 @@ const EarningsPage = () => {
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <p className="text-base font-semibold tracking-tight text-primary nums">
+                        <p className="text-sm font-semibold tracking-tight text-primary nums">
                           {typeof s.payout_amount_paise === "number"
                             ? formatRupees(s.payout_amount_paise)
                             : "—"}

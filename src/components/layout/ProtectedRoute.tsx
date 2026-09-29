@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserData } from "@/hooks/useUserData";
@@ -15,7 +16,7 @@ interface RoleProtectedRouteProps extends RouteProps {
 const LoadingSpinner = () => (
   <div className="app-viewport-min flex items-center justify-center bg-background">
     <div className="flex flex-col items-center gap-4">
-      <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <EnergyLoader size={64} className="text-primary" />
       <p className="text-sm text-muted-foreground">Loading...</p>
     </div>
   </div>

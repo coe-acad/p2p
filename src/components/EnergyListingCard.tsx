@@ -1,5 +1,5 @@
 import { EnergyListing } from "@/hooks/useDiscoverListings";
-import { Clock, Hourglass, Layers } from "lucide-react";
+import { Clock, Droplets, Hourglass, Layers, Leaf, Sun, Wind, Zap } from "lucide-react";
 
 interface EnergyListingCardProps {
   listing: EnergyListing;
@@ -47,10 +47,21 @@ const formatDelivery = (start?: string, end?: string): string => {
   return formatWhen(start) || formatWhen(end) || "Flexible";
 };
 
+/** Source glyph for the band tile; the sun turns slowly (energy theme). */
+const SourceIcon = ({ source }: { source?: string }) => {
+  switch ((source || "").toLowerCase()) {
+    case "wind":    return <Wind className="h-4 w-4" />;
+    case "hydro":   return <Droplets className="h-4 w-4" />;
+    case "biomass": return <Leaf className="h-4 w-4" />;
+    case "grid":    return <Zap className="h-4 w-4 fill-current" strokeWidth={0} />;
+    default:        return <Sun className="spin-sun h-[17px] w-[17px]" />;
+  }
+};
+
 /** Value-first stat tile — value (top, prominent) + label (bottom, small caps). */
 const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="min-w-0">
-    <p className="truncate text-sm font-semibold text-foreground nums">{value}</p>
+    <p className="truncate text-2xl font-light leading-tight tracking-tight text-foreground nums">{value}</p>
     <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
       {label}
     </p>
@@ -86,6 +97,13 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
           Edge-to-edge with internal padding for the name + source/total + offer count. */}
       <div className="bg-accent/15 px-5 py-1.5 transition-colors duration-300 ease-out group-hover:bg-accent/20">
         <div className="flex items-center gap-3">
+          <span
+            title={sourceLabel}
+            aria-label={sourceLabel}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary"
+          >
+            <SourceIcon source={listing.source_type} />
+          </span>
           <div className="min-w-0 flex-1">
             <h3 className="relative inline-block max-w-full truncate text-base font-semibold leading-tight text-foreground sm:text-lg">
               {listing.seller_name || "Unknown seller"}
@@ -96,21 +114,19 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
               />
             </h3>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-xs leading-tight text-muted-foreground">
-              <span>{sourceLabel}</span>
-              <span className="text-muted-foreground/40">·</span>
               <span>
                 Total{" "}
                 <span className="font-semibold text-foreground nums">
                   ₹{listing.total_price.toFixed(2)}
                 </span>
               </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1 nums">
+                <Layers className="h-2.5 w-2.5" />
+                {offerCount} {offerCount === 1 ? "offer" : "offers"}
+              </span>
             </div>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5
-                           text-[10px] font-medium uppercase tracking-wider text-accent nums">
-            <Layers className="h-2.5 w-2.5" />
-            {offerCount} {offerCount === 1 ? "offer" : "offers"}
-          </span>
         </div>
       </div>
 
@@ -119,7 +135,7 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
         {/* 2-stat row — Price (with green emphasis line) · Available */}
         <div className="grid grid-cols-2 gap-x-4">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-primary nums">
+            <p className="truncate text-2xl font-normal leading-tight tracking-tight text-primary nums">
               ₹{heroPrice.toFixed(2)}
               <span className="ml-0.5 text-xs font-normal text-muted-foreground">
                 /{listing.quantity_unit}
@@ -144,7 +160,7 @@ export const EnergyListingCard = ({ listing, onSelect }: EnergyListingCardProps)
         {/* Time info — each on its own full-width line so long timestamps have room.
             min-w-0 + truncate on the spans prevents long delivery ranges from
             expanding the grid track on narrow viewports. */}
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
           <div className="min-w-0">
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Delivery

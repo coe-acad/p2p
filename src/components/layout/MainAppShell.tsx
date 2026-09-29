@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import { ZapOff } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import SamaiHeaderBrand from "@/components/SamaiHeaderBrand";
 import { ProfileMenu } from "./ProfileMenu";
@@ -23,11 +23,11 @@ const MainAppShell = ({ children, contentClassName = "" }: MainAppShellProps) =>
   const { isOnline } = useNetworkStatus();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="circuit-bg flex min-h-screen flex-col bg-background">
       {/* Offline banner — only when actually offline */}
       {!isOnline && (
-        <div className="flex items-center justify-center gap-2 bg-amber-50 px-4 py-1.5 text-xs text-amber-900">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <div className="flex items-center justify-center gap-2 border-b border-destructive/20 bg-destructive/[0.08] px-4 py-1.5 text-xs font-medium text-destructive">
+          <ZapOff className="h-3.5 w-3.5" />
           <span>You're offline — trades will sync when you reconnect.</span>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { EnergyLoader } from "@/components/EnergyLoader";
 import { useState } from "react";
 import Lottie from "lottie-react";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { EnergyListing } from "@/hooks/useDiscoverListings";
 import {
-  AlertCircle,
-  ArrowRight,
+  ZapOff,
   BadgeCheck,
   Clock,
-  Loader2,
   ShieldCheck,
   Zap,
 } from "lucide-react";
@@ -194,9 +193,7 @@ export const QuoteOrderModal = ({
         >
           <DialogTitle className="sr-only">Request quote</DialogTitle>
           <div className="flex flex-col items-center px-6 py-10">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </span>
+            <EnergyLoader size={64} className="text-primary" label="Requesting quote" />
             <p className="mt-4 text-center text-sm text-muted-foreground">
               Requesting a binding quote from {listing.seller_name || "the seller"}…
             </p>
@@ -221,13 +218,13 @@ export const QuoteOrderModal = ({
         <DialogTitle className="sr-only">Review quote</DialogTitle>
 
         {/* Header band — distinct from /select's centered avatar pill */}
-        <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-5 py-3">
+        <div className="circuit-bg flex items-center justify-between border-b border-border bg-accent/[0.06] px-5 py-3">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-accent">
               <BadgeCheck className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
+              <p className="kicker-zap text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
                 Quote received
               </p>
               <p className="text-xs text-muted-foreground">
@@ -242,14 +239,14 @@ export const QuoteOrderModal = ({
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Final price
           </p>
-          <p className="mt-1 text-4xl font-semibold tracking-tight text-foreground nums sm:text-5xl">
+          <p className="mt-1 text-4xl font-light tracking-tight text-foreground nums sm:text-5xl">
             ₹{quotedAmount.toFixed(2)}
           </p>
           <span aria-hidden className="mt-2 block h-[2px] w-8 rounded-full bg-accent" />
         </div>
 
         {/* Receipt-style itemised breakdown */}
-        <div className="mx-6 mt-4 rounded-xl border border-border bg-card">
+        <div className="mx-6 mt-4 rounded-xl border border-dashed border-border bg-card">
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
             <div className="flex min-w-0 items-center gap-2">
               <Zap className="h-3.5 w-3.5 fill-accent text-accent shrink-0" strokeWidth={0} />
@@ -299,7 +296,7 @@ export const QuoteOrderModal = ({
         {/* Error */}
         {error && (
           <div className="mx-6 mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/[0.06] p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"><ZapOff className="h-4 w-4" /></span>
             <span className="text-foreground break-words">{error}</span>
           </div>
         )}
@@ -321,13 +318,13 @@ export const QuoteOrderModal = ({
           >
             {isConfirming ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <EnergyLoader />
                 {confirmingLabel}
               </>
             ) : (
               <>
+                <ShieldCheck className="h-4 w-4" />
                 Pay <span className="nums">₹{quotedAmount.toFixed(2)}</span>
-                <ArrowRight className="h-4 w-4" />
               </>
             )}
           </Button>
